@@ -90,6 +90,12 @@ export const loadEnvConfig = (): ConfigLayer => {
     ['clientSecret', getEnvString('RCTF_CTFTIME_CLIENT_SECRET')],
   ])
 
+  const discord = optionalObjectFrom([
+    ['clientId', getEnvString('RCTF_DISCORD_CLIENT_ID')],
+    ['clientSecret', getEnvString('RCTF_DISCORD_CLIENT_SECRET')],
+    ['requiredGuildId', getEnvString('RCTF_DISCORD_REQUIRED_GUILD_ID')],
+  ])
+
   const meta = optionalObjectFrom([
     ['description', getEnvString('RCTF_META_DESCRIPTION')],
     ['imageUrl', getEnvString('RCTF_IMAGE_URL')],
@@ -127,6 +133,9 @@ export const loadEnvConfig = (): ConfigLayer => {
     ['tokenKey', getEnvString('RCTF_TOKEN_KEY')],
     ['origin', getEnvString('RCTF_ORIGIN')],
     ['ctftime', ctftime],
+    ['discord', discord],
+    ['maxTeamSize', getEnvInteger('RCTF_MAX_TEAM_SIZE')],
+    ['teamCreationEnabled', getEnvBoolean('RCTF_TEAM_CREATION_ENABLED')],
     ['userMembers', getEnvBoolean('RCTF_USER_MEMBERS')],
     ['homeContent', getEnvString('RCTF_HOME_CONTENT')],
     ['ctfName', getEnvString('RCTF_NAME')],

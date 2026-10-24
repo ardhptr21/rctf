@@ -35,13 +35,35 @@ $ <red><dim>bun</dim> rctf</red> config get leaderboard.maxLimit
 100
 ```
 
+### `<red>rctf</red> user create-admin`
+
+Creates a new team with admin permissions. Without `<dim>--perms</dim>`, the team gets full admin access.
+
+```ansi
+$ <red><dim>bun</dim> rctf</red> user create-admin organizers <dim>--discord-id</dim> 80351110224678912
+$ <red><dim>bun</dim> rctf</red> user create-admin authors <dim>--perms</dim> challsRead,challsWrite
+```
+
+With [Discord login](/configuration#discord-login), `<dim>--discord-id</dim>` makes that Discord account the team captain, so it is an admin as soon as it logs in. The command also prints the team token, which other organizers use to join from the **Team** page. Admin teams have no size limit.
+
+Without Discord login, the command prints a login URL for the new team instead.
+
+| Flag | Default | Description |
+| --- | --- | --- |
+| `<dim>--discord-id</dim>` | - | Discord user ID to add as captain. The account must not already be on a team. |
+| `<dim>--email</dim>` | - | Team email, for the legacy team login. |
+| `<dim>--division</dim>` | default division | Division for the team. |
+| `<dim>--perms</dim>` | all permissions | Comma-separated [permission names](/admin#permissions). |
+
 ### `<red>rctf</red> user promote`
 
-Grants permissions to the user with the given email. Without `<dim>--perms</dim>`, the command grants full admin access.
+Grants permissions to a team. The target can be the team's email, its name, or the Discord ID of one of its players. Without `<dim>--perms</dim>`, the command grants full admin access.
 
 ```ansi
 $ <red><dim>bun</dim> rctf</red> user promote admin@example.com
 $ <red><dim>bun</dim> rctf</red> user promote author@example.com <dim>--perms</dim> challsRead,challsWrite
+$ <red><dim>bun</dim> rctf</red> user promote organizers
+$ <red><dim>bun</dim> rctf</red> user promote 80351110224678912
 ```
 
 | Flag | Default | Description |
@@ -50,7 +72,7 @@ $ <red><dim>bun</dim> rctf</red> user promote author@example.com <dim>--perms</d
 
 ### `<red>rctf</red> user demote`
 
-Resets a user's permissions to zero.
+Resets a team's permissions to zero. It accepts the same targets as `user promote`.
 
 ```ansi
 $ <red><dim>bun</dim> rctf</red> user demote author@example.com

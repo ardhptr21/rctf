@@ -26,6 +26,7 @@
   import { onMount } from 'svelte'
   import ButtonCtftime from '../button-ctftime.svelte'
   import TeamTokenCard from '../team-token-card.svelte'
+  import DiscordOnlyNotice from '../discord-only-notice.svelte'
 
   const queryClient = useQueryClient()
   const configQuery = useClientConfig()
@@ -118,6 +119,8 @@
 
 {#if clientConfig?.isArchived}
   <ArchivedNotice message="Registration is not available." />
+{:else if clientConfig?.discord}
+  <DiscordOnlyNotice title="Registration" />
 {:else if clientConfig?.registrationsEnabled === false}
   <Card
     title="Registrations closed"

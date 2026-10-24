@@ -56,6 +56,9 @@ export const GoodClientConfigV2 = response('goodClientConfigV2', {
         'Scoreboard freeze time as a Unix timestamp in milliseconds, or `null` when unset. The freeze lifts at `endTime`.'
       )
     ),
+    teamCreationEnabled: example(z.boolean(), true).check(
+      z.describe('Whether players can create new teams.')
+    ),
     pageAccess: z
       .object({
         challenges: example(z.enum(PageAccess), PageAccess.Public).check(
@@ -98,6 +101,27 @@ export const GoodClientConfigV2 = response('goodClientConfigV2', {
       .check(
         z.describe('CTFtime integration config, or `null` when disabled.')
       ),
+    discord: z
+      .nullable(
+        z.object({
+          clientId: example(z.string(), '1563543298277245039').check(
+            z.describe('Discord OAuth client ID.')
+          ),
+          requireGuild: example(z.boolean(), false).check(
+            z.describe(
+              'Whether login requires membership of a Discord server, so the `guilds` scope is needed.'
+            )
+          ),
+        })
+      )
+      .check(
+        z.describe(
+          'Discord login config, or `null` when players use the legacy team login.'
+        )
+      ),
+    maxTeamSize: example(z.int(), 4).check(
+      z.describe('Maximum number of players per team.')
+    ),
     instancerEnabled: example(z.boolean(), true).check(
       z.describe('Whether the challenge instancer is enabled.')
     ),

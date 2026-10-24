@@ -18,6 +18,7 @@
   import { getRedirectPath } from '$lib/utils/redirect'
   import { onMount } from 'svelte'
   import ButtonCtftime from '../button-ctftime.svelte'
+  import DiscordLogin from './discord-login.svelte'
 
   const queryClient = useQueryClient()
   const configQuery = useClientConfig()
@@ -103,6 +104,13 @@
 
 {#if clientConfig?.isArchived}
   <ArchivedNotice message="Authentication is not available." />
+{:else if clientConfig?.discord}
+  <DiscordLogin
+    ctfName={clientConfig.ctfName}
+    origin={clientConfig.origin}
+    clientId={clientConfig.discord.clientId}
+    requireGuild={clientConfig.discord.requireGuild}
+  />
 {:else if clientConfig}
   <Card title="Login" description="Log in to {clientConfig.ctfName}">
     <auth-page>

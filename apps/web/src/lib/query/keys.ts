@@ -20,6 +20,8 @@ export type AdminSubmissionsQueryParams = Pick<
 export const queryKeys = {
   clientConfig: ['clientConfig'] as const,
   userSelf: ['user', 'self'] as const,
+  playerSelf: ['player', 'self'] as const,
+  teamMembers: ['team', 'members'] as const,
   verifyInfo: (token: string) => ['auth', 'verify-info', token] as const,
   userById: (id: string) => ['user', id] as const,
   challenges: ['challenges'] as const,

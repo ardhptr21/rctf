@@ -33,6 +33,7 @@ import {
   GoodUserSelfData,
   GoodUserUpdate,
   GoodVerifySent,
+  BadNotCaptain,
 } from '../../responses'
 import { UserEmail, UserName } from '../../util'
 
@@ -69,6 +70,7 @@ export const UpdateUserRoute = defineRoute({
   }),
   goodResponses: [GoodUserUpdate],
   badResponses: [
+    BadNotCaptain,
     BadName,
     BadRateLimit,
     BadDivisionNotAllowed,
@@ -77,6 +79,7 @@ export const UpdateUserRoute = defineRoute({
     BadToken,
   ],
   authRequired: true,
+  captainOnly: true,
 })
 
 export const GetMembersRoute = defineRoute({
@@ -85,6 +88,7 @@ export const GetMembersRoute = defineRoute({
   goodResponses: [GoodMemberData],
   badResponses: [BadEndpoint, BadToken],
   authRequired: true,
+  legacyAuth: true,
 })
 
 // TODO(es3n1n): rctf v1 allows this only when not finished, do we want that?
@@ -104,6 +108,7 @@ export const CreateMemberRoute = defineRoute({
     BadToken,
   ],
   authRequired: true,
+  legacyAuth: true,
 })
 
 // TODO(es3n1n): rctf v1 allows this only when not finished, do we want that?
@@ -116,6 +121,7 @@ export const DeleteMemberRoute = defineRoute({
   params: z.object({
     id: z.string().check(z.describe('Membership ID.')),
   }),
+  legacyAuth: true,
 })
 
 export const SetEmailRoute = defineRoute({
@@ -139,6 +145,7 @@ export const SetEmailRoute = defineRoute({
     BadToken,
   ],
   authRequired: true,
+  legacyAuth: true,
 })
 
 export const DeleteEmailRoute = defineRoute({
@@ -153,6 +160,7 @@ export const DeleteEmailRoute = defineRoute({
     BadToken,
   ],
   authRequired: true,
+  legacyAuth: true,
 })
 
 export const SetCtftimeRoute = defineRoute({
@@ -172,6 +180,7 @@ export const SetCtftimeRoute = defineRoute({
     BadToken,
   ],
   authRequired: true,
+  legacyAuth: true,
 })
 
 export const DeleteCtftimeRoute = defineRoute({
@@ -186,4 +195,5 @@ export const DeleteCtftimeRoute = defineRoute({
     BadToken,
   ],
   authRequired: true,
+  legacyAuth: true,
 })

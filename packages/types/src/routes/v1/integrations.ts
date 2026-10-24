@@ -39,4 +39,5 @@ export const CtftimeCallbackRoute = defineRoute({
   goodResponses: [GoodCtftimeToken],
   badResponses: [BadEndpoint, BadCtftimeCode],
   authRequired: false,
+  legacyAuth: true,
 })

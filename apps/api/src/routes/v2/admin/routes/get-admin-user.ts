@@ -1,4 +1,5 @@
 import { GetAdminUserRouteV2 } from '@rctf/types'
+import { getTeamMembers } from '../../../../services/teams'
 import { getAdminUserWithSolves } from '../../../../services/users'
 import adminGroup from '../group'
 
@@ -8,5 +9,16 @@ adminGroup.route(GetAdminUserRouteV2, async ({ res, ctx, params }) => {
     return res.badUnknownUser()
   }
 
-  return res.goodAdminUserV2(user)
+  const members = await getTeamMembers(ctx.var.db, params.id)
+  return res.goodAdminUserV2({
+    ...user,
+    members: members.map(member => ({
+      id: member.id,
+      discordId: member.discordId,
+      discordUsername: member.discordUsername,
+      displayName: member.displayName ?? null,
+      avatarUrl: member.avatarUrl ?? null,
+      isCaptain: member.isCaptain ?? false,
+    })),
+  })
 })

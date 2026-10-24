@@ -1,4 +1,5 @@
-import type { User } from '@rctf/db'
+import { config } from '@rctf/config'
+import type { Player, User } from '@rctf/db'
 import type {
   AnyRouteDefinition,
   Permissions,
@@ -23,6 +24,9 @@ import {
   BadNotStarted,
   BadPerms,
   BadRecaptchaCode,
+  BadEndpoint,
+  BadNoTeam,
+  BadNotCaptain,
   BadToken,
   PageAccess,
   type AccessControlledPage,
@@ -37,10 +41,11 @@ import {
   isAdminUser,
   type CompetitionTiming,
 } from '../services/settings'
+import { getCachedPlayer } from '../services/players'
 import { getUser } from '../services/users'
 import { validateCaptcha } from '../util/captcha'
 import type { ApiContext, AppEnv } from './app-env'
-import { parseToken, TokenKind } from './tokens'
+import { parseTokenWithMultipleKinds, TokenKind } from './tokens'
 
 const AUTH_PREFIX = 'Bearer '
 type JsonResponse = [Record<string, unknown>, ContentfulStatusCode]
@@ -119,6 +124,21 @@ const respond = {
     BadToken.status as ContentfulStatusCode,
   ],
 
+  badEndpoint: (): JsonResponse => [
+    { kind: BadEndpoint.kind, message: BadEndpoint.message },
+    BadEndpoint.status as ContentfulStatusCode,
+  ],
+
+  notCaptain: (): JsonResponse => [
+    { kind: BadNotCaptain.kind, message: BadNotCaptain.message },
+    BadNotCaptain.status as ContentfulStatusCode,
+  ],
+
+  noTeam: (): JsonResponse => [
+    { kind: BadNoTeam.kind, message: BadNoTeam.message },
+    BadNoTeam.status as ContentfulStatusCode,
+  ],
+
   notStarted: (): JsonResponse => [
     { kind: BadNotStarted.kind, message: BadNotStarted.message },
     BadNotStarted.status as ContentfulStatusCode,
@@ -140,22 +160,10 @@ const respond = {
   ],
 }
 
-const getAuthenticatedUser = async (
-  context: ApiContext
+const loadUser = async (
+  context: ApiContext,
+  userId: string
 ): Promise<User | undefined> => {
-  const authHeader = context.req.header('Authorization')
-  if (!authHeader?.startsWith(AUTH_PREFIX)) {
-    return undefined
-  }
-
-  const userId = await parseToken(
-    TokenKind.Auth,
-    authHeader.slice(AUTH_PREFIX.length)
-  )
-  if (!userId) {
-    return undefined
-  }
-
   const cached = await getCachedUser(context.var.redis, userId)
   if (cached) {
     return cached
@@ -170,6 +178,41 @@ const getAuthenticatedUser = async (
   }
 
   return user
+}
+
+type Principal = { user?: User | undefined; player?: Player | undefined }
+
+// A team auth token resolves to the team; a player token resolves to the
+// player plus the team they are on, if any.
+const getAuthenticatedPrincipal = async (
+  context: ApiContext
+): Promise<Principal> => {
+  const authHeader = context.req.header('Authorization')
+  if (!authHeader?.startsWith(AUTH_PREFIX)) {
+    return {}
+  }
+
+  const parsed = await parseTokenWithMultipleKinds(
+    [TokenKind.Auth, TokenKind.PlayerAuth],
+    authHeader.slice(AUTH_PREFIX.length)
+  )
+  if (!parsed) {
+    return {}
+  }
+
+  const [kind, id] = parsed
+  if (kind === TokenKind.Auth) {
+    return { user: await loadUser(context, id) }
+  }
+
+  const player = await getCachedPlayer(context.var.db, context.var.redis, id)
+  if (!player) {
+    return {}
+  }
+  return {
+    player,
+    user: player.teamId ? await loadUser(context, player.teamId) : undefined,
+  }
 }
 
 const hasPermissions = (user: User, perms: Permissions): boolean =>
@@ -244,6 +287,10 @@ export const declareRouter = <
   const responders = buildResponders(allResponses)
 
   const createHandler = (): Handler<AppEnv> => async context => {
+    if (definition.legacyAuth && config.discord) {
+      return context.json(...respond.badEndpoint())
+    }
+
     let user: User | undefined
     let timing: CompetitionTiming | undefined
     const loadTiming = async () => {
@@ -258,10 +305,18 @@ export const declareRouter = <
       definition.onlyWhenStartedPermissionsBypass !== undefined ||
       definition.pageAccess !== undefined
 
-    if (requiresAuth) {
-      user = await getAuthenticatedUser(context)
-      if (!user) {
+    let player: Player | undefined
+    if (definition.playerAuth) {
+      ;({ user, player } = await getAuthenticatedPrincipal(context))
+      if (!player) {
         return context.json(...respond.unauthorized())
+      }
+    } else if (requiresAuth) {
+      ;({ user, player } = await getAuthenticatedPrincipal(context))
+      if (!user) {
+        return context.json(
+          ...(player ? respond.noTeam() : respond.unauthorized())
+        )
       }
 
       if (
@@ -275,7 +330,13 @@ export const declareRouter = <
         return context.json(...respond.accessDenied())
       }
     } else if (wantsOptionalAuth) {
-      user = await getAuthenticatedUser(context)
+      ;({ user, player } = await getAuthenticatedPrincipal(context))
+    }
+    if (player) {
+      context.set('player', player)
+      if (definition.captainOnly && !player.isCaptain) {
+        return context.json(...respond.notCaptain())
+      }
     }
 
     if (definition.pageAccess) {

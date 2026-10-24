@@ -15,9 +15,12 @@ aside: true
 | [Recover an account](/api/auth/recover/) | `<route>POST /api/[v2,v1]/auth/recover</route>` |
 | [Preview a verification token](/api/auth/verify-info/) | `<route>GET /api/v2/auth/verify-info</route>` |
 | [Log in](/api/auth/login/) | `<route>POST /api/v1/auth/login</route>` |
+| [Log in with Discord](/api/auth/discord/) | `<route>POST /api/v2/auth/discord</route>` |
 | [Test an auth token](/api/auth/test/) | `<route>GET /api/v1/auth/test</route>` |
 
 :::
+
+When [Discord login](/configuration/#discord-login) is configured, players sign in with [Log in with Discord](/api/auth/discord/) and the email, recovery, team token and CTFtime routes on this page return `<response>404 badEndpoint</response>`. See [Teams](/api/teams/) for how players form teams.
 
 Authentication in rCTF is based around teams. A team owns the name, email address, score, solves, members, and settings. Browser sessions and API clients act on behalf of a team by sending an auth token in the `Authorization` header.
 

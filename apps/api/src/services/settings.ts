@@ -90,6 +90,7 @@ export function getConfigDefaults(): EditableSettings {
     startTime: config.startTime,
     endTime: config.endTime,
     scoreboardFreezeTime: config.scoreboardFreezeTime,
+    teamCreationEnabled: config.teamCreationEnabled,
     pageAccess: config.pageAccess,
     sponsors: config.sponsors,
     meta: config.meta,
@@ -107,6 +108,8 @@ export function resolveSettings(overrides: EditableSettings) {
     endTime: overrides.endTime ?? config.endTime,
     scoreboardFreezeTime:
       overrides.scoreboardFreezeTime ?? config.scoreboardFreezeTime ?? null,
+    teamCreationEnabled:
+      overrides.teamCreationEnabled ?? config.teamCreationEnabled,
     pageAccess: {
       challenges:
         overrides.pageAccess?.challenges ??

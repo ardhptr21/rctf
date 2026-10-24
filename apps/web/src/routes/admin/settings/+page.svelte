@@ -21,6 +21,7 @@
   import { toast } from '$lib/toast'
   import Button from '$lib/ui/button.svelte'
   import Card from '$lib/ui/card.svelte'
+  import Checkbox from '$lib/ui/checkbox.svelte'
   import Field from '$lib/ui/field.svelte'
   import Input from '$lib/ui/input.svelte'
   import type { MenuItem } from '$lib/ui/menu.svelte'
@@ -155,6 +156,11 @@
   function resetFreeze() {
     if (!form || !defaults) return
     form.freeze = resetGroup(defaults, 'freeze')
+  }
+
+  function resetTeamCreation() {
+    if (!form || !defaults) return
+    form.teamCreation = resetGroup(defaults, 'teamCreation')
   }
 
   function resetPageAccess() {
@@ -438,6 +444,27 @@
           {/if}
         </group-body>
       </settings-group>
+
+      {#if configQuery.data?.discord}
+        <settings-group>
+          {@render groupHeader('Teams', resetTeamCreation)}
+          <group-body>
+            <Checkbox
+              checked={settingsForm.teamCreation.enabled}
+              onchange={e => {
+                settingsForm.teamCreation.enabled = e.currentTarget.checked
+                markGroup('teamCreation')
+              }}
+            >
+              Allow players to create new teams
+            </Checkbox>
+            <field-description>
+              When off, players can only join an existing team with its team
+              token.
+            </field-description>
+          </group-body>
+        </settings-group>
+      {/if}
 
       <settings-group>
         {@render groupHeader('Page access', resetPageAccess)}
@@ -749,6 +776,12 @@
     display: block;
     font-size: var(--step--1);
     color: var(--foreground-destructive);
+  }
+
+  field-description {
+    display: block;
+    font-size: var(--step--1);
+    color: var(--foreground-l3);
   }
 
   timing-grid {

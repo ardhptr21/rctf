@@ -22,6 +22,7 @@ export interface AdminSettingsShape {
   startTime?: number
   endTime?: number
   scoreboardFreezeTime?: number
+  teamCreationEnabled?: boolean
   pageAccess?: { challenges?: PageAccess; scores?: PageAccess }
   homeContent?: string
   logoLightUrl?: string
@@ -43,6 +44,11 @@ interface TimingGroup {
 
 interface FreezeGroup {
   time: number | null
+  dirty: boolean
+}
+
+interface TeamCreationGroup {
+  enabled: boolean
   dirty: boolean
 }
 
@@ -74,6 +80,7 @@ export interface SettingsFormState {
   faviconUrl: ScalarGroup
   timing: TimingGroup
   freeze: FreezeGroup
+  teamCreation: TeamCreationGroup
   pageAccess: PageAccessGroup
   logo: LogoGroup
   homeContent: ScalarGroup
@@ -87,6 +94,7 @@ export interface SettingsPatch {
   startTime?: number | null
   endTime?: number | null
   scoreboardFreezeTime?: number | null
+  teamCreationEnabled?: boolean | null
   pageAccess?: { challenges: PageAccess; scores: PageAccess } | null
   homeContent?: string | null
   logoLightUrl?: string | null
@@ -123,6 +131,16 @@ export function buildPatch(
     patch.scoreboardFreezeTime = groupMatchesDefaults(state, 'freeze', defaults)
       ? null
       : state.freeze.time
+  }
+
+  if (state.teamCreation.dirty) {
+    patch.teamCreationEnabled = groupMatchesDefaults(
+      state,
+      'teamCreation',
+      defaults
+    )
+      ? null
+      : state.teamCreation.enabled
   }
 
   if (state.pageAccess.dirty) {
@@ -278,6 +296,11 @@ export function initialFormState(
         overrides.scoreboardFreezeTime ?? defaults.scoreboardFreezeTime ?? null,
       dirty: false,
     },
+    teamCreation: {
+      enabled:
+        overrides.teamCreationEnabled ?? defaults.teamCreationEnabled ?? true,
+      dirty: false,
+    },
     pageAccess: {
       challenges:
         overrides.pageAccess?.challenges ??
@@ -328,6 +351,10 @@ export function groupMatchesDefaults(
       )
     case 'freeze':
       return form.freeze.time === (defaults.scoreboardFreezeTime ?? null)
+    case 'teamCreation':
+      return (
+        form.teamCreation.enabled === (defaults.teamCreationEnabled ?? true)
+      )
     case 'pageAccess':
       return (
         form.pageAccess.challenges ===
@@ -367,6 +394,7 @@ const settingsGroupKeys = [
   'faviconUrl',
   'timing',
   'freeze',
+  'teamCreation',
   'pageAccess',
   'logo',
   'homeContent',

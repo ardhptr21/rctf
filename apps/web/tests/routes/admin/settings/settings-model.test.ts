@@ -24,6 +24,7 @@ function cleanState(): SettingsFormState {
     faviconUrl: { value: '', dirty: false },
     timing: { startTime: null, endTime: null, dirty: false },
     freeze: { time: null, dirty: false },
+    teamCreation: { enabled: true, dirty: false },
     pageAccess: {
       challenges: PageAccess.Public,
       scores: PageAccess.Public,
@@ -570,5 +571,23 @@ describe('freeze and page access settings', () => {
     expect(validateFreeze(1000, 1000, 2000)).toBeNull()
     expect(validateFreeze(999, 1000, 2000)).not.toBeNull()
     expect(validateFreeze(2000, 1000, 2000)).not.toBeNull()
+  })
+})
+
+describe('team creation setting', () => {
+  it('sends false when team creation is turned off', () => {
+    const state = cleanState()
+    state.teamCreation = { enabled: false, dirty: true }
+    expect(buildPatch(state, { teamCreationEnabled: true })).toEqual({
+      teamCreationEnabled: false,
+    })
+  })
+
+  it('clears the override when it matches the default', () => {
+    const state = cleanState()
+    state.teamCreation = { enabled: true, dirty: true }
+    expect(buildPatch(state, { teamCreationEnabled: true })).toEqual({
+      teamCreationEnabled: null,
+    })
   })
 })

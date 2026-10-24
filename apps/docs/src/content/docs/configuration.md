@@ -67,6 +67,11 @@ The following environment variables are supported. They override values from con
 | `<yellow>RCTF_USER_MEMBERS</yellow>`          | `boolean{:ts}` | Enable team members feature                |
 | `<yellow>RCTF_CTFTIME_CLIENT_ID</yellow>`     | `string{:ts}`  | CTFtime OAuth client ID                    |
 | `<yellow>RCTF_CTFTIME_CLIENT_SECRET</yellow>` | `string{:ts}`  | CTFtime OAuth client secret                |
+| `<yellow>RCTF_DISCORD_CLIENT_ID</yellow>`     | `string{:ts}`  | Discord OAuth client ID                    |
+| `<yellow>RCTF_DISCORD_CLIENT_SECRET</yellow>` | `string{:ts}`  | Discord OAuth client secret                |
+| `<yellow>RCTF_DISCORD_REQUIRED_GUILD_ID</yellow>` | `string{:ts}` | Discord server players must belong to |
+| `<yellow>RCTF_MAX_TEAM_SIZE</yellow>`         | `integer{:ts}` | Maximum Discord players per team           |
+| `<yellow>RCTF_TEAM_CREATION_ENABLED</yellow>` | `boolean{:ts}` | Whether players can create new teams       |
 
 ### UI and meta
 
@@ -264,6 +269,35 @@ ctftime:
 :::note
 Auth tokens (used for logging in) never expire. Only verification and CTFtime tokens expire according to `<red>loginTimeout</red>`.
 :::
+
+### Discord login
+
+```yaml
+discord:
+  clientId: '1234567890123456789'
+  clientSecret: your-secret
+  requiredGuildId: '9876543210987654321' # optional
+maxTeamSize: 4
+teamCreationEnabled: true
+```
+
+| Field | Type | Default | Description |
+| --- | --- | --- | --- |
+| `<red>discord.clientId</red>` | `string{:ts}` | - | Discord application client ID |
+| `<red>discord.clientSecret</red>` | `string{:ts}` | - | Discord application client secret |
+| `<red>discord.requiredGuildId</red>` | `string{:ts}` | - | Only members of this Discord server can log in |
+| `<red>maxTeamSize</red>` | `number{:ts}` | `4{:ts}` | Maximum players per team. Teams with admin permissions are unlimited |
+| `<red>teamCreationEnabled</red>` | `boolean{:ts}` | `true{:ts}` | Whether players can create new teams. Can also be changed at runtime from the admin settings |
+
+When `<red>discord</red>` is set, every participant logs in with their own Discord account and then creates a team or joins one with its team token. Email registration, account recovery, team token login and CTFtime login are turned off. See [Players and teams](/admin/teams/#players-and-teams) for how teams work in this mode.
+
+To set up the Discord application:
+
+1. Create an application in the [Discord developer portal](https://discord.com/developers/applications).
+2. Under **OAuth2**, add the redirect URI `<origin>/login/discord`, for example `https://ctf.example.com/login/discord`. It must match `<red>origin</red>` exactly.
+3. Copy the client ID and client secret into the config above. Keep the secret out of version control, for example in a separate file in `rctf.d/` or in `<yellow>RCTF_DISCORD_CLIENT_SECRET</yellow>`.
+
+Only the `identify` scope is requested, plus `guilds` when `<red>discord.requiredGuildId</red>` is set.
 
 ### Providers
 

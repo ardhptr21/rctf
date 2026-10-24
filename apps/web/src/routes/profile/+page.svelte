@@ -4,6 +4,7 @@
     useLeaderboardChallenges,
     useSelfUserGraph,
   } from '$lib/query/leaderboard'
+  import { usePlayerSelf } from '$lib/query/team'
   import { useCurrentUser } from '$lib/query/user'
   import Button from '$lib/ui/button.svelte'
   import Card from '$lib/ui/card.svelte'
@@ -19,6 +20,7 @@
   import ProfileSolves from './solves/solves.svelte'
 
   const userQuery = useCurrentUser()
+  const playerQuery = usePlayerSelf()
   const configQuery = useClientConfig()
   const challengesQuery = useLeaderboardChallenges()
 
@@ -86,11 +88,26 @@
           splitDynamicScore={user.dynamicScores.length > 0}
         />
       {:else if tab === 'settings'}
-        <ProfileSettingsAvatar {user} {clientConfig} />
-        <ProfileSettingsAccount {user} {clientConfig} />
+        {#if clientConfig.discord && !playerQuery.data?.player.isCaptain}
+          <captain-note>
+            Only your team captain can change the team name, division and
+            avatar.
+          </captain-note>
+        {:else}
+          <ProfileSettingsAvatar {user} {clientConfig} />
+          <ProfileSettingsAccount {user} {clientConfig} />
+        {/if}
         <ProfileSettingsCtftime {user} {clientConfig} />
         <ProfileSettingsMembers {clientConfig} />
       {/if}
     {/if}
   {/snippet}
 </ProfileShell>
+
+<style>
+  captain-note {
+    display: block;
+    font-size: var(--step--1);
+    color: var(--foreground-l3);
+  }
+</style>

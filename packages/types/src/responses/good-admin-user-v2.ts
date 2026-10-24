@@ -1,5 +1,6 @@
 import { z } from 'zod/mini'
 import { response } from '../internal'
+import { PlayerSchema } from './teams'
 import { example } from '../util/example'
 
 export const GoodAdminUserV2 = response('goodAdminUserV2', {
@@ -49,5 +50,8 @@ export const GoodAdminUserV2 = response('goodAdminUserV2', {
         ),
       })
     ),
+    members: z
+      .array(PlayerSchema)
+      .check(z.describe('Discord players on this team.')),
   }),
 })

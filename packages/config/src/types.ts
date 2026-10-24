@@ -109,6 +109,16 @@ export const ServerConfigSchema = z.object({
       clientSecret: z.string(),
     })
   ),
+  // when set, players log in with Discord and form teams themselves
+  discord: z.optional(
+    z.object({
+      clientId: z.string(),
+      clientSecret: z.string(),
+      requiredGuildId: z.optional(z.string()),
+    })
+  ),
+  maxTeamSize: z._default(z.int().check(z.gte(1)), 4), // admin teams are unlimited
+  teamCreationEnabled: z._default(z.boolean(), true), // players may create teams
 
   // Captcha
   captcha: z.optional(

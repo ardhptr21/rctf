@@ -27,11 +27,20 @@ integrationsGroup.route(GetClientConfigRouteV2, async ({ res, ctx }) => {
     divisions: config.divisions,
     defaultDivision: config.defaultDivision ?? null,
     origin: config.origin,
-    userMembers: config.userMembers,
-    emailEnabled: Boolean(config.email),
+    // Discord mode replaces email members and CTFtime with player accounts
+    userMembers: config.discord ? false : config.userMembers,
+    // email sign-in and recovery are replaced by Discord login
+    emailEnabled: !config.discord && Boolean(config.email),
     analytics: getAnalyticsConfig(),
     registrationsEnabled: config.registrationsEnabled ?? null,
-    ctftime: config.ctftime ?? null,
+    ctftime: config.discord ? null : (config.ctftime ?? null),
+    discord: config.discord
+      ? {
+          clientId: config.discord.clientId,
+          requireGuild: Boolean(config.discord.requiredGuildId),
+        }
+      : null,
+    maxTeamSize: config.maxTeamSize,
     instancerEnabled,
     isArchived: false,
     captcha: captchaProvider

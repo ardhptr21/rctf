@@ -1,5 +1,5 @@
 import type { DatabaseClient, DatabaseTx, User } from '@rctf/db'
-import { challenges, solves, users } from '@rctf/db'
+import { challenges, players, solves, users } from '@rctf/db'
 import { getErrorConstraint, takeUnique } from '@rctf/db/util'
 import type {
   BadEmailNoExists,
@@ -277,6 +277,17 @@ export const updateUserEmail = async (
   return res.goodEmailSet()
 }
 
+// A team needs some way to sign in: an email, a CTFtime ID, or Discord players.
+// (The old `require_email_or_ctftime_id` check can't see the players table.)
+const keepsSignIn = (remaining: PgColumn) =>
+  sql`(${remaining} IS NOT NULL OR EXISTS (SELECT 1 FROM ${players} WHERE ${players.teamId} = ${users.id}))`
+
+const zeroAuthOrUnknown = async (
+  db: DatabaseClient,
+  id: string
+): Promise<'badZeroAuth' | 'badUnknownUser'> =>
+  (await getUser(db, id)) ? 'badZeroAuth' : 'badUnknownUser'
+
 export const deleteEmail = async (
   res: DeleteEmailResponseHelpers,
   db: DatabaseClient,
@@ -285,25 +296,17 @@ export const deleteEmail = async (
 ): Promise<
   ReturnType<DeleteEmailResponseHelpers[keyof DeleteEmailResponseHelpers]>
 > => {
-  let updated
-
-  try {
-    updated = await db
-      .update(users)
-      .set({ email: null })
-      .where(eq(users.id, id))
-      .returning()
-      .then(takeUnique)
-  } catch (error) {
-    const contraintName = getErrorConstraint(error)
-    if (contraintName === 'require_email_or_ctftime_id') {
-      return res.badZeroAuth()
-    }
-    throw error
-  }
+  const updated = await db
+    .update(users)
+    .set({ email: null })
+    .where(and(eq(users.id, id), keepsSignIn(users.ctftimeId)))
+    .returning()
+    .then(takeUnique)
 
   if (!updated) {
-    return res.badUnknownUser()
+    return (await zeroAuthOrUnknown(db, id)) === 'badZeroAuth'
+      ? res.badZeroAuth()
+      : res.badUnknownUser()
   }
 
   await invalidateUserCache(redis, id)
@@ -351,23 +354,17 @@ export const deleteCtftimeId = async (
     DeleteCtftimeIdResponseHelpers[keyof DeleteCtftimeIdResponseHelpers]
   >
 > => {
-  let updated
-
-  try {
-    updated = await db
-      .update(users)
-      .set({ ctftimeId: null })
-      .where(eq(users.id, id))
-  } catch (error) {
-    const contraintName = getErrorConstraint(error)
-    if (contraintName === 'require_email_or_ctftime_id') {
-      return res.badZeroAuth()
-    }
-    throw error
-  }
+  const updated = await db
+    .update(users)
+    .set({ ctftimeId: null })
+    .where(and(eq(users.id, id), keepsSignIn(users.email)))
+    .returning()
+    .then(takeUnique)
 
   if (!updated) {
-    return res.badUnknownUser()
+    return (await zeroAuthOrUnknown(db, id)) === 'badZeroAuth'
+      ? res.badZeroAuth()
+      : res.badUnknownUser()
   }
 
   await invalidateUserCache(redis, id)

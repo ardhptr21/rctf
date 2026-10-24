@@ -65,6 +65,7 @@ export async function discoverAndFetch(options: {
     scores: PageAccess.Public,
   }
   configData.scoreboardFreezeTime = null
+  configData.discord = null
   await writeApiResponse(
     outputDir,
     '/api/v2/integrations/client/config',

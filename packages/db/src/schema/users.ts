@@ -1,7 +1,6 @@
 import { sql } from 'drizzle-orm'
 import {
   boolean,
-  check,
   foreignKey,
   index,
   integer,
@@ -39,6 +38,8 @@ export const users = pgTable(
       withTimezone: true,
       mode: 'string',
     }),
+    // code players use to join this team; null for teams without players
+    joinToken: text('join_token'),
   },
   table => [
     index('users_created_at_index').using(
@@ -58,11 +59,8 @@ export const users = pgTable(
     unique('users_name_key').on(table.name),
     unique('users_email_key').on(table.email),
     unique('users_ctftime_id_key').on(table.ctftimeId),
+    unique('users_join_token_key').on(table.joinToken),
     index('users_name_trgm_idx').using('gin', sql`${table.name} gin_trgm_ops`),
-    check(
-      'require_email_or_ctftime_id',
-      sql`(email IS NOT NULL) OR (ctftime_id IS NOT NULL)`
-    ),
     index('users_global_leaderboard_idx')
       .using('btree', sql`global_rank ASC`)
       .where(sql`global_rank IS NOT NULL`),

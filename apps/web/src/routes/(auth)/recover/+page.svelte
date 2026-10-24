@@ -10,6 +10,7 @@
   import Field from '$lib/ui/field.svelte'
   import Input from '$lib/ui/input.svelte'
   import Spinner from '$lib/ui/spinner.svelte'
+  import DiscordOnlyNotice from '../discord-only-notice.svelte'
 
   const configQuery = useClientConfig()
   const clientConfig = $derived(configQuery.data)
@@ -32,6 +33,8 @@
 
 {#if clientConfig?.isArchived}
   <ArchivedNotice message="Account recovery is not available." />
+{:else if clientConfig?.discord}
+  <DiscordOnlyNotice title="Account recovery" />
 {:else if verifySent}
   <Card
     title="Recovery email sent"

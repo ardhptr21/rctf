@@ -1,4 +1,9 @@
-import type { Challenge, DatabaseClient, PostgresClient } from '@rctf/db'
+import type {
+  Challenge,
+  DatabaseClient,
+  Player,
+  PostgresClient,
+} from '@rctf/db'
 import type { Context } from 'hono'
 import type { PinoLogger } from 'hono-pino'
 import type { TypedRedis } from '../cache/scripts'
@@ -13,6 +18,8 @@ export type AppEnv = {
     redis: TypedRedis
     ip: string
     dynamicChallenge?: DynamicChallengeContext
+    // set when the request is authenticated with a Discord player token
+    player?: Player
   }
 }
 export type ApiContext = Context<AppEnv>

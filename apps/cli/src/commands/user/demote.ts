@@ -1,4 +1,3 @@
-import { normalizeEmail } from '@rctf/types'
 import { defineCommand } from 'citty'
 import { withDbAndRedis } from '../../lib/context'
 
@@ -8,18 +7,18 @@ export default defineCommand({
     description: 'Revoke all admin permissions from a user',
   },
   args: {
-    email: {
+    target: {
       type: 'positional',
-      description: 'Email of the user to demote',
+      description: "Team email, team name, or a team member's Discord ID",
       required: true,
     },
   },
   run: async ({ args }) => {
     const updated = await withDbAndRedis(async ({ db, redis }) => {
-      const { getUserByEmail, setUserPerms } =
-        await import('@rctf/api/src/services/users')
+      const { setUserPerms } = await import('@rctf/api/src/services/users')
+      const { resolveTeamTarget } = await import('@rctf/api/src/services/teams')
 
-      const user = await getUserByEmail(db, normalizeEmail(args.email))
+      const user = await resolveTeamTarget(db, args.target)
       if (!user) {
         return undefined
       }
@@ -28,7 +27,7 @@ export default defineCommand({
     })
 
     if (!updated) {
-      console.error(`No user found with email '${args.email}'`)
+      console.error(`No team found for '${args.target}'`)
       process.exit(1)
     }
 

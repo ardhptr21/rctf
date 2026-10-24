@@ -22,6 +22,9 @@ export const AdminSettingsSchema = z.object({
       'Scoreboard freeze time as a Unix timestamp in milliseconds. The freeze lifts at `endTime`.'
     )
   ),
+  teamCreationEnabled: example(z.optional(z.boolean()), true).check(
+    z.describe('Whether players can create new teams.')
+  ),
   pageAccess: z.optional(
     z.object({
       challenges: example(

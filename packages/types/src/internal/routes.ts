@@ -36,6 +36,12 @@ export interface RouteConfig {
   serviceAuth?: 'adminBot' | 'dynamicChallenge'
   // gated by the page's access setting (public / private / admin)
   pageAccess?: AccessControlledPage
+  // requires a Discord player login; the player need not be on a team
+  playerAuth?: boolean
+  // email / team-token / CTFtime auth, disabled when Discord login is set up
+  legacyAuth?: boolean
+  // players other than the team captain may not call this route
+  captainOnly?: boolean
 }
 
 export interface RouteDefinition<T extends RouteConfig = RouteConfig> {
@@ -74,6 +80,9 @@ export interface RouteDefinition<T extends RouteConfig = RouteConfig> {
   readonly captchaAction: T['captchaAction']
   readonly serviceAuth: T['serviceAuth']
   readonly pageAccess: T['pageAccess']
+  readonly playerAuth: T['playerAuth']
+  readonly legacyAuth: T['legacyAuth']
+  readonly captainOnly: T['captainOnly']
 }
 
 export function defineRoute<const T extends RouteConfig>(
@@ -107,6 +116,9 @@ export function defineRoute<const T extends RouteConfig>(
     captchaAction: config.captchaAction,
     serviceAuth: config.serviceAuth,
     pageAccess: config.pageAccess,
+    playerAuth: config.playerAuth,
+    legacyAuth: config.legacyAuth,
+    captainOnly: config.captainOnly,
   } as RouteDefinition<T>
 }
 

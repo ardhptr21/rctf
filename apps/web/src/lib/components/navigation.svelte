@@ -19,8 +19,10 @@
     IconSignOut,
     IconTableFilled,
     IconUserGear,
+    IconUsersThree,
   } from '$lib/icons'
   import { useClientConfig } from '$lib/query/config'
+  import { usePlayerSelf } from '$lib/query/team'
   import { useCurrentUser } from '$lib/query/user'
   import Avatar from '$lib/ui/avatar.svelte'
   import Menu from '$lib/ui/menu.svelte'
@@ -42,6 +44,9 @@
   const clientConfig = $derived(configQuery.data)
   const userQuery = useCurrentUser()
   const user = $derived(userQuery.data)
+  const playerQuery = usePlayerSelf()
+  const playerSelf = $derived(playerQuery.data)
+  const discordMode = $derived(!!clientConfig?.discord)
 
   const isArchived = $derived(clientConfig?.isArchived ?? false)
   const canReadChallenges = $derived(
@@ -105,28 +110,43 @@
     ].filter(item => item.show)
   )
 
-  const userMenuItems = $derived([
-    {
-      value: 'copy-login-url',
-      label: 'Copy login URL',
-      icon: IconCopy,
-      onSelect: () => {
-        if (user?.teamToken) copyLoginUrl(user.teamToken)
+  const userMenuItems = $derived(
+    [
+      {
+        value: 'copy-login-url',
+        label: 'Copy login URL',
+        icon: IconCopy,
+        onSelect: () => {
+          if (user?.teamToken) copyLoginUrl(user.teamToken)
+        },
+        // Discord players log in individually; team login links are disabled
+        show: !discordMode && !!user,
       },
-    },
-    {
-      value: 'profile',
-      label: 'Manage team',
-      icon: IconUserGear,
-      href: '/profile',
-    },
-    {
-      value: 'logout',
-      label: 'Log out',
-      icon: IconSignOut,
-      onSelect: () => logout(queryClient),
-    },
-  ])
+      {
+        value: 'team',
+        label: 'Team members',
+        icon: IconUsersThree,
+        href: '/team',
+        show: discordMode,
+      },
+      {
+        value: 'profile',
+        label: 'Manage team',
+        icon: IconUserGear,
+        href: '/profile',
+        show: !!user,
+      },
+      {
+        value: 'logout',
+        label: 'Log out',
+        icon: IconSignOut,
+        onSelect: () => logout(queryClient),
+        show: true,
+      },
+    ]
+      .filter(item => item.show)
+      .map(({ show: _, ...item }) => item)
+  )
 </script>
 
 <header>
@@ -232,6 +252,22 @@
               </user-meta>
             </user-details>
             <Avatar src={currentUser.avatarUrl} name={currentUser.name} />
+          </button>
+        {/snippet}
+      </Menu>
+    {:else if playerSelf && !isArchived}
+      {@const playerName =
+        playerSelf.player.displayName ?? playerSelf.player.discordUsername}
+      <Menu label="Account" items={userMenuItems} placement="bottom-end">
+        {#snippet trigger({ props })}
+          <button {...props}>
+            <user-details>
+              <user-name>{playerName}</user-name>
+              <user-meta>
+                <user-status>No team yet</user-status>
+              </user-meta>
+            </user-details>
+            <Avatar src={playerSelf.player.avatarUrl} name={playerName} />
           </button>
         {/snippet}
       </Menu>

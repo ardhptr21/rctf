@@ -20,6 +20,7 @@ export type Challenge = InferInsertModel<typeof schema.challenges>
 export type Solve = InferInsertModel<typeof schema.solves>
 export type User = InferInsertModel<typeof schema.users>
 export type UserMember = InferInsertModel<typeof schema.userMembers>
+export type Player = InferInsertModel<typeof schema.players>
 export type AdminBotJob = InferInsertModel<typeof schema.adminBotJobs>
 export type Settings = InferInsertModel<typeof schema.settings>
 export type PendingUserVerification = InferInsertModel<

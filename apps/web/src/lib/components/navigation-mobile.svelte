@@ -18,9 +18,11 @@
     IconSignOut,
     IconTableFilled,
     IconUserGear,
+    IconUsersThree,
     IconX,
   } from '$lib/icons'
   import { useClientConfig } from '$lib/query/config'
+  import { usePlayerSelf } from '$lib/query/team'
   import { useCurrentUser } from '$lib/query/user'
   import Dialog from '$lib/ui/dialog.svelte'
   import Tooltip from '$lib/ui/tooltip.svelte'
@@ -37,6 +39,9 @@
   const clientConfig = $derived(configQuery.data)
   const userQuery = useCurrentUser()
   const user = $derived(userQuery.data)
+  const playerQuery = usePlayerSelf()
+  const playerSelf = $derived(playerQuery.data)
+  const discordMode = $derived(!!clientConfig?.discord)
 
   const isArchived = $derived(clientConfig?.isArchived ?? false)
   const canReadChallenges = $derived(
@@ -89,6 +94,13 @@
         label: 'Scoreboard',
         icon: IconGlobeHemisphereWest,
         show: showScores,
+      },
+      {
+        href: '/team',
+        activePath: '/team',
+        label: 'Team members',
+        icon: IconUsersThree,
+        show: discordMode && !!playerSelf && !isArchived,
       },
       {
         href: '/profile',
@@ -169,24 +181,26 @@
       </nav>
       <sheet-footer>
         <ThemeToggle />
-        {#if user && !isArchived}
+        {#if (user || playerSelf) && !isArchived}
           {@const currentUser = user}
           <footer-actions>
-            <Tooltip label="Copy login URL">
-              {#snippet children({ props })}
-                <button
-                  {...mergeProps(props, {
-                    onclick: () => {
-                      if (currentUser.teamToken)
-                        copyLoginUrl(currentUser.teamToken)
-                    },
-                  })}
-                  aria-label="Copy login URL"
-                >
-                  <IconCopy />
-                </button>
-              {/snippet}
-            </Tooltip>
+            {#if currentUser && !discordMode}
+              <Tooltip label="Copy login URL">
+                {#snippet children({ props })}
+                  <button
+                    {...mergeProps(props, {
+                      onclick: () => {
+                        if (currentUser.teamToken)
+                          copyLoginUrl(currentUser.teamToken)
+                      },
+                    })}
+                    aria-label="Copy login URL"
+                  >
+                    <IconCopy />
+                  </button>
+                {/snippet}
+              </Tooltip>
+            {/if}
             <Tooltip label="Log out">
               {#snippet children({ props })}
                 <button

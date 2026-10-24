@@ -57,6 +57,7 @@ An account with `settingsWrite` can change the following settings without restar
 | CTF end time      | Competition end time                        |
 | Scoreboard freeze | Time when the scoreboard stops updating     |
 | Page access       | Who can view the challenges and scoreboard  |
+| Team creation     | Whether Discord players can create new teams |
 | Home content      | Home page markdown content                  |
 | Sponsors          | Sponsor list (name, icon, description, URL) |
 | Meta description  | HTML meta description                       |

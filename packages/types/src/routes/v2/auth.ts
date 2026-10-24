@@ -74,6 +74,7 @@ export const RegisterRouteV2 = defineRoute({
     BadRateLimit,
   ],
   authRequired: false,
+  legacyAuth: true,
 })
 
 export const VerifyRouteV2 = defineRoute({
@@ -94,6 +95,7 @@ export const VerifyRouteV2 = defineRoute({
     BadUnknownUser,
   ],
   authRequired: false,
+  legacyAuth: true,
 })
 
 export const RecoverRouteV2 = defineRoute({
@@ -115,6 +117,7 @@ export const RecoverRouteV2 = defineRoute({
     BadRateLimit,
   ],
   authRequired: false,
+  legacyAuth: true,
 })
 
 export const GetVerifyInfoRouteV2 = defineRoute({
@@ -128,4 +131,5 @@ export const GetVerifyInfoRouteV2 = defineRoute({
   goodResponses: [GoodVerifyInfo],
   badResponses: [BadTokenVerification],
   authRequired: false,
+  legacyAuth: true,
 })

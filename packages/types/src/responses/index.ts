@@ -137,3 +137,7 @@ export * from './bad-signature'
 export * from './bad-replayed-request'
 export * from './good-external-auth'
 export * from './bad-external-auth-request'
+
+// players and teams
+export * from './discord-login'
+export * from './teams'

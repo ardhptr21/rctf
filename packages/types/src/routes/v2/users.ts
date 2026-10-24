@@ -24,6 +24,7 @@ import {
   GoodUserSelfDataV2,
   GoodUserUpdateV2,
   GoodVerifySent,
+  BadNotCaptain,
 } from '../../responses'
 import { FileFieldSchema, UserEmail, UserName } from '../../util'
 
@@ -71,6 +72,7 @@ export const UpdateUserRouteV2 = defineRoute({
   }),
   goodResponses: [GoodUserUpdateV2],
   badResponses: [
+    BadNotCaptain,
     BadName,
     BadRateLimit,
     BadDivisionNotAllowed,
@@ -79,6 +81,7 @@ export const UpdateUserRouteV2 = defineRoute({
     BadToken,
   ],
   authRequired: true,
+  captainOnly: true,
 })
 
 export const UpdateAvatarRoute = defineRoute({
@@ -87,6 +90,7 @@ export const UpdateAvatarRoute = defineRoute({
   captchaAction: ProtectedAction.AvatarUpload,
   goodResponses: [GoodAvatarUpdated],
   badResponses: [
+    BadNotCaptain,
     BadToken,
     BadAvatarFile,
     BadAvatarFileSize,
@@ -104,6 +108,7 @@ export const UpdateAvatarRoute = defineRoute({
       .check(z.describe('Checked only when captcha protects this route.')),
   }),
   bodyFormat: 'form-data',
+  captainOnly: true,
 })
 
 export const SetEmailRouteV2 = defineRoute({
@@ -127,4 +132,5 @@ export const SetEmailRouteV2 = defineRoute({
     BadToken,
   ],
   authRequired: true,
+  legacyAuth: true,
 })

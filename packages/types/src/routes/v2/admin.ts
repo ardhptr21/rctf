@@ -789,6 +789,11 @@ const AdminSettingsUpdateBody = z.object({
           'Scoreboard freeze time as a Unix ms timestamp. Must fall within the event; the freeze lifts at the end time.'
         )
       ),
+      teamCreationEnabled: example(z.nullish(z.boolean()), false).check(
+        z.describe(
+          'Whether players can create new teams. Joining existing teams is unaffected.'
+        )
+      ),
       pageAccess: z.nullish(
         z.object({
           challenges: example(
