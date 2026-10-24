@@ -20,7 +20,7 @@ order: 3
 
 ::route-meta{def="SubmitFlagRoute" rateLimit="Burst `5`, refill window `25000` ms, scoped to user and challenge."}
 
-Submits a flag for the authenticated team. This route uses V1 because there is no V2 equivalent.
+Submits a flag for the authenticated team. This JSON route cannot carry a solver proof, so while [submission evidence](/admin/submissions/#ai-links-and-solver-proof) is required it returns `<response>400 badProofRequired</response>`. Use [Submit a flag with evidence](/api/challenges/submit-v2/) instead.
 
 Rate limit conventions are documented under [`/api#rate-limits`](/api/#rate-limits).
 

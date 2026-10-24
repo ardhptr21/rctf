@@ -59,6 +59,7 @@ An account with `settingsWrite` can change the following settings without restar
 | Page access       | Who can view the challenges and scoreboard  |
 | Team creation     | Whether Discord players can create new teams |
 | Max team members  | Players allowed per team                    |
+| Submission evidence | Whether flags need AI links and a solver proof |
 | Home content      | Home page markdown content                  |
 | Sponsors          | Sponsor list (name, icon, description, URL) |
 | Meta description  | HTML meta description                       |
@@ -93,6 +94,8 @@ Each of the challenges page and the scoreboard page has one of three access leve
 | `admin`   | Accounts with an admin permission (`challsRead`, `usersWrite`, or `settingsWrite`) |
 
 The level applies to the page and to the API routes behind it: the challenge list and solver routes for the challenges page, and the leaderboard routes for the scoreboard page. Flag submission always requires a login.
+
+With [Discord login](/configuration#discord-login), a player who is signed in but not on a team cannot view challenges at any access level. The challenge routes return `<response>403 badNoTeam</response>` and the page asks them to create or join a team. The same applies to a `private` or `admin` scoreboard; a `public` scoreboard stays visible.
 
 :::caution
 [`rctf export`](/admin/cli/) fetches pages without logging in. Set both pages to `public` before exporting an archive.

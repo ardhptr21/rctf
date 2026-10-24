@@ -1,0 +1,87 @@
+/* Syntax highlighting for `tok-*` classes from @lezer/highlight's
+   classHighlighter, shared by the code editor and code previews. */
+
+.syntax {
+  --code-key: #116329;
+  --code-string: #0a3069;
+  --code-literal: #0550ae;
+  --code-keyword: #cf222e;
+  --code-type: #953800;
+  --code-comment: #6e7781;
+  --code-link: #0969da;
+}
+
+:root[data-theme='dark'] .syntax {
+  --code-key: #7ee787;
+  --code-string: #a5d6ff;
+  --code-literal: #79c0ff;
+  --code-keyword: #ff7b72;
+  --code-type: #ffa657;
+  --code-comment: #8b949e;
+  --code-link: #58a6ff;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) .syntax {
+    --code-key: #7ee787;
+    --code-string: #a5d6ff;
+    --code-literal: #79c0ff;
+    --code-keyword: #ff7b72;
+    --code-type: #ffa657;
+    --code-comment: #8b949e;
+    --code-link: #58a6ff;
+  }
+}
+
+.syntax .tok-propertyName {
+  color: var(--code-key);
+}
+
+.syntax .tok-string,
+.syntax .tok-string2,
+.syntax .tok-url {
+  color: var(--code-string);
+}
+
+.syntax .tok-number,
+.syntax .tok-bool,
+.syntax .tok-atom,
+.syntax .tok-literal {
+  color: var(--code-literal);
+}
+
+.syntax .tok-keyword,
+.syntax .tok-operatorKeyword {
+  color: var(--code-keyword);
+}
+
+.syntax .tok-typeName,
+.syntax .tok-className {
+  color: var(--code-type);
+}
+
+.syntax .tok-comment,
+.syntax .tok-meta {
+  color: var(--code-comment);
+}
+
+.syntax .tok-link {
+  color: var(--code-link);
+  text-decoration: underline;
+}
+
+.syntax .tok-heading {
+  font-weight: 700;
+}
+
+.syntax .tok-emphasis {
+  font-style: italic;
+}
+
+.syntax .tok-strong {
+  font-weight: 700;
+}
+
+.syntax .tok-invalid {
+  color: var(--foreground-destructive);
+}

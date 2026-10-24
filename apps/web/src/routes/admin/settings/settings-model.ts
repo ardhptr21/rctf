@@ -24,6 +24,7 @@ export interface AdminSettingsShape {
   scoreboardFreezeTime?: number
   teamCreationEnabled?: boolean
   maxTeamSize?: number
+  requireSubmissionEvidence?: boolean
   pageAccess?: { challenges?: PageAccess; scores?: PageAccess }
   homeContent?: string
   logoLightUrl?: string
@@ -50,6 +51,11 @@ interface FreezeGroup {
 
 interface TeamCreationGroup {
   enabled: boolean
+  dirty: boolean
+}
+
+interface SubmissionEvidenceGroup {
+  required: boolean
   dirty: boolean
 }
 
@@ -88,6 +94,7 @@ export interface SettingsFormState {
   freeze: FreezeGroup
   teamCreation: TeamCreationGroup
   teamSize: TeamSizeGroup
+  submissionEvidence: SubmissionEvidenceGroup
   pageAccess: PageAccessGroup
   logo: LogoGroup
   homeContent: ScalarGroup
@@ -103,6 +110,7 @@ export interface SettingsPatch {
   scoreboardFreezeTime?: number | null
   teamCreationEnabled?: boolean | null
   maxTeamSize?: number | null
+  requireSubmissionEvidence?: boolean | null
   pageAccess?: { challenges: PageAccess; scores: PageAccess } | null
   homeContent?: string | null
   logoLightUrl?: string | null
@@ -155,6 +163,16 @@ export function buildPatch(
     patch.maxTeamSize = groupMatchesDefaults(state, 'teamSize', defaults)
       ? null
       : state.teamSize.value
+  }
+
+  if (state.submissionEvidence.dirty) {
+    patch.requireSubmissionEvidence = groupMatchesDefaults(
+      state,
+      'submissionEvidence',
+      defaults
+    )
+      ? null
+      : state.submissionEvidence.required
   }
 
   if (state.pageAccess.dirty) {
@@ -326,6 +344,13 @@ export function initialFormState(
       value: overrides.maxTeamSize ?? defaults.maxTeamSize ?? null,
       dirty: false,
     },
+    submissionEvidence: {
+      required:
+        overrides.requireSubmissionEvidence ??
+        defaults.requireSubmissionEvidence ??
+        true,
+      dirty: false,
+    },
     pageAccess: {
       challenges:
         overrides.pageAccess?.challenges ??
@@ -382,6 +407,11 @@ export function groupMatchesDefaults(
       )
     case 'teamSize':
       return form.teamSize.value === (defaults.maxTeamSize ?? null)
+    case 'submissionEvidence':
+      return (
+        form.submissionEvidence.required ===
+        (defaults.requireSubmissionEvidence ?? true)
+      )
     case 'pageAccess':
       return (
         form.pageAccess.challenges ===
@@ -423,6 +453,7 @@ const settingsGroupKeys = [
   'freeze',
   'teamCreation',
   'teamSize',
+  'submissionEvidence',
   'pageAccess',
   'logo',
   'homeContent',

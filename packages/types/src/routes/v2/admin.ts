@@ -57,6 +57,9 @@ import {
   GoodInstancerSchema,
   GoodInstanceStatus,
   GoodLeaderboardV2,
+  GoodSubmissionProof,
+  BadNoProof,
+  BadUnknownSubmission,
   GoodUploadsQueryV2,
 } from '../../responses'
 import {
@@ -237,6 +240,18 @@ export const GetAdminSubmissionsRouteV2 = defineRoute({
   query: AdminSubmissionsQuery,
   goodResponses: [GoodAdminSubmissions],
   badResponses: [BadBody, BadPerms, BadToken],
+  authRequired: true,
+  permissions: Permissions.usersWrite | Permissions.challsRead,
+})
+
+export const GetAdminSubmissionProofRouteV2 = defineRoute({
+  path: '/v2/admin/submissions/:id/proof',
+  method: 'GET',
+  params: z.object({
+    id: z.string().check(z.describe('Submission log ID.')),
+  }),
+  goodResponses: [GoodSubmissionProof],
+  badResponses: [BadUnknownSubmission, BadNoProof, BadPerms, BadToken],
   authRequired: true,
   permissions: Permissions.usersWrite | Permissions.challsRead,
 })
@@ -795,6 +810,11 @@ const AdminSettingsUpdateBody = z.object({
       ).check(
         z.describe(
           'Maximum players per team. Teams already over a lower limit keep their members but cannot take new ones.'
+        )
+      ),
+      requireSubmissionEvidence: example(z.nullish(z.boolean()), true).check(
+        z.describe(
+          'Whether flag submissions must include AI links and a solver proof file.'
         )
       ),
       teamCreationEnabled: example(z.nullish(z.boolean()), false).check(

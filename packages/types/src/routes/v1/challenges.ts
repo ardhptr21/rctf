@@ -3,6 +3,7 @@ import { AccessControlledPage, Permissions } from '../../enums'
 import { defineRoute } from '../../internal'
 import {
   BadAlreadySolvedChallenge,
+  BadProofRequired,
   BadBody,
   BadChallenge,
   BadEnded,
@@ -15,13 +16,14 @@ import {
   GoodChallenges,
   GoodChallengeSolves,
   GoodFlag,
+  BadNoTeam,
 } from '../../responses'
 
 export const GetChallengesRoute = defineRoute({
   path: '/v1/challs',
   method: 'GET',
   goodResponses: [GoodChallenges],
-  badResponses: [BadNotStarted, BadPerms, BadToken],
+  badResponses: [BadNotStarted, BadPerms, BadToken, BadNoTeam],
   authRequired: false,
   onlyWhenStarted: true,
   onlyWhenStartedPermissionsBypass: Permissions.challsRead,
@@ -48,6 +50,7 @@ export const SubmitFlagRoute = defineRoute({
     BadAlreadySolvedChallenge,
     BadUnknownUser,
     BadToken,
+    BadProofRequired,
   ],
   authRequired: true,
   params: z.object({
@@ -62,7 +65,14 @@ export const GetChallengeSolvesRoute = defineRoute({
   path: '/v1/challs/:id/solves',
   method: 'GET',
   goodResponses: [GoodChallengeSolves],
-  badResponses: [BadNotStarted, BadChallenge, BadBody, BadPerms, BadToken],
+  badResponses: [
+    BadNotStarted,
+    BadChallenge,
+    BadBody,
+    BadPerms,
+    BadToken,
+    BadNoTeam,
+  ],
   authRequired: false,
   optionalAuth: true,
   params: z.object({

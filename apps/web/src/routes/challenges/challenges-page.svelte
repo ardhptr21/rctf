@@ -4,7 +4,6 @@
   import { IconFlagBannerFold } from '$lib/icons'
   import { useChallenges } from '$lib/query/challenges'
   import { useClientConfig } from '$lib/query/config'
-  import { usePlayerSelf } from '$lib/query/team'
   import { ApiError } from '$lib/query/core'
   import Button from '$lib/ui/button.svelte'
   import Card from '$lib/ui/card.svelte'
@@ -16,9 +15,6 @@
   const ctfName = $derived(configQuery.data?.ctfName)
 
   const challengesQuery = useChallenges()
-  const playerQuery = usePlayerSelf()
-  // Discord players can browse, but need a team before submitting flags
-  const needsTeam = $derived(!!playerQuery.data && !playerQuery.data.team)
   const challenges = $derived(challengesQuery.data)
   const isPending = $derived(challengesQuery.isPending)
   const error = $derived(challengesQuery.error)
@@ -32,13 +28,6 @@
     <title>Challenges | {ctfName}</title>
   {/if}
 </svelte:head>
-
-{#if needsTeam}
-  <team-prompt role="status">
-    You need a team to submit flags.
-    <a href="/team">Create or join a team</a>
-  </team-prompt>
-{/if}
 
 {#if challenges && challenges.length > 0}
   <challenges-reveal data-reveal={revealAfterLoading || undefined}>
@@ -72,18 +61,6 @@
 <style>
   challenges-reveal {
     display: block;
-  }
-
-  team-prompt {
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--space-3xs);
-    justify-content: center;
-    padding: var(--space-2xs) var(--space-s);
-    font-size: var(--step--1);
-    color: var(--foreground-l1);
-    background: var(--background-l2);
-    border-block-end: 1px solid var(--border);
   }
 
   page-status,

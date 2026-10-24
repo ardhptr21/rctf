@@ -27,6 +27,7 @@ function cleanState(): SettingsFormState {
     freeze: { time: null, dirty: false },
     teamCreation: { enabled: true, dirty: false },
     teamSize: { value: null, dirty: false },
+    submissionEvidence: { required: true, dirty: false },
     pageAccess: {
       challenges: PageAccess.Public,
       scores: PageAccess.Public,

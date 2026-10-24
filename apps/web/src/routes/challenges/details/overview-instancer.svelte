@@ -185,6 +185,11 @@
       // NOTE: Admins only test the instancer, so the flag is shown but not submitted
       return
     }
+    if (clientConfig?.requireSubmissionEvidence) {
+      // the flag needs AI links and a solver proof, which only the form collects
+      toast.info('Submit this flag below with your AI links and solver proof.')
+      return
+    }
 
     const res = await apiRequest(SubmitFlagRoute, { id: challengeId, flag })
     if (res.kind === GoodFlag.kind) {

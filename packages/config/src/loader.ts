@@ -136,6 +136,11 @@ export const loadEnvConfig = (): ConfigLayer => {
     ['discord', discord],
     ['maxTeamSize', getEnvInteger('RCTF_MAX_TEAM_SIZE')],
     ['teamCreationEnabled', getEnvBoolean('RCTF_TEAM_CREATION_ENABLED')],
+    [
+      'requireSubmissionEvidence',
+      getEnvBoolean('RCTF_REQUIRE_SUBMISSION_EVIDENCE'),
+    ],
+    ['maxProofSize', getEnvInteger('RCTF_MAX_PROOF_SIZE')],
     ['userMembers', getEnvBoolean('RCTF_USER_MEMBERS')],
     ['homeContent', getEnvString('RCTF_HOME_CONTENT')],
     ['ctfName', getEnvString('RCTF_NAME')],

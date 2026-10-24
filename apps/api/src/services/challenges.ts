@@ -6,6 +6,7 @@ import type {
   DatabaseTx,
   InstancerConfig,
   Solve,
+  SubmissionDetails,
 } from '@rctf/db'
 import {
   challenges,
@@ -23,6 +24,7 @@ import type {
   BadPerms,
   BadRateLimit,
   BadUnknownUser,
+  FileField,
   GoodFlag,
   ResponseHelpers,
 } from '@rctf/types'
@@ -64,6 +66,7 @@ import {
   getResolvedSettings,
   getScoreboardFreezeCutoff,
 } from './settings'
+import { storeSubmissionProof } from './submission-proofs'
 import { createSubmission } from './submissions'
 import { getUser } from './users'
 
@@ -378,6 +381,7 @@ export const createSolveAndGetBloodNumber = async (
     matchedFlag?: MatchedFlagEntry
     cheated?: boolean
     cheatedFrom?: string
+    extraDetails?: SubmissionDetails
   }
 ): Promise<number | null> => {
   const solveId = crypto.randomUUID()
@@ -427,6 +431,7 @@ export const createSolveAndGetBloodNumber = async (
             }
           : {}),
         ...(params.cheatedFrom ? { cheatedFrom: params.cheatedFrom } : {}),
+        ...params.extraDetails,
       },
       relatedId: solveId,
       createdAt: new Date().toISOString(),
@@ -1220,6 +1225,8 @@ export const submitFlag = async (
     challengeId: string
     flag: string
     submissionIp: string | undefined
+    // AI links and solver proof, kept with every attempt
+    evidence?: { aiLinks: string[]; proofFile?: FileField | undefined }
   }
 ): Promise<ReturnType<SubmitResponseHelpers[keyof SubmitResponseHelpers]>> => {
   // NOTE(es3n1n): Directly querying from the database to bypass any stale cache entries
@@ -1256,6 +1263,15 @@ export const submitFlag = async (
     return res.badRateLimit({ timeLeft })
   }
 
+  const evidenceDetails: SubmissionDetails = params.evidence
+    ? {
+        aiLinks: params.evidence.aiLinks,
+        ...(params.evidence.proofFile
+          ? { proof: await storeSubmissionProof(db, params.evidence.proofFile) }
+          : {}),
+      }
+    : {}
+
   const { matched, cheated, cheatedFrom } = await verifyFlagEntries(
     flagEntries,
     params.flag,
@@ -1270,6 +1286,7 @@ export const submitFlag = async (
       result: SubmissionResult.INCORRECT,
       details: {
         submittedFlag: params.flag,
+        ...evidenceDetails,
       },
     }).catch(err =>
       log.error(
@@ -1312,6 +1329,7 @@ export const submitFlag = async (
       matchedFlag: matched,
       cheated,
       cheatedFrom,
+      extraDetails: evidenceDetails,
     })
   } catch (error) {
     const constraintName = getErrorConstraint(error)
@@ -1322,7 +1340,7 @@ export const submitFlag = async (
         userId: params.userId,
         ip: params.submissionIp,
         result: SubmissionResult.ALREADY_SOLVED,
-        details: { submittedFlag: params.flag },
+        details: { submittedFlag: params.flag, ...evidenceDetails },
       }).catch(err =>
         log.error(
           { err, challengeId: params.challengeId, userId: params.userId },

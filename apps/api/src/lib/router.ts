@@ -29,7 +29,7 @@ import {
   BadNotCaptain,
   BadToken,
   PageAccess,
-  type AccessControlledPage,
+  AccessControlledPage,
 } from '@rctf/types'
 import type { Handler } from 'hono'
 import type { ContentfulStatusCode } from 'hono/utils/http-status'
@@ -344,7 +344,18 @@ export const declareRouter = <
         context.var.db,
         context.var.redis
       )
-      const access = pageAccess[definition.pageAccess as AccessControlledPage]
+      const page = definition.pageAccess as AccessControlledPage
+      const access = pageAccess[page]
+      // a signed-in player without a team is told to join one rather than
+      // treated as logged out; challenges always need a team
+      const noTeam = player !== undefined && user === undefined
+      if (
+        noTeam &&
+        (page === AccessControlledPage.Challenges ||
+          access !== PageAccess.Public)
+      ) {
+        return context.json(...respond.noTeam())
+      }
       if (access !== PageAccess.Public && !user) {
         return context.json(...respond.unauthorized())
       }

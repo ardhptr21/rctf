@@ -1,5 +1,6 @@
 <script lang="ts">
   import { IconX } from '$lib/icons'
+  import ProofPreview from '../proof-preview.svelte'
   import { detailEntries, type Submission } from '../submissions-model'
 
   type Props = {
@@ -10,6 +11,8 @@
   let { submission, onClose }: Props = $props()
 
   const entries = $derived(detailEntries(submission))
+
+  let proofOpen = $state(false)
 </script>
 
 <detail-row>
@@ -18,13 +21,26 @@
     {#if entries.length === 0}
       <detail-empty>No details recorded</detail-empty>
     {:else}
-      {#each entries as entry (`${entry.label}:${entry.value}`)}
+      {#each entries as entry, index (`${index}:${entry.label}:${entry.value}`)}
         <detail-pill
           data-wide={entry.wide || undefined}
           title={`${entry.label}: ${entry.value}`}
         >
           <pill-label>{entry.label}</pill-label>
-          {#if entry.href}
+          {#if entry.proof}
+            <button
+              type="button"
+              data-proof
+              title="Preview solver proof"
+              onclick={() => (proofOpen = true)}
+            >
+              <code>{entry.value}</code>
+            </button>
+          {:else if entry.href && entry.external}
+            <a href={entry.href} target="_blank" rel="noopener noreferrer"
+              ><code>{entry.value}</code></a
+            >
+          {:else if entry.href}
             <a href={entry.href}><code>{entry.value}</code></a>
           {:else}
             <code>{entry.value}</code>
@@ -33,6 +49,11 @@
       {/each}
     {/if}
   </detail-pills>
+  <ProofPreview
+    submissionId={submission.id}
+    open={proofOpen}
+    onOpenChange={open => (proofOpen = open)}
+  />
   <button type="button" aria-label="Close submitted details" onclick={onClose}>
     <IconX aria-hidden="true" />
   </button>
@@ -142,6 +163,25 @@
     :global(svg) {
       inline-size: 1rem;
       block-size: 1rem;
+    }
+
+    &[data-proof] {
+      display: inline-flex;
+      inline-size: auto;
+      block-size: auto;
+      min-inline-size: 0;
+      padding: 0;
+      border-radius: 0;
+
+      &:hover {
+        background: transparent;
+      }
+
+      &:hover code,
+      &:focus-visible code {
+        color: var(--foreground-accent);
+        text-decoration: underline;
+      }
     }
   }
 </style>

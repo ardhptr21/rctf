@@ -2,6 +2,7 @@ import {
   BadRateLimit,
   BadToken,
   isFileField,
+  ROUTER_RESPONSES,
   type AnyRouteDefinition,
   type ClientConfig,
   type ResponseDefinition,
@@ -135,9 +136,12 @@ const parseResponse = <TRoute extends AnyRouteDefinition>(
     clearToken()
   }
 
+  // the router can answer any route with these (e.g. 403 badNoTeam for a
+  // player without a team); throwing on them would leave queries erroring
   const definitions: ResponseDefinition[] = [
     ...route.goodResponses,
     ...route.badResponses,
+    ...ROUTER_RESPONSES,
   ]
   const definition = definitions.find(
     definition => definition.kind === envelope.kind

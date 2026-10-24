@@ -92,6 +92,7 @@ export function getConfigDefaults(): EditableSettings {
     scoreboardFreezeTime: config.scoreboardFreezeTime,
     teamCreationEnabled: config.teamCreationEnabled,
     maxTeamSize: config.maxTeamSize,
+    requireSubmissionEvidence: config.requireSubmissionEvidence,
     pageAccess: config.pageAccess,
     sponsors: config.sponsors,
     meta: config.meta,
@@ -112,6 +113,8 @@ export function resolveSettings(overrides: EditableSettings) {
     teamCreationEnabled:
       overrides.teamCreationEnabled ?? config.teamCreationEnabled,
     maxTeamSize: overrides.maxTeamSize ?? config.maxTeamSize,
+    requireSubmissionEvidence:
+      overrides.requireSubmissionEvidence ?? config.requireSubmissionEvidence,
     pageAccess: {
       challenges:
         overrides.pageAccess?.challenges ??

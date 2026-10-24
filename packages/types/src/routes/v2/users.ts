@@ -25,6 +25,7 @@ import {
   GoodUserUpdateV2,
   GoodVerifySent,
   BadNotCaptain,
+  BadNoTeam,
 } from '../../responses'
 import { FileFieldSchema, UserEmail, UserName } from '../../util'
 
@@ -47,7 +48,7 @@ export const GetUserSelfRouteV2 = defineRoute({
   path: '/v2/users/me',
   method: 'GET',
   goodResponses: [GoodUserSelfDataV2],
-  badResponses: [BadToken],
+  badResponses: [BadToken, BadNoTeam],
   authRequired: true,
 })
 

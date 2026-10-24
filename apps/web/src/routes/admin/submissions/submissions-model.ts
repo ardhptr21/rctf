@@ -71,7 +71,43 @@ export type DetailEntry = {
   label: string
   value: string
   href?: string
+  // links supplied by players open in a new tab
+  external?: boolean
+  // the submission has a solver proof that can be previewed
+  proof?: boolean
   wide?: boolean
+}
+
+const formatBytes = (bytes: number): string => {
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+}
+
+const isHttpLink = (value: string): boolean => /^https?:\/\//i.test(value)
+
+function evidenceEntries(details: Record<string, unknown>): DetailEntry[] {
+  const entries: DetailEntry[] = []
+  if (Array.isArray(details.aiLinks)) {
+    for (const link of details.aiLinks) {
+      if (typeof link !== 'string') continue
+      entries.push(
+        isHttpLink(link)
+          ? { label: 'ai', value: link, href: link, external: true }
+          : { label: 'ai', value: link }
+      )
+    }
+  }
+  if (isRecord(details.proof)) {
+    const name =
+      typeof details.proof.name === 'string' ? details.proof.name : 'proof'
+    const size =
+      typeof details.proof.size === 'number'
+        ? ` (${formatBytes(details.proof.size)})`
+        : ''
+    entries.push({ label: 'proof', value: `${name}${size}`, proof: true })
+  }
+  return entries
 }
 
 export const KIND_OPTIONS = [
@@ -265,6 +301,7 @@ export function detailEntries(submission: Submission): DetailEntry[] {
           : {}),
       })
     }
+    entries.push(...evidenceEntries(details))
     return entries
   }
 

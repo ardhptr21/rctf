@@ -168,6 +168,7 @@
 </script>
 
 <code-editor-shell
+  class="syntax"
   bind:this={container}
   data-invalid={invalid || undefined}
   style:--code-editor-block-size="calc({rows * 1.5}em + 2 * var(--space-3xs))"
@@ -181,14 +182,6 @@
       var(--foreground-l4) 70%,
       transparent
     );
-    --code-key: #116329;
-    --code-string: #0a3069;
-    --code-literal: #0550ae;
-    --code-keyword: #cf222e;
-    --code-type: #953800;
-    --code-comment: #6e7781;
-    --code-link: #0969da;
-
     position: relative;
     display: flex;
     flex-direction: column;
@@ -197,28 +190,6 @@
     background: var(--background-l4);
     border: 2px solid transparent;
     border-radius: var(--radius-md);
-
-    :root[data-theme='dark'] & {
-      --code-key: #7ee787;
-      --code-string: #a5d6ff;
-      --code-literal: #79c0ff;
-      --code-keyword: #ff7b72;
-      --code-type: #ffa657;
-      --code-comment: #8b949e;
-      --code-link: #58a6ff;
-    }
-
-    @media (prefers-color-scheme: dark) {
-      :root:not([data-theme]) & {
-        --code-key: #7ee787;
-        --code-string: #a5d6ff;
-        --code-literal: #79c0ff;
-        --code-keyword: #ff7b72;
-        --code-type: #ffa657;
-        --code-comment: #8b949e;
-        --code-link: #58a6ff;
-      }
-    }
 
     &:focus-within {
       outline: 2px solid var(--ring);
@@ -259,59 +230,6 @@
 
     :global(.cm-placeholder) {
       color: var(--foreground-l4);
-    }
-
-    :global(.tok-propertyName) {
-      color: var(--code-key);
-    }
-
-    :global(.tok-string),
-    :global(.tok-string2),
-    :global(.tok-url) {
-      color: var(--code-string);
-    }
-
-    :global(.tok-number),
-    :global(.tok-bool),
-    :global(.tok-atom),
-    :global(.tok-literal) {
-      color: var(--code-literal);
-    }
-
-    :global(.tok-keyword),
-    :global(.tok-operatorKeyword) {
-      color: var(--code-keyword);
-    }
-
-    :global(.tok-typeName),
-    :global(.tok-className) {
-      color: var(--code-type);
-    }
-
-    :global(.tok-comment),
-    :global(.tok-meta) {
-      color: var(--code-comment);
-    }
-
-    :global(.tok-link) {
-      color: var(--code-link);
-      text-decoration: underline;
-    }
-
-    :global(.tok-heading) {
-      font-weight: 700;
-    }
-
-    :global(.tok-emphasis) {
-      font-style: italic;
-    }
-
-    :global(.tok-strong) {
-      font-weight: 700;
-    }
-
-    :global(.tok-invalid) {
-      color: var(--foreground-destructive);
     }
   }
 </style>

@@ -23,6 +23,6 @@ aside: true
 
 When [Discord login](/configuration/#discord-login) is configured, each participant has their own player account and teams are formed by players. These routes take a player token from [Discord login](/api/auth/discord/). The player does not need to be on a team.
 
-Once a player is on a team, their token also works on every route that acts for a team, such as flag submission and profile updates. Profile updates (`<route>PATCH /api/v2/users/me</route>` and the avatar route) are limited to the captain.
+Until a player is on a team, the challenge routes (list and solvers) return `<response>403 badNoTeam</response>`, even when the challenges page is public. Once a player is on a team, their token also works on every route that acts for a team, such as flag submission and profile updates. Profile updates (`<route>PATCH /api/v2/users/me</route>` and the avatar route) are limited to the captain.
 
 Rosters lock when the CTF starts: after that, players can still join teams that have room, but nobody can leave or be removed.

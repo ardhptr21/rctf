@@ -41,6 +41,7 @@ integrationsGroup.route(GetClientConfigRouteV2, async ({ res, ctx }) => {
         }
       : null,
     maxTeamSize: resolved.maxTeamSize,
+    maxProofSize: config.maxProofSize,
     instancerEnabled,
     isArchived: false,
     captcha: captchaProvider

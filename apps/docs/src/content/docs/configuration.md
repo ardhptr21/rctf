@@ -72,6 +72,8 @@ The following environment variables are supported. They override values from con
 | `<yellow>RCTF_DISCORD_REQUIRED_GUILD_ID</yellow>` | `string{:ts}` | Discord server players must belong to |
 | `<yellow>RCTF_MAX_TEAM_SIZE</yellow>`         | `integer{:ts}` | Maximum Discord players per team           |
 | `<yellow>RCTF_TEAM_CREATION_ENABLED</yellow>` | `boolean{:ts}` | Whether players can create new teams       |
+| `<yellow>RCTF_REQUIRE_SUBMISSION_EVIDENCE</yellow>` | `boolean{:ts}` | Whether flag submissions need AI links and a solver proof |
+| `<yellow>RCTF_MAX_PROOF_SIZE</yellow>`        | `integer{:ts}` | Maximum solver proof size in bytes         |
 
 ### UI and meta
 
@@ -206,6 +208,20 @@ pageAccess:
 | `<red>pageAccess.scores</red>` | `'public' \| 'private' \| 'admin'{:ts}` | `'public'{:ts}` | Who can view the scoreboard page |
 
 See [Page access](/admin/#page-access) for what each level means. Both values can also be changed at runtime from the admin settings.
+
+### Submission evidence
+
+```yaml
+requireSubmissionEvidence: true
+maxProofSize: 5242880 # 5 MB
+```
+
+| Field | Type | Default | Description |
+| --- | --- | --- | --- |
+| `<red>requireSubmissionEvidence</red>` | `boolean{:ts}` | `true{:ts}` | Whether every flag submission needs AI links and a solver proof file. Can also be changed at runtime from the admin settings |
+| `<red>maxProofSize</red>` | `number{:ts}` | `5242880{:ts}` | Maximum solver proof file size in bytes |
+
+See [AI links and solver proof](/admin/submissions/#ai-links-and-solver-proof).
 
 ### Divisions
 

@@ -165,6 +165,11 @@
     form.teamSize = resetGroup(defaults, 'teamSize')
   }
 
+  function resetSubmissionEvidence() {
+    if (!form || !defaults) return
+    form.submissionEvidence = resetGroup(defaults, 'submissionEvidence')
+  }
+
   function resetPageAccess() {
     if (!form || !defaults) return
     form.pageAccess = resetGroup(defaults, 'pageAccess')
@@ -500,6 +505,26 @@
           </group-body>
         </settings-group>
       {/if}
+
+      <settings-group>
+        {@render groupHeader('Submissions', resetSubmissionEvidence)}
+        <group-body>
+          <Checkbox
+            checked={settingsForm.submissionEvidence.required}
+            onchange={e => {
+              settingsForm.submissionEvidence.required = e.currentTarget.checked
+              markGroup('submissionEvidence')
+            }}
+          >
+            Require AI links and solver proof on flag submissions
+          </Checkbox>
+          <field-description>
+            Players must add links to the AI conversations they used (or
+            &quot;no ai&quot;) and upload one solver proof file with every flag.
+            Admins can review them on the Submissions page.
+          </field-description>
+        </group-body>
+      </settings-group>
 
       <settings-group>
         {@render groupHeader('Page access', resetPageAccess)}

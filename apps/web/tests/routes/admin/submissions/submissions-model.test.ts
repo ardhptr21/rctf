@@ -212,6 +212,31 @@ describe('applyDeepLinkFilters', () => {
 })
 
 describe('detailEntries', () => {
+  test('a flag submission surfaces its AI links and solver proof', () => {
+    const entries = detailEntries(
+      submissionWith({
+        kind: SubmissionKind.FLAG,
+        details: {
+          submittedFlag: 'rctf{pwned}',
+          aiLinks: ['https://chatgpt.com/share/1', 'no ai'],
+          proof: { sha256: 'abc', name: 'solve.py', size: 2048 },
+        },
+      })
+    )
+
+    expect(entries).toEqual([
+      { label: 'flag', value: 'rctf{pwned}' },
+      {
+        label: 'ai',
+        value: 'https://chatgpt.com/share/1',
+        href: 'https://chatgpt.com/share/1',
+        external: true,
+      },
+      { label: 'ai', value: 'no ai' },
+      { label: 'proof', value: 'solve.py (2.0 KB)', proof: true },
+    ])
+  })
+
   test('a flag submission surfaces only its submitted flag', () => {
     const entries = detailEntries(
       submissionWith({

@@ -20,3 +20,6 @@ divisions:
   hs: High School
   college: College
   other: Other
+
+# existing submit tests use the v1 JSON route; evidence tests opt in
+requireSubmissionEvidence: false

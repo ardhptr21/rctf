@@ -25,6 +25,8 @@ import {
   GoodTeamMembers,
   GoodTeamTokenRotate,
   GoodUserSelfDataV2,
+  GoodChallengesV2,
+  PageAccess,
 } from '@rctf/types'
 import {
   afterAll,
@@ -280,6 +282,41 @@ describe('players without a team', () => {
     } finally {
       await cleanup()
     }
+  })
+
+  test('cannot view challenges, even when the page is public', async () => {
+    const { token } = await login()
+    const { challenge, cleanup } = await generateChallenge()
+    try {
+      await expectResponse(await get('/api/v2/challs', token), BadNoTeam)
+      await expectResponse(await get('/api/v1/challs', token), BadNoTeam)
+      await expectResponse(
+        await get(
+          `/api/v2/challs/${challenge.id}/solves?limit=10&offset=0`,
+          token
+        ),
+        BadNoTeam
+      )
+
+      // once on a team, the same player can see them
+      await createTeam(token)
+      await expectResponse(await get('/api/v2/challs', token), GoodChallengesV2)
+    } finally {
+      await cleanup()
+    }
+  })
+
+  test('gets badNoTeam, not a logout, on a private scoreboard', async () => {
+    await updateSettings(
+      getDb(),
+      { pageAccess: { scores: PageAccess.Private } },
+      await createRedis()
+    )
+    const { token } = await login()
+    await expectResponse(
+      await get('/api/v2/leaderboard/now?limit=10&offset=0', token),
+      BadNoTeam
+    )
   })
 
   test('cannot list team members', async () => {

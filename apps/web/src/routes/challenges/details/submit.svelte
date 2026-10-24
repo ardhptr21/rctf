@@ -2,23 +2,33 @@
   import {
     BadAlreadySolvedChallenge,
     GoodFlag,
-    SubmitFlagRoute,
+    SubmitFlagRouteV2,
     type Challenge,
   } from '@rctf/types'
   import { showApiError } from '$lib/api'
   import { useApiForm } from '$lib/forms/use-api-form.svelte'
   import {
     IconCheck,
+    IconFile,
     IconInfo,
     IconPaperPlaneTilt,
+    IconPlus,
     IconSignIn,
+    IconX,
   } from '$lib/icons'
   import { useClientConfig } from '$lib/query/config'
   import { useCurrentUser } from '$lib/query/user'
   import { toast } from '$lib/toast'
   import Button from '$lib/ui/button.svelte'
+  import Checkbox from '$lib/ui/checkbox.svelte'
   import Input from '$lib/ui/input.svelte'
   import Spinner from '$lib/ui/spinner.svelte'
+  import {
+    collectAiLinks,
+    formatFileSize,
+    validateEvidence,
+    type EvidenceErrors,
+  } from './submit-evidence'
   import { resolveSubmitState } from './submit-ladder'
 
   interface Props {
@@ -53,12 +63,40 @@
     return () => clearInterval(interval)
   })
 
-  const form = useApiForm(SubmitFlagRoute, {
+  const requireEvidence = $derived(
+    clientConfig?.requireSubmissionEvidence ?? false
+  )
+  const maxProofSize = $derived(clientConfig?.maxProofSize ?? 5 * 1024 * 1024)
+
+  let aiLinks = $state<string[]>([''])
+  let noAi = $state(false)
+  let proof = $state<File | null>(null)
+  let proofInput = $state<HTMLInputElement | null>(null)
+  let evidenceErrors = $state<EvidenceErrors>({})
+
+  function resetEvidence() {
+    aiLinks = ['']
+    noAi = false
+    proof = null
+    evidenceErrors = {}
+    if (proofInput) proofInput.value = ''
+  }
+
+  function addLink() {
+    aiLinks = [...aiLinks, '']
+  }
+
+  function removeLink(index: number) {
+    aiLinks = aiLinks.filter((_, i) => i !== index)
+  }
+
+  const form = useApiForm(SubmitFlagRouteV2, {
     onSuccess: response => {
       if (response.kind === GoodFlag.kind) {
         toast.success('Flag correct!')
         onSolve(challenge.id)
         form.setData({ flag: '' })
+        resetEvidence()
       } else if (response.kind === BadAlreadySolvedChallenge.kind) {
         toast.info('You already solved this challenge')
         onSolve(challenge.id)
@@ -77,8 +115,31 @@
     event.preventDefault()
     const flag = (form.data.flag ?? '').trim()
     if (!flag) return
-    form.setData({ flag })
+
+    if (requireEvidence) {
+      evidenceErrors = validateEvidence({
+        links: aiLinks,
+        noAi,
+        proof,
+        maxProofSize,
+      })
+      if (evidenceErrors.aiLinks || evidenceErrors.proof) return
+      form.setData({
+        flag,
+        aiLinks: collectAiLinks(aiLinks, noAi),
+        proof: proof ?? undefined,
+      })
+    } else {
+      form.setData({ flag, aiLinks: undefined, proof: undefined })
+    }
     form.submit()
+  }
+
+  function handleProofChange(
+    event: Event & { currentTarget: HTMLInputElement }
+  ) {
+    proof = event.currentTarget.files?.[0] ?? null
+    evidenceErrors = { ...evidenceErrors, proof: undefined }
   }
 </script>
 
@@ -100,6 +161,113 @@
     </Button>
   {:else}
     <form onsubmit={handleSubmit}>
+      {#if requireEvidence && submitState !== 'solved'}
+        <submit-evidence>
+          <fieldset>
+            <legend>AI links</legend>
+            <Checkbox
+              checked={noAi}
+              disabled={form.submitting}
+              onchange={e => {
+                noAi = e.currentTarget.checked
+                evidenceErrors = { ...evidenceErrors, aiLinks: undefined }
+              }}
+            >
+              I didn&apos;t use AI
+            </Checkbox>
+            {#if !noAi}
+              {#each aiLinks as _, index (index)}
+                <link-row>
+                  <Input
+                    type="url"
+                    placeholder="https://chatgpt.com/share/..."
+                    aria-label={`AI link ${index + 1}`}
+                    aria-invalid={!!evidenceErrors.aiLinks || undefined}
+                    disabled={form.submitting}
+                    bind:value={aiLinks[index]}
+                    oninput={() =>
+                      (evidenceErrors = {
+                        ...evidenceErrors,
+                        aiLinks: undefined,
+                      })}
+                  />
+                  {#if aiLinks.length > 1}
+                    <Button
+                      type="button"
+                      size="icon-sm"
+                      variant="ghost"
+                      aria-label={`Remove AI link ${index + 1}`}
+                      disabled={form.submitting}
+                      onclick={() => removeLink(index)}
+                    >
+                      <IconX />
+                    </Button>
+                  {/if}
+                </link-row>
+              {/each}
+              {#if aiLinks.length < 10}
+                <add-link>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="secondary"
+                    disabled={form.submitting}
+                    onclick={addLink}
+                  >
+                    <IconPlus />
+                    Add link
+                  </Button>
+                </add-link>
+              {/if}
+            {/if}
+            {#if evidenceErrors.aiLinks}
+              <evidence-error role="alert"
+                >{evidenceErrors.aiLinks}</evidence-error
+              >
+            {/if}
+          </fieldset>
+
+          <fieldset>
+            <legend>Solver proof</legend>
+            <evidence-hint>
+              Your solve script, or a screenshot showing the flag. One file, up
+              to {formatFileSize(maxProofSize)}.
+            </evidence-hint>
+            <!-- the transparent input covers the whole box, so clicking or
+                 dropping a file anywhere on it works natively -->
+            <label
+              class="proof-picker"
+              data-has-file={proof ? '' : undefined}
+              data-invalid={evidenceErrors.proof ? '' : undefined}
+              data-disabled={form.submitting || undefined}
+            >
+              <input
+                bind:this={proofInput}
+                type="file"
+                aria-label="Solver proof file"
+                disabled={form.submitting}
+                onchange={handleProofChange}
+              />
+              <IconFile aria-hidden="true" />
+              <picker-text>
+                <strong>{proof ? proof.name : 'Choose a file'}</strong>
+                <span
+                  >{proof
+                    ? formatFileSize(proof.size)
+                    : 'Click to browse, or drop a file here'}</span
+                >
+              </picker-text>
+              <picker-action>{proof ? 'Change' : 'Browse'}</picker-action>
+            </label>
+            {#if evidenceErrors.proof}
+              <evidence-error role="alert"
+                >{evidenceErrors.proof}</evidence-error
+              >
+            {/if}
+          </fieldset>
+        </submit-evidence>
+      {/if}
+
       <submit-row>
         {#if submitState === 'solved'}
           <submit-notice data-tone="success">
@@ -151,6 +319,143 @@
 
   form {
     display: block;
+  }
+
+  submit-evidence {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-s);
+    margin-block-end: var(--space-s);
+
+    fieldset {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-2xs);
+      min-inline-size: 0;
+      margin: 0;
+      padding: 0;
+      border: 0;
+    }
+
+    legend {
+      margin-block-end: var(--space-3xs);
+      font-weight: var(--font-weight-medium);
+      color: var(--foreground-l1);
+    }
+  }
+
+  .proof-picker {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: var(--space-2xs);
+    min-inline-size: 0;
+    padding: var(--space-2xs) var(--space-xs);
+    color: var(--foreground-l1);
+    background: var(--background-l4);
+    border: 2px dashed var(--border);
+    border-radius: var(--radius-lg);
+    cursor: pointer;
+    transition:
+      border-color 120ms ease,
+      background 120ms ease;
+
+    &:hover {
+      background: var(--background-l5);
+      border-color: var(--foreground-l3);
+    }
+
+    &:focus-within {
+      outline: 2px solid var(--ring);
+      outline-offset: 1px;
+    }
+
+    &[data-has-file] {
+      border-style: solid;
+      border-color: var(--foreground-accent);
+    }
+
+    &[data-invalid] {
+      border-color: var(--foreground-destructive);
+    }
+
+    &[data-disabled] {
+      cursor: not-allowed;
+      opacity: 0.5;
+    }
+
+    input {
+      position: absolute;
+      inset: 0;
+      inline-size: 100%;
+      block-size: 100%;
+      opacity: 0;
+      cursor: inherit;
+    }
+
+    > :global(svg) {
+      flex-shrink: 0;
+      inline-size: 1.5rem;
+      block-size: 1.5rem;
+      color: var(--foreground-l2);
+    }
+  }
+
+  picker-text {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-inline-size: 0;
+
+    strong {
+      overflow: hidden;
+      font-weight: var(--font-weight-medium);
+      color: var(--foreground-l0);
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    span {
+      font-size: var(--step--1);
+      color: var(--foreground-l3);
+    }
+  }
+
+  picker-action {
+    flex-shrink: 0;
+    padding: var(--space-3xs) var(--space-xs);
+    font-size: var(--step--1);
+    font-weight: var(--font-weight-medium);
+    color: var(--foreground-l0);
+    background: var(--background-l2);
+    border-radius: var(--radius-md);
+  }
+
+  link-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3xs);
+
+    :global(input) {
+      flex: 1;
+      min-inline-size: 0;
+    }
+  }
+
+  add-link {
+    display: flex;
+  }
+
+  evidence-hint {
+    display: block;
+    font-size: var(--step--1);
+    color: var(--foreground-l3);
+  }
+
+  evidence-error {
+    display: block;
+    font-size: var(--step--1);
+    color: var(--foreground-destructive);
   }
 
   submit-row {

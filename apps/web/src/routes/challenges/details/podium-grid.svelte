@@ -37,7 +37,7 @@
           {#if slot.kind !== 'empty'}
             <slot-body>
               <slot-text>
-                <slot-name>{slot.name}</slot-name>
+                <slot-name title={slot.name}>{slot.name}</slot-name>
                 <slot-detail>{slot.detail}</slot-detail>
               </slot-text>
               <Avatar src={slot.avatarUrl} name={slot.name} />
@@ -161,7 +161,8 @@
   }
 
   slot-name {
-    max-inline-size: 100%;
+    /* same cap as the navbar team name, so long names end in an ellipsis */
+    max-inline-size: min(100%, 16rem);
     overflow: hidden;
     font-size: 1rem;
     color: var(--slot-fg-l0);

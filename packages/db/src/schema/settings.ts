@@ -18,6 +18,7 @@ export interface EditableSettings {
   scoreboardFreezeTime?: number
   teamCreationEnabled?: boolean
   maxTeamSize?: number
+  requireSubmissionEvidence?: boolean
   pageAccess?: {
     challenges?: PageAccess
     scores?: PageAccess

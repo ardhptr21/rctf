@@ -12,6 +12,8 @@
     description?: string
     presentation?: 'center' | 'sheet' | 'drawer'
     flush?: boolean
+    // widest the centered dialog may grow, e.g. 'min(64rem, 92vw)'
+    maxInlineSize?: string
     children: Snippet<[{ closeProps: Record<string, unknown> }]>
     trigger?: Snippet<[{ props: Record<string, unknown> }]>
   }
@@ -24,6 +26,7 @@
     description,
     presentation = 'center',
     flush = false,
+    maxInlineSize,
     children,
     trigger,
   }: Props = $props()
@@ -61,6 +64,7 @@
       {...api.getPositionerProps()}
       data-presentation={presentation}
       data-flush={flush ? '' : undefined}
+      style:--dialog-max-inline-size={maxInlineSize}
     >
       <div {...api.getContentProps()}>
         <h2 {...api.getTitleProps()} data-hidden={titleHidden ? '' : undefined}>

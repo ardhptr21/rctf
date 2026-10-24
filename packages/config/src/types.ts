@@ -120,6 +120,10 @@ export const ServerConfigSchema = z.object({
   maxTeamSize: z._default(z.int().check(z.gte(1)), 4), // admin teams are unlimited
   teamCreationEnabled: z._default(z.boolean(), true), // players may create teams
 
+  // Flag submissions must include AI links and a solver proof file
+  requireSubmissionEvidence: z._default(z.boolean(), true),
+  maxProofSize: z._default(z.int().check(z.gte(1)), 5 * 1024 * 1024),
+
   // Captcha
   captcha: z.optional(
     z.object({
