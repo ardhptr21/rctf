@@ -1,4 +1,5 @@
 import { z } from 'zod/mini'
+import { PageAccess } from '../enums'
 import { response } from '../internal'
 import { SponsorSchemaV2 } from '../util'
 import { example } from '../util/example'
@@ -15,6 +16,22 @@ export const AdminSettingsSchema = z.object({
   ),
   endTime: example(z.optional(z.int()), 1710864000000).check(
     z.describe('CTF end time as a Unix timestamp in milliseconds.')
+  ),
+  scoreboardFreezeTime: example(z.optional(z.int()), 1710777600000).check(
+    z.describe(
+      'Scoreboard freeze time as a Unix timestamp in milliseconds. The freeze lifts at `endTime`.'
+    )
+  ),
+  pageAccess: z.optional(
+    z.object({
+      challenges: example(
+        z.optional(z.enum(PageAccess)),
+        PageAccess.Public
+      ).check(z.describe('Who may view the challenges page.')),
+      scores: example(z.optional(z.enum(PageAccess)), PageAccess.Public).check(
+        z.describe('Who may view the scoreboard page.')
+      ),
+    })
   ),
   sponsors: z.optional(z.array(SponsorSchemaV2)),
   meta: z.optional(

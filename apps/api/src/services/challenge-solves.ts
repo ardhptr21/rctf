@@ -20,6 +20,7 @@ export interface ChallengeSolvesRequest {
   limit: number
   offset: number
   includeHidden?: boolean
+  solveCutoff?: number | null
 }
 
 export const getChallengeSolvesResponse = async ({
@@ -30,6 +31,7 @@ export const getChallengeSolvesResponse = async ({
   limit,
   offset,
   includeHidden,
+  solveCutoff,
 }: ChallengeSolvesRequest): Promise<
   ReturnType<
     ChallengeSolvesResponseHelpers[keyof ChallengeSolvesResponseHelpers]
@@ -51,7 +53,7 @@ export const getChallengeSolvesResponse = async ({
       userId,
       limit,
       offset,
-      { includeHidden }
+      { includeHidden, solveCutoff }
     )
 
   if (!challengeExists) {

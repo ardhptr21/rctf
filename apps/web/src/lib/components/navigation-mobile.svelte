@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Permissions } from '@rctf/types'
+  import { PageAccess, Permissions } from '@rctf/types'
   import { useQueryClient } from '@tanstack/svelte-query'
   import { mergeProps } from '@zag-js/svelte'
   import { afterNavigate } from '$app/navigation'
@@ -25,6 +25,7 @@
   import Dialog from '$lib/ui/dialog.svelte'
   import Tooltip from '$lib/ui/tooltip.svelte'
   import { copyLoginUrl, logout } from '$lib/utils/auth'
+  import { decidePageGate } from '$lib/utils/page-gate'
   import {
     ADMIN_PANEL_PERMISSIONS,
     hasAnyPermission,
@@ -46,6 +47,16 @@
     hasPermissions(user, Permissions.settingsWrite)
   )
   const isAdmin = $derived(hasAnyPermission(user, ADMIN_PANEL_PERMISSIONS))
+  // admin-only pages are hidden from everyone else; private pages stay
+  // visible so logged-out visitors reach the login prompt
+  const showPage = (page: 'challenges' | 'scores') => {
+    const access = clientConfig?.pageAccess[page]
+    return (
+      access === PageAccess.Private || decidePageGate(access, user) === 'ok'
+    )
+  }
+  const showChallenges = $derived(showPage('challenges'))
+  const showScores = $derived(showPage('scores'))
 
   const lightLogo = $derived(clientConfig?.logoLightUrl || wordmarkLight)
   const darkLogo = $derived(clientConfig?.logoDarkUrl || wordmarkDark)
@@ -70,14 +81,14 @@
         activePath: '/challenges',
         label: 'Challenges',
         icon: IconFlagBannerFold,
-        show: true,
+        show: showChallenges,
       },
       {
         href: '/scores',
         activePath: '/scores',
         label: 'Scoreboard',
         icon: IconGlobeHemisphereWest,
-        show: true,
+        show: showScores,
       },
       {
         href: '/profile',

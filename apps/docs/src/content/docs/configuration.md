@@ -181,10 +181,26 @@ endTime: 1735776000000 # January 2, 2025 00:00 UTC
 | --- | --- | --- | --- |
 | `<red>startTime</red>` | `number{:ts}` | - | Competition start time in Unix milliseconds (required) |
 | `<red>endTime</red>` | `number{:ts}` | - | Competition end time in Unix milliseconds (required) |
+| `<red>scoreboardFreezeTime</red>` | `number{:ts}` | - | [Scoreboard freeze](/admin/#scoreboard-freeze) time in Unix milliseconds. The freeze lifts at `endTime` |
 
 :::tip
 To convert a date to Unix milliseconds: `$ <red>date</red> <dim>-d</dim> <green>"2025-01-01T00:00:00Z"</green> +%s000` or use `new Date('2025-01-01T00:00:00Z').getTime(){:ts}` in JavaScript.
 :::
+
+### Page access
+
+```yaml
+pageAccess:
+  challenges: private
+  scores: public
+```
+
+| Field | Type | Default | Description |
+| --- | --- | --- | --- |
+| `<red>pageAccess.challenges</red>` | `'public' \| 'private' \| 'admin'{:ts}` | `'public'{:ts}` | Who can view the challenges page |
+| `<red>pageAccess.scores</red>` | `'public' \| 'private' \| 'admin'{:ts}` | `'public'{:ts}` | Who can view the scoreboard page |
+
+See [Page access](/admin/#page-access) for what each level means. Both values can also be changed at runtime from the admin settings.
 
 ### Divisions
 

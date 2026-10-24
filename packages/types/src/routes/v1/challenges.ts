@@ -1,5 +1,5 @@
 import { z } from 'zod/mini'
-import { Permissions } from '../../enums'
+import { AccessControlledPage, Permissions } from '../../enums'
 import { defineRoute } from '../../internal'
 import {
   BadAlreadySolvedChallenge,
@@ -21,10 +21,11 @@ export const GetChallengesRoute = defineRoute({
   path: '/v1/challs',
   method: 'GET',
   goodResponses: [GoodChallenges],
-  badResponses: [BadNotStarted],
+  badResponses: [BadNotStarted, BadPerms, BadToken],
   authRequired: false,
   onlyWhenStarted: true,
   onlyWhenStartedPermissionsBypass: Permissions.challsRead,
+  pageAccess: AccessControlledPage.Challenges,
 })
 
 export const SubmitFlagRoute = defineRoute({
@@ -61,8 +62,9 @@ export const GetChallengeSolvesRoute = defineRoute({
   path: '/v1/challs/:id/solves',
   method: 'GET',
   goodResponses: [GoodChallengeSolves],
-  badResponses: [BadNotStarted, BadChallenge, BadBody],
+  badResponses: [BadNotStarted, BadChallenge, BadBody, BadPerms, BadToken],
   authRequired: false,
+  optionalAuth: true,
   params: z.object({
     id: z.string().check(z.describe('Challenge ID.')),
   }),
@@ -79,4 +81,5 @@ export const GetChallengeSolvesRoute = defineRoute({
   }),
   onlyWhenStarted: true,
   onlyWhenStartedPermissionsBypass: Permissions.challsRead,
+  pageAccess: AccessControlledPage.Challenges,
 })

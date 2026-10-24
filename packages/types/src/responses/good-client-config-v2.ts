@@ -1,5 +1,5 @@
 import { z } from 'zod/mini'
-import { ProtectedAction } from '../enums'
+import { PageAccess, ProtectedAction } from '../enums'
 import { response } from '../internal'
 import { NumericString, SponsorSchemaV2 } from '../util'
 import { example } from '../util/example'
@@ -51,6 +51,21 @@ export const GoodClientConfigV2 = response('goodClientConfigV2', {
     endTime: example(z.int(), 1710864000000).check(
       z.describe('CTF end time as a Unix timestamp in milliseconds.')
     ),
+    scoreboardFreezeTime: example(z.nullable(z.int()), 1710777600000).check(
+      z.describe(
+        'Scoreboard freeze time as a Unix timestamp in milliseconds, or `null` when unset. The freeze lifts at `endTime`.'
+      )
+    ),
+    pageAccess: z
+      .object({
+        challenges: example(z.enum(PageAccess), PageAccess.Public).check(
+          z.describe('Who may view the challenges page.')
+        ),
+        scores: example(z.enum(PageAccess), PageAccess.Public).check(
+          z.describe('Who may view the scoreboard page.')
+        ),
+      })
+      .check(z.describe('Access level required for each page.')),
     userMembers: example(z.boolean(), true).check(
       z.describe('Whether teams may add individual members.')
     ),

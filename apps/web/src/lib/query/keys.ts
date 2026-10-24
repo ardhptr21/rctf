@@ -37,6 +37,8 @@ export const queryKeys = {
   leaderboard: (params: { limit: number; offset: number; division?: string }) =>
     ['leaderboard', params] as const,
   leaderboardChallenges: ['leaderboard', 'challenges'] as const,
+  leaderboardLive: (params: { division?: string }) =>
+    ['leaderboard', 'live', params] as const,
   leaderboardWithGraph: (params: {
     division?: string
     search?: string

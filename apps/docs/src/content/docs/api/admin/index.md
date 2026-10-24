@@ -31,6 +31,7 @@ aside: true
 | [Filter submissions](/api/admin/submission-filter/) | `<route>POST /api/v2/admin/submissions</route>` |
 | [Read settings](/api/admin/settings/) | `<route>GET /api/v2/admin/settings</route>` |
 | [Update settings](/api/admin/settings-update/) | `<route>PUT /api/v2/admin/settings</route>` |
+| [Live leaderboard](/api/admin/live-leaderboard/) | `<route>GET /api/v2/admin/leaderboard/live</route>` |
 | [Instancer schema](/api/admin/instancer-schema/) | `<route>GET /api/v2/admin/instancer/schema</route>` |
 | [Admin instance status](/api/admin/instance-status/) | `<route>GET /api/v2/admin/challs/:id/instance</route>` |
 | [Admin start an instance](/api/admin/instance-start/) | `<route>PUT /api/v2/admin/challs/:id/instance</route>` |

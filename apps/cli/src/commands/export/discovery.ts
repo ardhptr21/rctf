@@ -1,4 +1,4 @@
-import type { ClientConfig } from '@rctf/types'
+import { PageAccess, type ClientConfig } from '@rctf/types'
 import type { Fetcher } from './fetcher.ts'
 import { writeApiResponse, writeDump } from './writer.ts'
 
@@ -59,6 +59,12 @@ export async function discoverAndFetch(options: {
   collectUrl(configData.meta.imageUrl, uploadUrls)
 
   configData.isArchived = true
+  // the archive is a static mirror, so every page is public and nothing is frozen
+  configData.pageAccess = {
+    challenges: PageAccess.Public,
+    scores: PageAccess.Public,
+  }
+  configData.scoreboardFreezeTime = null
   await writeApiResponse(
     outputDir,
     '/api/v2/integrations/client/config',

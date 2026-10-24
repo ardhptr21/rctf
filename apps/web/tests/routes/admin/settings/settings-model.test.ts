@@ -1,3 +1,4 @@
+import { PageAccess } from '@rctf/types'
 import {
   buildPatch,
   clampSelected,
@@ -10,6 +11,7 @@ import {
   resetGroup,
   sponsorPayload,
   sponsorsReducer,
+  validateFreeze,
   validateTiming,
   type SettingsFormState,
   type SponsorsState,
@@ -21,6 +23,12 @@ function cleanState(): SettingsFormState {
     ctfName: { value: '', dirty: false },
     faviconUrl: { value: '', dirty: false },
     timing: { startTime: null, endTime: null, dirty: false },
+    freeze: { time: null, dirty: false },
+    pageAccess: {
+      challenges: PageAccess.Public,
+      scores: PageAccess.Public,
+      dirty: false,
+    },
     logo: { light: '', dark: '', dirty: false },
     homeContent: { value: '', dirty: false },
     meta: { description: '', imageUrl: '', dirty: false },
@@ -519,5 +527,48 @@ describe('groupMatchesDefaults', () => {
     expect(groupMatchesDefaults(state, 'sponsors', defaults)).toBe(true)
     state.sponsors.list = []
     expect(groupMatchesDefaults(state, 'sponsors', defaults)).toBe(false)
+  })
+})
+
+describe('freeze and page access settings', () => {
+  it('sends the freeze time when edited', () => {
+    const state = cleanState()
+    state.freeze = { time: 1500, dirty: true }
+    expect(buildPatch(state, {})).toEqual({ scoreboardFreezeTime: 1500 })
+  })
+
+  it('clears the freeze override when it matches the default', () => {
+    const state = cleanState()
+    state.freeze = { time: null, dirty: true }
+    expect(buildPatch(state, {})).toEqual({ scoreboardFreezeTime: null })
+  })
+
+  it('sends both page access levels when either is edited', () => {
+    const state = cleanState()
+    state.pageAccess = {
+      challenges: PageAccess.Private,
+      scores: PageAccess.Public,
+      dirty: true,
+    }
+    expect(buildPatch(state, {})).toEqual({
+      pageAccess: {
+        challenges: PageAccess.Private,
+        scores: PageAccess.Public,
+      },
+    })
+  })
+
+  it('clears the page access override when it matches the defaults', () => {
+    const state = cleanState()
+    state.pageAccess.dirty = true
+    expect(buildPatch(state, {})).toEqual({ pageAccess: null })
+  })
+
+  it('validates the freeze time against the event window', () => {
+    expect(validateFreeze(null, 1000, 2000)).toBeNull()
+    expect(validateFreeze(1500, 1000, 2000)).toBeNull()
+    expect(validateFreeze(1000, 1000, 2000)).toBeNull()
+    expect(validateFreeze(999, 1000, 2000)).not.toBeNull()
+    expect(validateFreeze(2000, 1000, 2000)).not.toBeNull()
   })
 })

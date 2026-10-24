@@ -24,6 +24,8 @@ import {
   BadPerms,
   BadRecaptchaCode,
   BadToken,
+  PageAccess,
+  type AccessControlledPage,
 } from '@rctf/types'
 import type { Handler } from 'hono'
 import type { ContentfulStatusCode } from 'hono/utils/http-status'
@@ -31,6 +33,8 @@ import { z } from 'zod/mini'
 import { getCachedUser, setCachedUser } from '../cache/auth-cache'
 import {
   getCompetitionTiming,
+  getResolvedSettings,
+  isAdminUser,
   type CompetitionTiming,
 } from '../services/settings'
 import { getUser } from '../services/users'
@@ -251,7 +255,8 @@ export const declareRouter = <
       definition.authRequired || (definition.permissions ?? 0) !== 0
     const wantsOptionalAuth =
       definition.optionalAuth === true ||
-      definition.onlyWhenStartedPermissionsBypass !== undefined
+      definition.onlyWhenStartedPermissionsBypass !== undefined ||
+      definition.pageAccess !== undefined
 
     if (requiresAuth) {
       user = await getAuthenticatedUser(context)
@@ -271,6 +276,20 @@ export const declareRouter = <
       }
     } else if (wantsOptionalAuth) {
       user = await getAuthenticatedUser(context)
+    }
+
+    if (definition.pageAccess) {
+      const { pageAccess } = await getResolvedSettings(
+        context.var.db,
+        context.var.redis
+      )
+      const access = pageAccess[definition.pageAccess as AccessControlledPage]
+      if (access !== PageAccess.Public && !user) {
+        return context.json(...respond.unauthorized())
+      }
+      if (access === PageAccess.Admin && !isAdminUser(user)) {
+        return context.json(...respond.accessDenied())
+      }
     }
 
     if (

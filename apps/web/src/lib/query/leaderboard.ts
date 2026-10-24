@@ -1,4 +1,5 @@
 import {
+  GetAdminLiveLeaderboardRouteV2,
   GetLeaderboardChallengesRouteV2,
   GetLeaderboardGraphRouteV2,
   GetLeaderboardRouteV2,
@@ -48,6 +49,8 @@ export type LeaderboardFilters = {
   division?: string
   search?: string
   challenge?: string
+  // admin-only live standings that ignore the scoreboard freeze; no graph
+  live?: boolean
 }
 
 export type LeaderboardParams = {
@@ -80,10 +83,24 @@ export function excludeSanityChallenges<T extends { category: string }>(
 
 export function useLeaderboardWithGraph(filters: () => LeaderboardFilters) {
   return createInfiniteQuery(() => {
-    const { division, search, challenge } = filters()
+    const { division, search, challenge, live } = filters()
     return {
-      queryKey: queryKeys.leaderboardWithGraph({ division, search, challenge }),
-      queryFn: async ({ pageParam }) => {
+      queryKey: live
+        ? queryKeys.leaderboardLive({ division })
+        : queryKeys.leaderboardWithGraph({ division, search, challenge }),
+      queryFn: async ({ pageParam }): Promise<LeaderboardWithGraphPage> => {
+        if (live) {
+          const response = await apiRequest(GetAdminLiveLeaderboardRouteV2, {
+            limit: INFINITE_PAGE_SIZE,
+            offset: pageParam,
+            ...(division !== undefined ? { division } : {}),
+          })
+          return {
+            ...unwrapData(response, GoodLeaderboardV2),
+            graph: [],
+            offset: pageParam,
+          }
+        }
         const response = await apiRequest(GetLeaderboardWithGraphRoute, {
           limit: INFINITE_PAGE_SIZE,
           offset: pageParam,

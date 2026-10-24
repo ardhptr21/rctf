@@ -34,10 +34,11 @@ export type FullUser = Omit<User, 'email' | 'ctftimeId'> & {
 
 export const getFullUser = async (
   db: DatabaseClient,
-  user: User
+  user: User,
+  solveCutoff: number | null = null
 ): Promise<FullUser> => {
   const [solves, freshRanks, dynamicScoresByUser] = await Promise.all([
-    getUserChallengeSolves(db, user.id),
+    getUserChallengeSolves(db, user.id, solveCutoff),
     db
       .select({
         score: users.score,
@@ -124,11 +125,12 @@ export const getFullUser = async (
 
 export const getFullUserFromId = async (
   db: DatabaseClient,
-  id: string
+  id: string,
+  solveCutoff: number | null = null
 ): Promise<FullUser | undefined> => {
   const user = await getUser(db, id)
   if (!user || user.banned) {
     return undefined
   }
-  return await getFullUser(db, user)
+  return await getFullUser(db, user, solveCutoff)
 }

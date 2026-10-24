@@ -4,7 +4,7 @@ import { challenges, solves, users } from '@rctf/db'
 import { takeUnique } from '@rctf/db/util'
 import type { ScoreContext } from '@rctf/scoring/base'
 import { ChallengeScoringKind } from '@rctf/types'
-import { and, asc, inArray, sql } from 'drizzle-orm'
+import { and, asc, inArray, lte, sql } from 'drizzle-orm'
 import type {
   CalculatedLeaderboard,
   InternalChallengeInfo,
@@ -19,7 +19,11 @@ import {
   nonBannedUserJoin,
   scoringKindOf,
 } from './challenge-queries'
-import { getCompetitionTiming, type CompetitionTiming } from './settings'
+import {
+  getResolvedSettings,
+  getScoreboardFreezeCutoff,
+  type CompetitionTiming,
+} from './settings'
 
 const numberOfBloods = 3
 
@@ -45,13 +49,17 @@ const buildScoreContext = (
   firstSolveTime: ch.firstSolveTime,
 })
 
-const timingFingerprint = (timing: CompetitionTiming): string =>
-  `${timing.startTime}:${timing.endTime}`
+const timingFingerprint = (
+  timing: CompetitionTiming,
+  solveCutoff: number | null
+): string => `${timing.startTime}:${timing.endTime}:${solveCutoff ?? ''}`
 
 type LeaderboardRuntimeState = {
   providerIdentity: string
   timingFingerprint: string
   challengesFingerprint: string
+  // solves created after this time are ignored while the scoreboard is frozen
+  solveCutoff: number | null
   userInfos: Map<string, ExtendedUserInfo>
   challengeInfos: Map<string, ExtendedChallengeInfo>
   firstBloods: Map<string, string[]>
@@ -103,6 +111,7 @@ type LeaderboardRebuildSeed = {
   providerIdentity: string
   timingFingerprint: string
   challengesFingerprint: string
+  solveCutoff: number | null
   dbUsers: UserSnapshot[]
   dbChallenges: PublicChallengeSnapshot[]
 }
@@ -186,19 +195,29 @@ const getPublicChallengesSnapshot = (
     .where(challengeIsPublicSql)
     .orderBy(asc(challenges.id))
 
-const getSolveCount = async (db: DatabaseClient): Promise<number> =>
+const solveCutoffFilter = (solveCutoff: number | null) =>
+  solveCutoff === null
+    ? undefined
+    : lte(solves.createdat, new Date(solveCutoff).toISOString())
+
+const getSolveCount = async (
+  db: DatabaseClient,
+  solveCutoff: number | null
+): Promise<number> =>
   (
     await db
       .select({
         count: sql<number>`count(*)::int`,
       })
       .from(solves)
+      .where(solveCutoffFilter(solveCutoff))
       .then(takeUnique)
   )?.count ?? 0
 
 const getSolvesAfterCursor = (
   db: DatabaseClient,
-  cursor: RowCursor | null
+  cursor: RowCursor | null,
+  solveCutoff: number | null
 ): Promise<SolveRow[]> =>
   db
     .select({
@@ -210,7 +229,12 @@ const getSolvesAfterCursor = (
       pointsUpdatedAt: solves.pointsUpdatedAt,
     })
     .from(solves)
-    .where(cursorAfter(solves.createdat, solves.id, cursor))
+    .where(
+      and(
+        cursorAfter(solves.createdat, solves.id, cursor),
+        solveCutoffFilter(solveCutoff)
+      )
+    )
     .orderBy(asc(solves.createdat), asc(solves.id))
 
 const patchUsers = (
@@ -289,6 +313,7 @@ const createRuntimeState = (
     providerIdentity: seed.providerIdentity,
     timingFingerprint: seed.timingFingerprint,
     challengesFingerprint: seed.challengesFingerprint,
+    solveCutoff: seed.solveCutoff,
     userInfos,
     challengeInfos,
     firstBloods: new Map<string, string[]>(),
@@ -583,7 +608,7 @@ const rebuildRuntimeState = async (
   timing: CompetitionTiming
 ): Promise<LeaderboardRuntimeState> => {
   const state = createRuntimeState(seed, timing)
-  const allSolves = await getSolvesAfterCursor(db, null)
+  const allSolves = await getSolvesAfterCursor(db, null, seed.solveCutoff)
 
   const batchResult = processSolveBatch(state, allSolves, now, timing)
   state.processedSolveCount = batchResult.consumedSolveCount
@@ -595,22 +620,34 @@ const rebuildRuntimeState = async (
 export const getCurrentScoreProviderIdentity = (): string =>
   `${config.scoreProvider.name}@${scoreProvider.revision}`
 
+type LeaderboardOptions = {
+  // compute live standings even while the scoreboard is frozen
+  ignoreFreeze?: boolean
+}
+
 const loadLeaderboardSeed = async (
   db: DatabaseClient,
   redis: TypedRedis | undefined,
-  providerIdentity = getCurrentScoreProviderIdentity()
+  now: number,
+  providerIdentity = getCurrentScoreProviderIdentity(),
+  opts: LeaderboardOptions = {}
 ): Promise<{ seed: LeaderboardRebuildSeed; timing: CompetitionTiming }> => {
-  const [dbUsers, dbChallenges, timing] = await Promise.all([
+  const [dbUsers, dbChallenges, resolved] = await Promise.all([
     getUsersSnapshot(db),
     getPublicChallengesSnapshot(db),
-    getCompetitionTiming(db, redis),
+    getResolvedSettings(db, redis),
   ])
+  const timing = { startTime: resolved.startTime, endTime: resolved.endTime }
+  const solveCutoff = opts.ignoreFreeze
+    ? null
+    : getScoreboardFreezeCutoff(resolved, now)
   return {
     timing,
     seed: {
       providerIdentity,
-      timingFingerprint: timingFingerprint(timing),
+      timingFingerprint: timingFingerprint(timing, solveCutoff),
       challengesFingerprint: buildChallengesFingerprint(dbChallenges),
+      solveCutoff,
       dbUsers,
       dbChallenges,
     },
@@ -619,10 +656,17 @@ const loadLeaderboardSeed = async (
 
 export const calculateLeaderboard = async (
   db: DatabaseClient,
-  redis?: TypedRedis
+  redis?: TypedRedis,
+  opts: LeaderboardOptions = {}
 ): Promise<CalculatedLeaderboard> => {
   const now = Date.now()
-  const { seed, timing } = await loadLeaderboardSeed(db, redis)
+  const { seed, timing } = await loadLeaderboardSeed(
+    db,
+    redis,
+    now,
+    undefined,
+    opts
+  )
   const runtimeState = await rebuildRuntimeState(db, seed, now, timing)
   return cloneCalculatedLeaderboard(runtimeState)
 }
@@ -639,11 +683,12 @@ export const createCachedLeaderboardCalculator = (redis?: TypedRedis) => {
     const { seed, timing } = await loadLeaderboardSeed(
       db,
       redis,
+      now,
       providerIdentity
     )
 
     const rebuild = async (): Promise<CachedLeaderboardComputation> => {
-      const fresh = await loadLeaderboardSeed(db, redis, providerIdentity)
+      const fresh = await loadLeaderboardSeed(db, redis, now, providerIdentity)
       state = await rebuildRuntimeState(db, fresh.seed, now, fresh.timing)
 
       return {
@@ -667,10 +712,14 @@ export const createCachedLeaderboardCalculator = (redis?: TypedRedis) => {
       return await rebuild()
     }
 
-    const deltaSolves = await getSolvesAfterCursor(db, state.lastSolveCursor)
+    const deltaSolves = await getSolvesAfterCursor(
+      db,
+      state.lastSolveCursor,
+      state.solveCutoff
+    )
 
     if (deltaSolves.length === 0) {
-      const totalSolves = await getSolveCount(db)
+      const totalSolves = await getSolveCount(db, state.solveCutoff)
       if (totalSolves !== state.processedSolveCount) {
         return await rebuild()
       }
@@ -686,7 +735,7 @@ export const createCachedLeaderboardCalculator = (redis?: TypedRedis) => {
       }
     }
 
-    const totalSolves = await getSolveCount(db)
+    const totalSolves = await getSolveCount(db, state.solveCutoff)
     const expectedDelta = totalSolves - state.processedSolveCount
     if (deltaSolves.length !== expectedDelta) {
       return await rebuild()
@@ -724,6 +773,11 @@ const refreshDynamicContribs = async (
   state: LeaderboardRuntimeState,
   timing: CompetitionTiming
 ): Promise<RefreshResult> => {
+  // dynamic point updates after the freeze would leak live standings
+  if (state.solveCutoff !== null) {
+    return { changed: false, needsRebuild: false }
+  }
+
   const dynamicIds = getDynamicChallengeIds(state)
   if (dynamicIds.length === 0) {
     return { changed: false, needsRebuild: false }

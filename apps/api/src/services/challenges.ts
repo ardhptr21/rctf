@@ -31,7 +31,19 @@ import {
   SubmissionKind,
   SubmissionResult,
 } from '@rctf/types'
-import { and, asc, count, desc, eq, inArray, max, sql, sum } from 'drizzle-orm'
+import {
+  and,
+  asc,
+  count,
+  desc,
+  eq,
+  inArray,
+  lte,
+  max,
+  or,
+  sql,
+  sum,
+} from 'drizzle-orm'
 import type { PinoLogger } from 'hono-pino'
 import type { TypedRedis } from '../cache/scripts'
 import { inJsonbArrayPlaceholder } from '../lib/db-bulk'
@@ -47,7 +59,11 @@ import {
   userIsNotBanned,
 } from './challenge-queries'
 import { rateLimitFlag } from './rate-limit'
-import { getCompetitionTiming } from './settings'
+import {
+  getCompetitionTiming,
+  getResolvedSettings,
+  getScoreboardFreezeCutoff,
+} from './settings'
 import { createSubmission } from './submissions'
 import { getUser } from './users'
 
@@ -118,9 +134,29 @@ type ChallengeSolvesWithPosition = {
   total: number
 }
 
+// While the scoreboard is frozen, solves after the cutoff stay hidden from
+// other users; `viewerId` still sees their own.
+const solveVisibleSql = (
+  solveCutoff: number | null,
+  viewerId: string | null = null
+) => {
+  if (solveCutoff === null) {
+    return undefined
+  }
+  const beforeCutoff = lte(
+    solves.createdat,
+    new Date(solveCutoff).toISOString()
+  )
+  return viewerId === null
+    ? beforeCutoff
+    : or(beforeCutoff, eq(solves.userid, viewerId))
+}
+
 const createRankedSolvesForChallenges = (
   db: DatabaseClient,
-  challengeIds: string[]
+  challengeIds: string[],
+  solveCutoff: number | null = null,
+  viewerId: string | null = null
 ) =>
   db.$with('ranked').as(
     db
@@ -144,7 +180,8 @@ const createRankedSolvesForChallenges = (
       .where(
         and(
           inArray(solves.challengeid, challengeIds),
-          eq(solves.source, 'flag')
+          eq(solves.source, 'flag'),
+          solveVisibleSql(solveCutoff, viewerId)
         )
       )
   )
@@ -537,7 +574,8 @@ export const getChallengeSolves = async (
   db: DatabaseClient,
   challengeId: string,
   limit: number,
-  offset: number
+  offset: number,
+  solveCutoff: number | null = null
 ): Promise<
   { solve: Solve; userName: string; userAvatarUrl: string | null }[]
 > => {
@@ -549,7 +587,13 @@ export const getChallengeSolves = async (
     })
     .from(solves)
     .innerJoin(users, nonBannedUserJoin(solves.userid))
-    .where(and(eq(solves.challengeid, challengeId), eq(solves.source, 'flag')))
+    .where(
+      and(
+        eq(solves.challengeid, challengeId),
+        eq(solves.source, 'flag'),
+        solveVisibleSql(solveCutoff)
+      )
+    )
     .orderBy(asc(solves.createdat))
     .limit(limit)
     .offset(offset)
@@ -561,7 +605,10 @@ export const getChallengeSolvesWithPosition = async (
   userId: string | null,
   limit: number,
   offset: number,
-  { includeHidden = false }: { includeHidden?: boolean } = {}
+  {
+    includeHidden = false,
+    solveCutoff = null,
+  }: { includeHidden?: boolean; solveCutoff?: number | null } = {}
 ): Promise<ChallengeSolvesWithPosition> => {
   const challenge = includeHidden
     ? await getPrivateChallenge(db, challengeId)
@@ -575,7 +622,12 @@ export const getChallengeSolvesWithPosition = async (
     }
   }
 
-  const ranked = createRankedSolvesForChallenges(db, [challengeId])
+  const ranked = createRankedSolvesForChallenges(
+    db,
+    [challengeId],
+    solveCutoff,
+    userId
+  )
   const rows = await db
     .with(ranked)
     .select({
@@ -865,7 +917,8 @@ export const getChallengeScoresGraph = async (
 
 export const getUserChallengeSolves = async (
   db: DatabaseClient,
-  userId: string
+  userId: string,
+  solveCutoff: number | null = null
 ): Promise<
   { solve: Solve; challengeData: ChallengeData; bloodIndex: number | null }[]
 > => {
@@ -875,7 +928,13 @@ export const getUserChallengeSolves = async (
         challengeId: sql<string>`${solves.challengeid}`.as('uc_cid'),
       })
       .from(solves)
-      .where(and(eq(solves.userid, userId), eq(solves.source, 'flag')))
+      .where(
+        and(
+          eq(solves.userid, userId),
+          eq(solves.source, 'flag'),
+          solveVisibleSql(solveCutoff)
+        )
+      )
   )
 
   const ranked = db.$with('ranked').as(
@@ -894,7 +953,7 @@ export const getUserChallengeSolves = async (
         userChallenges,
         eq(userChallenges.challengeId, solves.challengeid)
       )
-      .where(eq(solves.source, 'flag'))
+      .where(and(eq(solves.source, 'flag'), solveVisibleSql(solveCutoff)))
   )
 
   return await db
@@ -913,7 +972,13 @@ export const getUserChallengeSolves = async (
     )
     .innerJoin(users, nonBannedUserJoin(solves.userid))
     .leftJoin(ranked, eq(ranked.solveId, solves.id))
-    .where(and(eq(solves.userid, userId), eq(solves.source, 'flag')))
+    .where(
+      and(
+        eq(solves.userid, userId),
+        eq(solves.source, 'flag'),
+        solveVisibleSql(solveCutoff)
+      )
+    )
     .orderBy(desc(solves.createdat))
 }
 
@@ -933,7 +998,8 @@ const preparedLeaderboardSolves = preparedPerDb(db =>
       and(
         inJsonbArrayPlaceholder(solves.userid, sql.placeholder('userIds')),
         challengeIsPublicSql,
-        eq(solves.source, 'flag')
+        eq(solves.source, 'flag'),
+        sql`${solves.createdat} <= COALESCE(${sql.placeholder('solveCutoff')}::timestamptz, 'infinity'::timestamptz)`
       )
     )
     .groupBy(solves.userid)
@@ -960,7 +1026,8 @@ const preparedLeaderboardUserInfo = preparedPerDb(db =>
 
 export const getLeaderboardChallengeData = async (
   db: DatabaseClient,
-  userIds: string[]
+  userIds: string[],
+  solveCutoff: number | null = null
 ): Promise<LeaderboardChallengeData> => {
   if (userIds.length === 0) {
     return {
@@ -972,7 +1039,11 @@ export const getLeaderboardChallengeData = async (
 
   const userIdsJson = JSON.stringify(userIds)
   const [solveRows, userRows, dynamicScores] = await Promise.all([
-    preparedLeaderboardSolves(db).execute({ userIds: userIdsJson }),
+    preparedLeaderboardSolves(db).execute({
+      userIds: userIdsJson,
+      solveCutoff:
+        solveCutoff === null ? null : new Date(solveCutoff).toISOString(),
+    }),
     preparedLeaderboardUserInfo(db).execute({ userIds: userIdsJson }),
     getDynamicScoresForUsers(db, userIds),
   ])
@@ -1270,7 +1341,10 @@ export const submitFlag = async (
     return res.badChallenge()
   }
 
-  if (shouldNotifyBloodbot(bloodNumber)) {
+  // announcing bloods during a freeze would reveal post-freeze solves
+  const frozen =
+    getScoreboardFreezeCutoff(await getResolvedSettings(db, redis)) !== null
+  if (!frozen && shouldNotifyBloodbot(bloodNumber)) {
     getUser(db, params.userId)
       .then(user => {
         return sendBloodMessage(user!, challenge.data, bloodNumber)

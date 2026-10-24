@@ -2,6 +2,7 @@
   import {
     GoodAdminSettingsUpdate,
     GoodFilesUploadV2,
+    PageAccess,
     Permissions,
     UpdateAdminSettingsRouteV2,
     UploadFilesRouteV2,
@@ -10,6 +11,7 @@
   import { apiRequest, showApiError } from '$lib/api'
   import wordmarkDark from '$lib/assets/wordmark-dark.svg'
   import wordmarkLight from '$lib/assets/wordmark-light.svg'
+  import DivisionMenu from '$lib/components/division-menu.svelte'
   import MarkdownEditor from '$lib/components/markdown-editor.svelte'
   import { IconWarningCircle, IconX } from '$lib/icons'
   import { useAdminSettings } from '$lib/query/admin'
@@ -21,6 +23,7 @@
   import Card from '$lib/ui/card.svelte'
   import Field from '$lib/ui/field.svelte'
   import Input from '$lib/ui/input.svelte'
+  import type { MenuItem } from '$lib/ui/menu.svelte'
   import Spinner from '$lib/ui/spinner.svelte'
   import StatusCard from '$lib/ui/status-card.svelte'
   import { hasPermissions } from '$lib/utils/permissions'
@@ -35,6 +38,7 @@
     parseDatetimeLocal,
     resetGroup,
     sponsorsReducer,
+    validateFreeze,
     validateTiming,
     type SettingsFormState,
     type SponsorAction,
@@ -98,7 +102,39 @@
         )
       : null
   )
+  const freezeError = $derived(
+    form
+      ? validateFreeze(
+          form.freeze.time,
+          form.timing.startTime,
+          form.timing.endTime
+        )
+      : null
+  )
   const selectedSponsor = $derived(form?.sponsors.list[sponsorSelected])
+
+  const pageAccessLabels: Record<PageAccess, string> = {
+    [PageAccess.Public]: 'Public (anyone)',
+    [PageAccess.Private]: 'Private (signed-in teams)',
+    [PageAccess.Admin]: 'Admin only',
+  }
+  const pageAccessTargets = [
+    { key: 'challenges' as const, label: 'Challenges page' },
+    { key: 'scores' as const, label: 'Scoreboard page' },
+  ]
+
+  function pageAccessItems(key: 'challenges' | 'scores'): MenuItem[] {
+    return Object.values(PageAccess).map(value => ({
+      value,
+      label: pageAccessLabels[value],
+      checked: form?.pageAccess[key] === value,
+      onSelect: () => {
+        if (!form) return
+        form.pageAccess[key] = value
+        markGroup('pageAccess')
+      },
+    }))
+  }
 
   function markGroup(key: keyof SettingsFormState) {
     if (!form) return
@@ -114,6 +150,16 @@
   function resetTiming() {
     if (!form || !defaults) return
     form.timing = resetGroup(defaults, 'timing')
+  }
+
+  function resetFreeze() {
+    if (!form || !defaults) return
+    form.freeze = resetGroup(defaults, 'freeze')
+  }
+
+  function resetPageAccess() {
+    if (!form || !defaults) return
+    form.pageAccess = resetGroup(defaults, 'pageAccess')
   }
 
   function resetLogo() {
@@ -217,6 +263,15 @@
     )
     if (error) {
       toast.error(error)
+      return
+    }
+    const freezeValidation = validateFreeze(
+      form.freeze.time,
+      form.timing.startTime,
+      form.timing.endTime
+    )
+    if (freezeValidation) {
+      toast.error(freezeValidation)
       return
     }
     const patch = buildPatch(form, defaults)
@@ -353,6 +408,54 @@
           {#if timingError}
             <field-error role="alert">{timingError}</field-error>
           {/if}
+        </group-body>
+      </settings-group>
+
+      <settings-group>
+        {@render groupHeader('Scoreboard freeze', resetFreeze)}
+        <group-body>
+          <Field
+            label="Freeze at (local time)"
+            description="Standings stop updating for teams at this time and are revealed when the CTF ends. Leave empty to disable."
+          >
+            {#snippet children({ id, describedBy })}
+              <Input
+                {id}
+                aria-describedby={describedBy}
+                type="datetime-local"
+                value={formatDatetimeLocal(settingsForm.freeze.time)}
+                onchange={e => {
+                  settingsForm.freeze.time = parseDatetimeLocal(
+                    e.currentTarget.value
+                  )
+                  markGroup('freeze')
+                }}
+              />
+            {/snippet}
+          </Field>
+          {#if freezeError}
+            <field-error role="alert">{freezeError}</field-error>
+          {/if}
+        </group-body>
+      </settings-group>
+
+      <settings-group>
+        {@render groupHeader('Page access', resetPageAccess)}
+        <group-body>
+          {#each pageAccessTargets as target (target.key)}
+            <Field label={target.label}>
+              {#snippet children({ describedBy })}
+                <DivisionMenu
+                  label={`Select ${target.label.toLowerCase()} access`}
+                  items={pageAccessItems(target.key)}
+                  selectedLabel={pageAccessLabels[
+                    settingsForm.pageAccess[target.key]
+                  ]}
+                  {describedBy}
+                />
+              {/snippet}
+            </Field>
+          {/each}
         </group-body>
       </settings-group>
 

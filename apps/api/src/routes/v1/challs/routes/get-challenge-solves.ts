@@ -4,11 +4,12 @@ import {
   getChallenge,
   getChallengeSolves,
 } from '../../../../services/challenges'
+import { getFreezeCutoffForViewer } from '../../../../services/settings'
 import challsGroup from '../group'
 
 challsGroup.route(
   GetChallengeSolvesRoute,
-  async ({ res, ctx, params, query }) => {
+  async ({ res, ctx, params, query, user }) => {
     // NOTE: Handling manually because the values are loaded from config
     if (
       query.limit > config.leaderboard.maxLimit ||
@@ -19,9 +20,20 @@ challsGroup.route(
       })
     }
 
+    const solveCutoff = await getFreezeCutoffForViewer(
+      ctx.var.db,
+      ctx.var.redis,
+      user
+    )
     const [challenge, solves] = await Promise.all([
       getChallenge(ctx.var.db, params.id),
-      getChallengeSolves(ctx.var.db, params.id, query.limit, query.offset),
+      getChallengeSolves(
+        ctx.var.db,
+        params.id,
+        query.limit,
+        query.offset,
+        solveCutoff
+      ),
     ])
 
     if (!challenge) {

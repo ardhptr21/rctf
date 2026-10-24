@@ -6,6 +6,10 @@ import {
   challengeIsPublicSql,
   scoringKindOf,
 } from '../../../../services/challenge-queries'
+import {
+  getResolvedSettings,
+  getScoreboardFreezeCutoff,
+} from '../../../../services/settings'
 import leaderboardGroup from '../group'
 
 const preparedLeaderboardChallenges = preparedPerDb(db =>
@@ -25,6 +29,7 @@ const preparedLeaderboardChallenges = preparedPerDb(db =>
             WHERE solves.challengeid = challenges.id
               AND solves.source = 'flag'
               AND "users".banned = false
+              AND solves.createdat <= COALESCE(${sql.placeholder('solveCutoff')}::timestamptz, 'infinity'::timestamptz)
             ORDER BY solves.createdat ASC, solves.id ASC
             LIMIT 3
           ) AS first_blood
@@ -39,7 +44,14 @@ const preparedLeaderboardChallenges = preparedPerDb(db =>
 leaderboardGroup.route(
   GetLeaderboardChallengesRouteV2,
   async ({ ctx, res }) => {
-    const rows = await preparedLeaderboardChallenges(ctx.var.db).execute()
+    // bloods after the freeze would reveal post-freeze solves
+    const solveCutoff = getScoreboardFreezeCutoff(
+      await getResolvedSettings(ctx.var.db, ctx.var.redis)
+    )
+    const rows = await preparedLeaderboardChallenges(ctx.var.db).execute({
+      solveCutoff:
+        solveCutoff === null ? null : new Date(solveCutoff).toISOString(),
+    })
 
     return res.goodLeaderboardChallengesV2({
       challenges: Object.fromEntries(

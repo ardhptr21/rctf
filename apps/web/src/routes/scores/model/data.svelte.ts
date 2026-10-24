@@ -29,6 +29,7 @@ interface ScoresDataConfig {
   focusedChallengeId: () => string | null
   showTop3Context: () => boolean
   showSelfContext: () => boolean
+  live?: () => boolean
 }
 
 export function createScoresData(config: ScoresDataConfig) {
@@ -36,6 +37,7 @@ export function createScoresData(config: ScoresDataConfig) {
     division: config.division(),
     search: config.search(),
     challenge: config.focusedChallengeId() ?? undefined,
+    live: config.live?.() ?? false,
   }))
   const challengesQuery = useLeaderboardChallenges()
   const userQuery = useCurrentUser()

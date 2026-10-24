@@ -1,11 +1,12 @@
 import {
   normalizeSponsorIcons,
   NumericString,
+  PageAccess,
   ProtectedAction,
 } from '@rctf/types'
 import { z } from 'zod/mini'
 
-export { ProtectedAction }
+export { PageAccess, ProtectedAction }
 
 export const ProviderConfigSchema = z.object({
   name: z.string(),
@@ -81,6 +82,16 @@ export const ServerConfigSchema = z.object({
   // CTF timing
   startTime: z.number(), // unix ms
   endTime: z.number(), // unix ms
+  scoreboardFreezeTime: z.optional(z.number()), // unix ms, lifts at endTime
+
+  // Page access
+  pageAccess: z.prefault(
+    z.object({
+      challenges: z._default(z.enum(PageAccess), PageAccess.Public),
+      scores: z._default(z.enum(PageAccess), PageAccess.Public),
+    }),
+    {}
+  ),
 
   // Divisions
   divisions: z._default(z.record(z.string(), z.string()), { open: 'Open' }), // id -> display name

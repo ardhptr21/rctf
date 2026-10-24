@@ -1,5 +1,6 @@
 import { ALL_REGIONS } from '@rctf/util'
 import { z } from 'zod/mini'
+import { PageAccess } from '../../enums/page-access'
 import { Permissions } from '../../enums/permissions'
 import { defineRoute } from '../../internal'
 import {
@@ -55,6 +56,7 @@ import {
   GoodInstancerActionResult,
   GoodInstancerSchema,
   GoodInstanceStatus,
+  GoodLeaderboardV2,
   GoodUploadsQueryV2,
 } from '../../responses'
 import {
@@ -731,6 +733,33 @@ export const FailAdminBotJobRouteV2 = defineRoute({
   params: z.object({ id: z.string().check(z.describe('Admin-bot job ID.')) }),
 })
 
+export const GetAdminLiveLeaderboardRouteV2 = defineRoute({
+  path: '/v2/admin/leaderboard/live',
+  method: 'GET',
+  goodResponses: [GoodLeaderboardV2],
+  badResponses: [BadBody, BadPerms, BadToken],
+  authRequired: true,
+  permissions: Permissions.leaderboardRead,
+  query: z.object({
+    // NOTE: Has max limits that are loaded from config
+    limit: z
+      .pipe(z.coerce.number(), z.int())
+      .check(z.gte(1))
+      .check(
+        z.describe(
+          'Maximum number of entries to return. Capped by deployment config.'
+        )
+      ),
+    offset: z
+      .pipe(z.coerce.number(), z.int())
+      .check(z.gte(0))
+      .check(z.describe('Number of leading entries to skip for pagination.')),
+    division: z.optional(
+      z.string().check(z.describe('Restrict results to a single division.'))
+    ),
+  }),
+})
+
 export const GetAdminSettingsRouteV2 = defineRoute({
   path: '/v2/admin/settings',
   method: 'GET',
@@ -754,6 +783,23 @@ const AdminSettingsUpdateBody = z.object({
       ),
       endTime: example(z.nullish(z.int()), 1710864000000).check(
         z.describe('CTF end time as a Unix ms timestamp.')
+      ),
+      scoreboardFreezeTime: example(z.nullish(z.int()), 1710777600000).check(
+        z.describe(
+          'Scoreboard freeze time as a Unix ms timestamp. Must fall within the event; the freeze lifts at the end time.'
+        )
+      ),
+      pageAccess: z.nullish(
+        z.object({
+          challenges: example(
+            z.optional(z.enum(PageAccess)),
+            PageAccess.Private
+          ).check(z.describe('Who may view the challenges page.')),
+          scores: example(
+            z.optional(z.enum(PageAccess)),
+            PageAccess.Public
+          ).check(z.describe('Who may view the scoreboard page.')),
+        })
       ),
       sponsors: z.nullish(z.array(SponsorUpdateSchemaV2)),
       meta: z.nullish(

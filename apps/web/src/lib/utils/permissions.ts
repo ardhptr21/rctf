@@ -1,7 +1,6 @@
-import { Permissions } from '@rctf/types'
+import { ADMIN_PERMISSIONS } from '@rctf/types'
 
-export const ADMIN_PANEL_PERMISSIONS =
-  Permissions.challsRead | Permissions.usersWrite | Permissions.settingsWrite
+export const ADMIN_PANEL_PERMISSIONS = ADMIN_PERMISSIONS
 
 export function hasPermissions(
   user: { perms: number | null | undefined } | undefined | null,

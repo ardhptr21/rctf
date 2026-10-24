@@ -1,18 +1,20 @@
 import { z } from 'zod/mini'
-import { Permissions } from '../../enums'
+import { AccessControlledPage, Permissions } from '../../enums'
 import { defineRoute } from '../../internal'
 import {
   BadBody,
   BadNotStarted,
   GoodLeaderboard,
   GoodLeaderboardGraph,
+  BadPerms,
+  BadToken,
 } from '../../responses'
 
 export const GetLeaderboardRoute = defineRoute({
   path: '/v1/leaderboard/now',
   method: 'GET',
   goodResponses: [GoodLeaderboard],
-  badResponses: [BadNotStarted, BadBody],
+  badResponses: [BadNotStarted, BadBody, BadPerms, BadToken],
   authRequired: false,
   query: z.object({
     // NOTE: Has max limits that are loaded from config
@@ -34,13 +36,14 @@ export const GetLeaderboardRoute = defineRoute({
   }),
   onlyWhenStarted: true,
   onlyWhenStartedPermissionsBypass: Permissions.leaderboardRead,
+  pageAccess: AccessControlledPage.Scores,
 })
 
 export const GetLeaderboardGraphRoute = defineRoute({
   path: '/v1/leaderboard/graph',
   method: 'GET',
   goodResponses: [GoodLeaderboardGraph],
-  badResponses: [BadNotStarted, BadBody],
+  badResponses: [BadNotStarted, BadBody, BadPerms, BadToken],
   authRequired: false,
   query: z.object({
     // NOTE: Has max limit that is loaded from config
@@ -58,4 +61,5 @@ export const GetLeaderboardGraphRoute = defineRoute({
   }),
   onlyWhenStarted: true,
   onlyWhenStartedPermissionsBypass: Permissions.leaderboardRead,
+  pageAccess: AccessControlledPage.Scores,
 })

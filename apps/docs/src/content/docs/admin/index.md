@@ -55,6 +55,8 @@ An account with `settingsWrite` can change the following settings without restar
 | CTF name          | Display name of the competition             |
 | CTF start time    | Competition start time                      |
 | CTF end time      | Competition end time                        |
+| Scoreboard freeze | Time when the scoreboard stops updating     |
+| Page access       | Who can view the challenges and scoreboard  |
 | Home content      | Home page markdown content                  |
 | Sponsors          | Sponsor list (name, icon, description, URL) |
 | Meta description  | HTML meta description                       |
@@ -65,3 +67,31 @@ An account with `settingsWrite` can change the following settings without restar
 These settings override values from the config files. Setting a value to `null{:ts}` reverts to the config file default.
 
 Start and end time overrides have to keep the start before the end. Runtime timing overrides are returned through the v2 client config.
+
+### Scoreboard freeze
+
+The scoreboard freeze hides the last part of the competition from teams. From the freeze time until the CTF ends, everything public shows the standings as of the freeze time: the leaderboard, the graph, team ranks and scores, challenge solve counts and points, per-challenge solver lists, first bloods, and other teams' profiles. Blood bot announcements are suppressed. Teams can still submit flags, and each team still sees its own solves.
+
+The freeze lifts automatically when the CTF ends and the leaderboard is recomputed from every solve. Clear the freeze time to lift it early. The freeze time has to fall between the start and end time.
+
+Admins with `leaderboardRead` can switch the scoreboard page to live standings during the freeze, or call the [live leaderboard](/api/admin/live-leaderboard/) route.
+
+:::note
+Points of dynamic-scoring challenges are not refreshed from feed updates during the freeze, and per-challenge dynamic score feeds are not frozen.
+:::
+
+### Page access
+
+Each of the challenges page and the scoreboard page has one of three access levels:
+
+| Level     | Who can view it                                                        |
+| --------- | ---------------------------------------------------------------------- |
+| `public`  | Anyone, without logging in (default)                                   |
+| `private` | Any logged-in team                                                     |
+| `admin`   | Accounts with an admin permission (`challsRead`, `usersWrite`, or `settingsWrite`) |
+
+The level applies to the page and to the API routes behind it: the challenge list and solver routes for the challenges page, and the leaderboard routes for the scoreboard page. Flag submission always requires a login.
+
+:::caution
+[`rctf export`](/admin/cli/) fetches pages without logging in. Set both pages to `public` before exporting an archive.
+:::

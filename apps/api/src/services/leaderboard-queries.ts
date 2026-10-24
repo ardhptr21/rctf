@@ -6,9 +6,12 @@ import {
   leaderboardOrderSql,
   userIsPublicRankedSql,
 } from '../cache/leaderboard'
+import type { TypedRedis } from '../cache/scripts'
 import { preparedPerDb } from '../lib/prepared'
 import { scoringKindOf } from './challenge-queries'
 import { getChallenge, getLeaderboardChallengeData } from './challenges'
+import { calculateLeaderboard } from './leaderboard-calculation'
+import { getResolvedSettings, getScoreboardFreezeCutoff } from './settings'
 import { userNameSearchFilter } from './users'
 
 type LeaderboardEntryRow = Pick<
@@ -27,7 +30,9 @@ const leaderboardEntrySelection = {
 
 const hydrateLeaderboardEntries = async (
   db: DatabaseClient,
-  entries: LeaderboardEntryRow[]
+  entries: LeaderboardEntryRow[],
+  // defaults to the current scoreboard freeze cutoff
+  solveCutoff?: number | null
 ) => {
   if (entries.length === 0) {
     return []
@@ -39,7 +44,11 @@ const hydrateLeaderboardEntries = async (
     userInfo,
   } = await getLeaderboardChallengeData(
     db,
-    entries.map(entry => entry.id)
+    entries.map(entry => entry.id),
+    // keep the solve matrix in line with the frozen standings
+    solveCutoff === undefined
+      ? getScoreboardFreezeCutoff(await getResolvedSettings(db))
+      : solveCutoff
   )
 
   return entries.map(entry => {
@@ -240,4 +249,74 @@ export const getLeaderboardWithFilters = (
   }
 
   return getLeaderboardWithTotal(db, limit, offset, division)
+}
+
+const LIVE_LEADERBOARD_CACHE_KEY = 'leaderboard:live'
+const LIVE_LEADERBOARD_CACHE_TTL = 10_000
+
+type LiveLeaderboardRow = Pick<
+  LeaderboardEntryRow,
+  'id' | 'name' | 'division' | 'score'
+>
+
+const getLiveLeaderboardRows = async (
+  db: DatabaseClient,
+  redis: TypedRedis
+): Promise<LiveLeaderboardRow[]> => {
+  const cached = await redis.get(LIVE_LEADERBOARD_CACHE_KEY)
+  if (cached) {
+    try {
+      return JSON.parse(cached) as LiveLeaderboardRow[]
+    } catch {
+      await redis.del(LIVE_LEADERBOARD_CACHE_KEY)
+    }
+  }
+
+  const calculated = await calculateLeaderboard(db, redis, {
+    ignoreFreeze: true,
+  })
+  const rows = calculated.users.map(user => ({
+    id: user.id,
+    name: user.name,
+    division: user.division ?? '',
+    score: user.score,
+  }))
+  await redis.set(
+    LIVE_LEADERBOARD_CACHE_KEY,
+    JSON.stringify(rows),
+    'PX',
+    LIVE_LEADERBOARD_CACHE_TTL
+  )
+  return rows
+}
+
+// Live standings that ignore the scoreboard freeze; admin-only.
+export const getLiveLeaderboardWithTotal = async (
+  db: DatabaseClient,
+  redis: TypedRedis,
+  limit: number,
+  offset: number,
+  division?: string
+) => {
+  const divisionCounters = new Map<string, number>()
+  const ranked: LeaderboardEntryRow[] = (
+    await getLiveLeaderboardRows(db, redis)
+  ).map((row, idx) => {
+    const divisionRank = (divisionCounters.get(row.division) ?? 0) + 1
+    divisionCounters.set(row.division, divisionRank)
+    return { ...row, globalRank: idx + 1, divisionRank }
+  })
+
+  const filtered = division
+    ? ranked.filter(row => row.division === division)
+    : ranked
+
+  return {
+    total: filtered.length,
+    leaderboard: await hydrateLeaderboardEntries(
+      db,
+      filtered.slice(offset, offset + limit),
+      null
+    ),
+  }
 }

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Permissions } from '@rctf/types'
+  import { PageAccess, Permissions } from '@rctf/types'
   import { useQueryClient } from '@tanstack/svelte-query'
   import { mergeProps } from '@zag-js/svelte'
   import wordmarkDark from '$lib/assets/wordmark-dark.svg'
@@ -26,6 +26,7 @@
   import Menu from '$lib/ui/menu.svelte'
   import Tooltip from '$lib/ui/tooltip.svelte'
   import { copyLoginUrl, logout } from '$lib/utils/auth'
+  import { decidePageGate } from '$lib/utils/page-gate'
   import { countryCodeToFlagFilename } from '$lib/utils/flags'
   import {
     ADMIN_PANEL_PERMISSIONS,
@@ -51,6 +52,16 @@
     hasPermissions(user, Permissions.settingsWrite)
   )
   const isAdmin = $derived(hasAnyPermission(user, ADMIN_PANEL_PERMISSIONS))
+  // admin-only pages are hidden from everyone else; private pages stay
+  // visible so logged-out visitors reach the login prompt
+  const showPage = (page: 'challenges' | 'scores') => {
+    const access = clientConfig?.pageAccess[page]
+    return (
+      access === PageAccess.Private || decidePageGate(access, user) === 'ok'
+    )
+  }
+  const showChallenges = $derived(showPage('challenges'))
+  const showScores = $derived(showPage('scores'))
 
   const lightLogo = $derived(clientConfig?.logoLightUrl || wordmarkLight)
   const darkLogo = $derived(clientConfig?.logoDarkUrl || wordmarkDark)
@@ -141,30 +152,34 @@
           />
         {/snippet}
       </Tooltip>
-      <Tooltip label="Challenges">
-        {#snippet children({ props })}
-          <NavigationButton
-            {...props}
-            data-roving
-            href="/challenges"
-            activePath="/challenges"
-            label="Challenges"
-            icon={IconFlagBannerFold}
-          />
-        {/snippet}
-      </Tooltip>
-      <Tooltip label="Scoreboard">
-        {#snippet children({ props })}
-          <NavigationButton
-            {...props}
-            data-roving
-            href="/scores"
-            activePath="/scores"
-            label="Scoreboard"
-            icon={IconGlobeHemisphereWest}
-          />
-        {/snippet}
-      </Tooltip>
+      {#if showChallenges}
+        <Tooltip label="Challenges">
+          {#snippet children({ props })}
+            <NavigationButton
+              {...props}
+              data-roving
+              href="/challenges"
+              activePath="/challenges"
+              label="Challenges"
+              icon={IconFlagBannerFold}
+            />
+          {/snippet}
+        </Tooltip>
+      {/if}
+      {#if showScores}
+        <Tooltip label="Scoreboard">
+          {#snippet children({ props })}
+            <NavigationButton
+              {...props}
+              data-roving
+              href="/scores"
+              activePath="/scores"
+              label="Scoreboard"
+              icon={IconGlobeHemisphereWest}
+            />
+          {/snippet}
+        </Tooltip>
+      {/if}
       {#if isAdmin}
         <Tooltip label="Admin">
           {#snippet children({ props: tooltipProps })}

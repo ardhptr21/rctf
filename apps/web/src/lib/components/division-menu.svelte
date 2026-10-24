@@ -7,12 +7,19 @@
     selectedLabel: string
     describedBy?: string | undefined
     disabled?: boolean
+    label?: string
   }
 
-  let { items, selectedLabel, describedBy, disabled = false }: Props = $props()
+  let {
+    items,
+    selectedLabel,
+    describedBy,
+    disabled = false,
+    label = 'Select division',
+  }: Props = $props()
 </script>
 
-<Menu label="Select division" {items} placement="bottom-start" sameWidth>
+<Menu {label} {items} placement="bottom-start" sameWidth>
   {#snippet trigger({ props })}
     <button {...props} type="button" aria-describedby={describedBy} {disabled}>
       <span>{selectedLabel}</span>

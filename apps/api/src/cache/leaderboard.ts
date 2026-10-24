@@ -1,10 +1,14 @@
 import { config } from '@rctf/config'
 import type { DatabaseClient } from '@rctf/db'
 import { challenges, scoreEvents, users } from '@rctf/db'
-import { and, asc, eq, gte, inArray, sql } from 'drizzle-orm'
+import { and, asc, eq, gte, inArray, lte, sql } from 'drizzle-orm'
 import { inJsonbArray } from '../lib/db-bulk'
 import { challengeIsPublicSql } from '../services/challenge-queries'
-import { getCompetitionTiming } from '../services/settings'
+import {
+  getCompetitionTiming,
+  getResolvedSettings,
+  getScoreboardFreezeCutoff,
+} from '../services/settings'
 import type { TypedRedis } from './scripts'
 
 const keyGraphUpdate = 'graph-update'
@@ -223,12 +227,15 @@ const buildGraphFromSamples = (
 const buildGraphFingerprint = (
   userIds: string[],
   challengeIds: string[],
-  endTime: number
+  endTime: number,
+  solveCutoff: number | null
 ): string =>
   JSON.stringify({
     users: [...userIds].sort(),
     challenges: [...challengeIds].sort(),
     endTime,
+    // only set while frozen, so unfrozen fingerprints stay stable
+    ...(solveCutoff !== null ? { solveCutoff } : {}),
   })
 
 const buildGraphCursor = (
@@ -253,6 +260,7 @@ const getScoreEventGraphRows = async (
   db: DatabaseClient,
   userIds: string[],
   challengeIds: string[],
+  solveCutoff: number | null,
   cursor: ScoreEventGraphCursor | null = null
 ): Promise<ScoreEventGraphRow[]> => {
   const rows = await db
@@ -267,7 +275,11 @@ const getScoreEventGraphRows = async (
       and(
         inJsonbArray(scoreEvents.userid, userIds),
         inArray(scoreEvents.challengeid, challengeIds),
-        cursor ? gte(scoreEvents.eventAt, cursor.time) : undefined
+        cursor ? gte(scoreEvents.eventAt, cursor.time) : undefined,
+        // while frozen, the graph stops at the freeze like the standings
+        solveCutoff === null
+          ? undefined
+          : lte(scoreEvents.eventAt, new Date(solveCutoff).toISOString())
       )
     )
     .orderBy(asc(scoreEvents.eventAt), asc(scoreEvents.id))
@@ -360,9 +372,16 @@ const cacheGraphIncremental = async (
   challengeIds: string[],
   fingerprint: string,
   cursor: ScoreEventGraphCursor,
-  endTime: number
+  endTime: number,
+  solveCutoff: number | null
 ): Promise<void> => {
-  const rows = await getScoreEventGraphRows(db, userIds, challengeIds, cursor)
+  const rows = await getScoreEventGraphRows(
+    db,
+    userIds,
+    challengeIds,
+    solveCutoff,
+    cursor
+  )
   if (rows.length === 0) {
     // no new events since the cursor: bump freshness only, cursor/fingerprint/source stay valid
     const stored = Number.parseInt((await redis.get(keyGraphUpdate)) ?? '0')
@@ -389,10 +408,17 @@ const cacheGraph = async (
   redis: TypedRedis,
   data: CalculatedLeaderboard
 ): Promise<void> => {
-  const { endTime } = await getCompetitionTiming(db, redis)
+  const resolved = await getResolvedSettings(db, redis)
+  const { endTime } = resolved
+  const solveCutoff = getScoreboardFreezeCutoff(resolved)
   const userIds = data.users.filter(u => u.hadAnySolve).map(u => u.id)
   const challengeIds = Array.from(data.challengeInfos.keys())
-  const fingerprint = buildGraphFingerprint(userIds, challengeIds, endTime)
+  const fingerprint = buildGraphFingerprint(
+    userIds,
+    challengeIds,
+    endTime,
+    solveCutoff
+  )
   const replaceGraph = (
     fold: GraphFold,
     cursor: ScoreEventGraphCursor | null,
@@ -413,11 +439,17 @@ const cacheGraph = async (
       challengeIds,
       fingerprint,
       cursor,
-      endTime
+      endTime,
+      solveCutoff
     )
   }
 
-  const rows = await getScoreEventGraphRows(db, userIds, challengeIds)
+  const rows = await getScoreEventGraphRows(
+    db,
+    userIds,
+    challengeIds,
+    solveCutoff
+  )
   if (rows.length > 0) {
     return replaceGraph(
       foldScoreEvents(rows, endTime),

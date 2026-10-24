@@ -1,5 +1,9 @@
 import { z } from 'zod/mini'
-import type { Permissions, ProtectedAction } from '../enums'
+import type {
+  AccessControlledPage,
+  Permissions,
+  ProtectedAction,
+} from '../enums'
 import type {
   ResponseBody,
   ResponseDefinition,
@@ -30,6 +34,8 @@ export interface RouteConfig {
   bodyFormat?: BodyFormat
   captchaAction?: ProtectedAction
   serviceAuth?: 'adminBot' | 'dynamicChallenge'
+  // gated by the page's access setting (public / private / admin)
+  pageAccess?: AccessControlledPage
 }
 
 export interface RouteDefinition<T extends RouteConfig = RouteConfig> {
@@ -67,6 +73,7 @@ export interface RouteDefinition<T extends RouteConfig = RouteConfig> {
     : 'json'
   readonly captchaAction: T['captchaAction']
   readonly serviceAuth: T['serviceAuth']
+  readonly pageAccess: T['pageAccess']
 }
 
 export function defineRoute<const T extends RouteConfig>(
@@ -99,6 +106,7 @@ export function defineRoute<const T extends RouteConfig>(
       'json') as RouteDefinition<T>['bodyFormat'],
     captchaAction: config.captchaAction,
     serviceAuth: config.serviceAuth,
+    pageAccess: config.pageAccess,
   } as RouteDefinition<T>
 }
 

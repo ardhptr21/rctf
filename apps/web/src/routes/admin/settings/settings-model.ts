@@ -1,3 +1,5 @@
+import { PageAccess } from '@rctf/types'
+
 export interface Sponsor {
   name: string
   iconLight: string
@@ -19,6 +21,8 @@ export interface AdminSettingsShape {
   faviconUrl?: string
   startTime?: number
   endTime?: number
+  scoreboardFreezeTime?: number
+  pageAccess?: { challenges?: PageAccess; scores?: PageAccess }
   homeContent?: string
   logoLightUrl?: string
   logoDarkUrl?: string
@@ -34,6 +38,17 @@ interface ScalarGroup {
 interface TimingGroup {
   startTime: number | null
   endTime: number | null
+  dirty: boolean
+}
+
+interface FreezeGroup {
+  time: number | null
+  dirty: boolean
+}
+
+interface PageAccessGroup {
+  challenges: PageAccess
+  scores: PageAccess
   dirty: boolean
 }
 
@@ -58,6 +73,8 @@ export interface SettingsFormState {
   ctfName: ScalarGroup
   faviconUrl: ScalarGroup
   timing: TimingGroup
+  freeze: FreezeGroup
+  pageAccess: PageAccessGroup
   logo: LogoGroup
   homeContent: ScalarGroup
   meta: MetaGroup
@@ -69,6 +86,8 @@ export interface SettingsPatch {
   faviconUrl?: string | null
   startTime?: number | null
   endTime?: number | null
+  scoreboardFreezeTime?: number | null
+  pageAccess?: { challenges: PageAccess; scores: PageAccess } | null
   homeContent?: string | null
   logoLightUrl?: string | null
   logoDarkUrl?: string | null
@@ -98,6 +117,21 @@ export function buildPatch(
     const matches = groupMatchesDefaults(state, 'timing', defaults)
     patch.startTime = matches ? null : state.timing.startTime
     patch.endTime = matches ? null : state.timing.endTime
+  }
+
+  if (state.freeze.dirty) {
+    patch.scoreboardFreezeTime = groupMatchesDefaults(state, 'freeze', defaults)
+      ? null
+      : state.freeze.time
+  }
+
+  if (state.pageAccess.dirty) {
+    patch.pageAccess = groupMatchesDefaults(state, 'pageAccess', defaults)
+      ? null
+      : {
+          challenges: state.pageAccess.challenges,
+          scores: state.pageAccess.scores,
+        }
   }
 
   if (state.logo.dirty) {
@@ -138,6 +172,18 @@ export function validateTiming(
   }
   if (start >= end) {
     return 'Start time must be before end time.'
+  }
+  return null
+}
+
+export function validateFreeze(
+  freeze: number | null,
+  start: number | null,
+  end: number | null
+): string | null {
+  if (freeze === null || start === null || end === null) return null
+  if (freeze < start || freeze >= end) {
+    return 'Freeze time must be between the start and end time.'
   }
   return null
 }
@@ -227,6 +273,22 @@ export function initialFormState(
       endTime: overrides.endTime ?? defaults.endTime ?? null,
       dirty: false,
     },
+    freeze: {
+      time:
+        overrides.scoreboardFreezeTime ?? defaults.scoreboardFreezeTime ?? null,
+      dirty: false,
+    },
+    pageAccess: {
+      challenges:
+        overrides.pageAccess?.challenges ??
+        defaults.pageAccess?.challenges ??
+        PageAccess.Public,
+      scores:
+        overrides.pageAccess?.scores ??
+        defaults.pageAccess?.scores ??
+        PageAccess.Public,
+      dirty: false,
+    },
     logo: {
       light: overrides.logoLightUrl ?? defaults.logoLightUrl ?? '',
       dark: overrides.logoDarkUrl ?? defaults.logoDarkUrl ?? '',
@@ -264,6 +326,15 @@ export function groupMatchesDefaults(
         form.timing.startTime === (defaults.startTime ?? null) &&
         form.timing.endTime === (defaults.endTime ?? null)
       )
+    case 'freeze':
+      return form.freeze.time === (defaults.scoreboardFreezeTime ?? null)
+    case 'pageAccess':
+      return (
+        form.pageAccess.challenges ===
+          (defaults.pageAccess?.challenges ?? PageAccess.Public) &&
+        form.pageAccess.scores ===
+          (defaults.pageAccess?.scores ?? PageAccess.Public)
+      )
     case 'logo':
       return (
         form.logo.light === (defaults.logoLightUrl ?? '') &&
@@ -295,6 +366,8 @@ const settingsGroupKeys = [
   'ctfName',
   'faviconUrl',
   'timing',
+  'freeze',
+  'pageAccess',
   'logo',
   'homeContent',
   'meta',

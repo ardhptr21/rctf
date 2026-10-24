@@ -1,3 +1,4 @@
+import type { PageAccess } from '@rctf/types'
 import { jsonb, pgTable, text } from 'drizzle-orm/pg-core'
 
 export interface EditableSponsor {
@@ -14,6 +15,11 @@ export interface EditableSettings {
   homeContent?: string
   startTime?: number
   endTime?: number
+  scoreboardFreezeTime?: number
+  pageAccess?: {
+    challenges?: PageAccess
+    scores?: PageAccess
+  }
   sponsors?: EditableSponsor[]
   meta?: {
     description?: string
