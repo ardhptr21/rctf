@@ -19,7 +19,12 @@ export const AdminSettingsSchema = z.object({
   ),
   scoreboardFreezeTime: example(z.optional(z.int()), 1710777600000).check(
     z.describe(
-      'Scoreboard freeze time as a Unix timestamp in milliseconds. The freeze lifts at `endTime`.'
+      'Scoreboard freeze time as a Unix timestamp in milliseconds. The freeze stays on after `endTime` until it is cleared.'
+    )
+  ),
+  maxTeamSize: example(z.optional(z.int()), 4).check(
+    z.describe(
+      'Maximum players per team. Teams with admin permissions are unlimited.'
     )
   ),
   teamCreationEnabled: example(z.optional(z.boolean()), true).check(

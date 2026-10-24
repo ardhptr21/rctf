@@ -91,6 +91,7 @@ export function getConfigDefaults(): EditableSettings {
     endTime: config.endTime,
     scoreboardFreezeTime: config.scoreboardFreezeTime,
     teamCreationEnabled: config.teamCreationEnabled,
+    maxTeamSize: config.maxTeamSize,
     pageAccess: config.pageAccess,
     sponsors: config.sponsors,
     meta: config.meta,
@@ -110,6 +111,7 @@ export function resolveSettings(overrides: EditableSettings) {
       overrides.scoreboardFreezeTime ?? config.scoreboardFreezeTime ?? null,
     teamCreationEnabled:
       overrides.teamCreationEnabled ?? config.teamCreationEnabled,
+    maxTeamSize: overrides.maxTeamSize ?? config.maxTeamSize,
     pageAccess: {
       challenges:
         overrides.pageAccess?.challenges ??
@@ -211,7 +213,7 @@ export async function getCompetitionTiming(
 }
 
 // Returns the solve cutoff (unix ms) while the scoreboard is frozen, or null.
-// The freeze lifts automatically once the competition ends.
+// The freeze stays on after the competition ends, until an admin clears it.
 export const getScoreboardFreezeCutoff = (
   timing: FreezeTiming,
   now: number = Date.now()
@@ -220,11 +222,7 @@ export const getScoreboardFreezeCutoff = (
   if (freezeTime === null || freezeTime === undefined) {
     return null
   }
-  if (
-    freezeTime >= timing.endTime ||
-    now < freezeTime ||
-    now >= timing.endTime
-  ) {
+  if (freezeTime >= timing.endTime || now < freezeTime) {
     return null
   }
   return freezeTime

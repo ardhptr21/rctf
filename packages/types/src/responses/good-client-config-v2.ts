@@ -53,7 +53,7 @@ export const GoodClientConfigV2 = response('goodClientConfigV2', {
     ),
     scoreboardFreezeTime: example(z.nullable(z.int()), 1710777600000).check(
       z.describe(
-        'Scoreboard freeze time as a Unix timestamp in milliseconds, or `null` when unset. The freeze lifts at `endTime`.'
+        'Scoreboard freeze time as a Unix timestamp in milliseconds, or `null` when unset. The freeze stays on after `endTime` until it is cleared.'
       )
     ),
     teamCreationEnabled: example(z.boolean(), true).check(

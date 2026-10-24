@@ -1,4 +1,3 @@
-import { config } from '@rctf/config'
 import {
   players,
   solves,
@@ -51,8 +50,11 @@ const toSummary = (team: Pick<User, 'id' | 'name' | 'division'>) => ({
 })
 
 // admin teams are not limited, so organizers can all share one team
-export const teamSizeLimit = (team: Pick<User, 'perms'>): number | null =>
-  (team.perms & ADMIN_PERMISSIONS) !== 0 ? null : config.maxTeamSize
+export const teamSizeLimit = (
+  team: Pick<User, 'perms'>,
+  maxTeamSize: number
+): number | null =>
+  (team.perms & ADMIN_PERMISSIONS) !== 0 ? null : maxTeamSize
 
 // rosters lock once the competition starts
 export const isRosterLocked = async (
@@ -181,6 +183,7 @@ export const joinTeam = async (
     return fail('badTeamBanned')
   }
 
+  const { maxTeamSize } = await getResolvedSettings(db, redis)
   const result = await db.transaction(async tx => {
     await lockTeamRoster(tx, team.id)
     const current = await lockPlayer(tx, player.id)
@@ -188,7 +191,7 @@ export const joinTeam = async (
       return fail('badAlreadyInTeam')
     }
 
-    const limit = teamSizeLimit(team)
+    const limit = teamSizeLimit(team, maxTeamSize)
     if (limit !== null && (await countMembers(tx, team.id)) >= limit) {
       return fail('badTeamFull')
     }

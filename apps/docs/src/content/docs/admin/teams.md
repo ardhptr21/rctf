@@ -16,7 +16,7 @@ When [Discord login](/configuration#discord-login) is configured, each participa
 
 Admins can stop new teams from being created with **Admin → Settings → Teams** (or `<red>teamCreationEnabled</red>` in the config). While it is off, the create form is hidden and players can only join an existing team with its token.
 
-Teams are limited to `<red>maxTeamSize</red>` players. Teams with admin permissions have no limit, so all organizers can share one team.
+Teams are limited to **Max team members** players, set in **Admin → Settings → Teams** (the default comes from `<red>maxTeamSize</red>` in the config). Teams with admin permissions have no limit, so all organizers can share one team. Lowering the limit does not remove anyone: teams that are already over it keep their members but cannot take new ones.
 
 The captain can rename the team, change its division and avatar, remove members, and hand captaincy to another member. Members can leave on their own. Rosters lock when the CTF starts: after that nobody can leave or be removed, but players can still join teams that have room. If a captain leaves, the earliest-joined member becomes captain. A team whose last player leaves before it has any solves is deleted.
 

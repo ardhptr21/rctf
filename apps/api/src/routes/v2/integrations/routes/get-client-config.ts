@@ -40,7 +40,7 @@ integrationsGroup.route(GetClientConfigRouteV2, async ({ res, ctx }) => {
           requireGuild: Boolean(config.discord.requiredGuildId),
         }
       : null,
-    maxTeamSize: config.maxTeamSize,
+    maxTeamSize: resolved.maxTeamSize,
     instancerEnabled,
     isArchived: false,
     captcha: captchaProvider

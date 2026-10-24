@@ -186,7 +186,7 @@ endTime: 1735776000000 # January 2, 2025 00:00 UTC
 | --- | --- | --- | --- |
 | `<red>startTime</red>` | `number{:ts}` | - | Competition start time in Unix milliseconds (required) |
 | `<red>endTime</red>` | `number{:ts}` | - | Competition end time in Unix milliseconds (required) |
-| `<red>scoreboardFreezeTime</red>` | `number{:ts}` | - | [Scoreboard freeze](/admin/#scoreboard-freeze) time in Unix milliseconds. The freeze lifts at `endTime` |
+| `<red>scoreboardFreezeTime</red>` | `number{:ts}` | - | [Scoreboard freeze](/admin/#scoreboard-freeze) time in Unix milliseconds. The freeze stays on after `endTime` until it is cleared |
 
 :::tip
 To convert a date to Unix milliseconds: `$ <red>date</red> <dim>-d</dim> <green>"2025-01-01T00:00:00Z"</green> +%s000` or use `new Date('2025-01-01T00:00:00Z').getTime(){:ts}` in JavaScript.
@@ -286,7 +286,7 @@ teamCreationEnabled: true
 | `<red>discord.clientId</red>` | `string{:ts}` | - | Discord application client ID |
 | `<red>discord.clientSecret</red>` | `string{:ts}` | - | Discord application client secret |
 | `<red>discord.requiredGuildId</red>` | `string{:ts}` | - | Only members of this Discord server can log in |
-| `<red>maxTeamSize</red>` | `number{:ts}` | `4{:ts}` | Maximum players per team. Teams with admin permissions are unlimited |
+| `<red>maxTeamSize</red>` | `number{:ts}` | `4{:ts}` | Maximum players per team. Teams with admin permissions are unlimited. Can also be changed at runtime from the admin settings |
 | `<red>teamCreationEnabled</red>` | `boolean{:ts}` | `true{:ts}` | Whether players can create new teams. Can also be changed at runtime from the admin settings |
 
 When `<red>discord</red>` is set, every participant logs in with their own Discord account and then creates a team or joins one with its team token. Email registration, account recovery, team token login and CTFtime login are turned off. See [Players and teams](/admin/teams/#players-and-teams) for how teams work in this mode.

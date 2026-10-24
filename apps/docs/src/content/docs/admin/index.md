@@ -58,6 +58,7 @@ An account with `settingsWrite` can change the following settings without restar
 | Scoreboard freeze | Time when the scoreboard stops updating     |
 | Page access       | Who can view the challenges and scoreboard  |
 | Team creation     | Whether Discord players can create new teams |
+| Max team members  | Players allowed per team                    |
 | Home content      | Home page markdown content                  |
 | Sponsors          | Sponsor list (name, icon, description, URL) |
 | Meta description  | HTML meta description                       |
@@ -71,9 +72,9 @@ Start and end time overrides have to keep the start before the end. Runtime timi
 
 ### Scoreboard freeze
 
-The scoreboard freeze hides the last part of the competition from teams. From the freeze time until the CTF ends, everything public shows the standings as of the freeze time: the leaderboard, the graph, team ranks and scores, challenge solve counts and points, per-challenge solver lists, first bloods, and other teams' profiles. Blood bot announcements are suppressed. Teams can still submit flags, and each team still sees its own solves.
+The scoreboard freeze hides the last part of the competition from teams. From the freeze time on, everything public shows the standings as of the freeze time: the leaderboard, the graph, team ranks and scores, challenge solve counts and points, per-challenge solver lists, first bloods, and other teams' profiles. Blood bot announcements are suppressed. Teams can still submit flags, and each team still sees its own solves.
 
-The freeze lifts automatically when the CTF ends and the leaderboard is recomputed from every solve. Clear the freeze time to lift it early. The freeze time has to fall between the start and end time.
+The freeze does not lift on its own: the scoreboard stays frozen after the CTF ends, so you can reveal the results when you are ready, for example at a closing ceremony. To reveal the final standings, clear the freeze time in the admin settings. The leaderboard is then recomputed from every solve. The freeze time has to fall between the start and end time.
 
 Admins with `leaderboardRead` can switch the scoreboard page to live standings during the freeze, or call the [live leaderboard](/api/admin/live-leaderboard/) route.
 

@@ -17,6 +17,7 @@ export interface EditableSettings {
   endTime?: number
   scoreboardFreezeTime?: number
   teamCreationEnabled?: boolean
+  maxTeamSize?: number
   pageAccess?: {
     challenges?: PageAccess
     scores?: PageAccess

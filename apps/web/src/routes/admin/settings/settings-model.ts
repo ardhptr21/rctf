@@ -23,6 +23,7 @@ export interface AdminSettingsShape {
   endTime?: number
   scoreboardFreezeTime?: number
   teamCreationEnabled?: boolean
+  maxTeamSize?: number
   pageAccess?: { challenges?: PageAccess; scores?: PageAccess }
   homeContent?: string
   logoLightUrl?: string
@@ -49,6 +50,11 @@ interface FreezeGroup {
 
 interface TeamCreationGroup {
   enabled: boolean
+  dirty: boolean
+}
+
+interface TeamSizeGroup {
+  value: number | null
   dirty: boolean
 }
 
@@ -81,6 +87,7 @@ export interface SettingsFormState {
   timing: TimingGroup
   freeze: FreezeGroup
   teamCreation: TeamCreationGroup
+  teamSize: TeamSizeGroup
   pageAccess: PageAccessGroup
   logo: LogoGroup
   homeContent: ScalarGroup
@@ -95,6 +102,7 @@ export interface SettingsPatch {
   endTime?: number | null
   scoreboardFreezeTime?: number | null
   teamCreationEnabled?: boolean | null
+  maxTeamSize?: number | null
   pageAccess?: { challenges: PageAccess; scores: PageAccess } | null
   homeContent?: string | null
   logoLightUrl?: string | null
@@ -141,6 +149,12 @@ export function buildPatch(
     )
       ? null
       : state.teamCreation.enabled
+  }
+
+  if (state.teamSize.dirty) {
+    patch.maxTeamSize = groupMatchesDefaults(state, 'teamSize', defaults)
+      ? null
+      : state.teamSize.value
   }
 
   if (state.pageAccess.dirty) {
@@ -202,6 +216,13 @@ export function validateFreeze(
   if (freeze === null || start === null || end === null) return null
   if (freeze < start || freeze >= end) {
     return 'Freeze time must be between the start and end time.'
+  }
+  return null
+}
+
+export function validateTeamSize(value: number | null): string | null {
+  if (value === null || !Number.isInteger(value) || value < 1 || value > 1000) {
+    return 'Max team members must be a whole number from 1 to 1000.'
   }
   return null
 }
@@ -301,6 +322,10 @@ export function initialFormState(
         overrides.teamCreationEnabled ?? defaults.teamCreationEnabled ?? true,
       dirty: false,
     },
+    teamSize: {
+      value: overrides.maxTeamSize ?? defaults.maxTeamSize ?? null,
+      dirty: false,
+    },
     pageAccess: {
       challenges:
         overrides.pageAccess?.challenges ??
@@ -355,6 +380,8 @@ export function groupMatchesDefaults(
       return (
         form.teamCreation.enabled === (defaults.teamCreationEnabled ?? true)
       )
+    case 'teamSize':
+      return form.teamSize.value === (defaults.maxTeamSize ?? null)
     case 'pageAccess':
       return (
         form.pageAccess.challenges ===
@@ -395,6 +422,7 @@ const settingsGroupKeys = [
   'timing',
   'freeze',
   'teamCreation',
+  'teamSize',
   'pageAccess',
   'logo',
   'homeContent',

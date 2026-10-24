@@ -12,6 +12,7 @@ import {
   sponsorPayload,
   sponsorsReducer,
   validateFreeze,
+  validateTeamSize,
   validateTiming,
   type SettingsFormState,
   type SponsorsState,
@@ -25,6 +26,7 @@ function cleanState(): SettingsFormState {
     timing: { startTime: null, endTime: null, dirty: false },
     freeze: { time: null, dirty: false },
     teamCreation: { enabled: true, dirty: false },
+    teamSize: { value: null, dirty: false },
     pageAccess: {
       challenges: PageAccess.Public,
       scores: PageAccess.Public,
@@ -589,5 +591,30 @@ describe('team creation setting', () => {
     expect(buildPatch(state, { teamCreationEnabled: true })).toEqual({
       teamCreationEnabled: null,
     })
+  })
+})
+
+describe('max team size setting', () => {
+  it('sends the new limit when edited', () => {
+    const state = cleanState()
+    state.teamSize = { value: 6, dirty: true }
+    expect(buildPatch(state, { maxTeamSize: 4 })).toEqual({ maxTeamSize: 6 })
+  })
+
+  it('clears the override when it matches the default', () => {
+    const state = cleanState()
+    state.teamSize = { value: 4, dirty: true }
+    expect(buildPatch(state, { maxTeamSize: 4 })).toEqual({
+      maxTeamSize: null,
+    })
+  })
+
+  it('only accepts whole numbers from 1 to 1000', () => {
+    expect(validateTeamSize(4)).toBeNull()
+    expect(validateTeamSize(1)).toBeNull()
+    expect(validateTeamSize(0)).not.toBeNull()
+    expect(validateTeamSize(2.5)).not.toBeNull()
+    expect(validateTeamSize(1001)).not.toBeNull()
+    expect(validateTeamSize(null)).not.toBeNull()
   })
 })

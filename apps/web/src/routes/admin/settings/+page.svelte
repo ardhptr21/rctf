@@ -40,6 +40,7 @@
     resetGroup,
     sponsorsReducer,
     validateFreeze,
+    validateTeamSize,
     validateTiming,
     type SettingsFormState,
     type SponsorAction,
@@ -161,6 +162,7 @@
   function resetTeamCreation() {
     if (!form || !defaults) return
     form.teamCreation = resetGroup(defaults, 'teamCreation')
+    form.teamSize = resetGroup(defaults, 'teamSize')
   }
 
   function resetPageAccess() {
@@ -279,6 +281,13 @@
     if (freezeValidation) {
       toast.error(freezeValidation)
       return
+    }
+    if (form.teamSize.dirty) {
+      const teamSizeValidation = validateTeamSize(form.teamSize.value)
+      if (teamSizeValidation) {
+        toast.error(teamSizeValidation)
+        return
+      }
     }
     const patch = buildPatch(form, defaults)
     if (Object.keys(patch).length === 0) {
@@ -422,7 +431,7 @@
         <group-body>
           <Field
             label="Freeze at (local time)"
-            description="Standings stop updating for teams at this time and are revealed when the CTF ends. Leave empty to disable."
+            description="Teams can keep solving, but the public scoreboard freezes at this time and stays frozen after the CTF ends. Clear this field to reveal the final standings. Leave empty for a live scoreboard."
           >
             {#snippet children({ id, describedBy })}
               <Input
@@ -462,6 +471,32 @@
               When off, players can only join an existing team with its team
               token.
             </field-description>
+            <Field
+              label="Max team members"
+              description="Players per team. Teams with admin permissions have no limit. Lowering it keeps existing members but stops new joins."
+              error={settingsForm.teamSize.dirty
+                ? (validateTeamSize(settingsForm.teamSize.value) ?? undefined)
+                : undefined}
+            >
+              {#snippet children({ id, describedBy })}
+                <Input
+                  {id}
+                  aria-describedby={describedBy}
+                  type="number"
+                  min="1"
+                  max="1000"
+                  step="1"
+                  value={settingsForm.teamSize.value ?? ''}
+                  placeholder={String(settingsDefaults.maxTeamSize ?? '')}
+                  oninput={e => {
+                    const raw = e.currentTarget.value
+                    settingsForm.teamSize.value =
+                      raw === '' ? null : Number(raw)
+                    markGroup('teamSize')
+                  }}
+                />
+              {/snippet}
+            </Field>
           </group-body>
         </settings-group>
       {/if}

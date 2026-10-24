@@ -33,11 +33,11 @@
     return () => clearInterval(timer)
   })
 
-  // mirrors the server: frozen from the freeze time until the CTF ends
+  // mirrors the server: frozen from the freeze time until an admin clears it
   const isFrozen = $derived(
     freezeTime !== null &&
       now >= freezeTime &&
-      now < (configQuery.data?.endTime ?? 0)
+      freezeTime < (configQuery.data?.endTime ?? 0)
   )
   let liveRequested = $state(false)
   const live = $derived(isFrozen && canViewLive && liveRequested)

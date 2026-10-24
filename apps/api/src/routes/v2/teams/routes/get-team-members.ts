@@ -1,4 +1,5 @@
 import { GetTeamMembersRouteV2 } from '@rctf/types'
+import { getResolvedSettings } from '../../../../services/settings'
 import {
   getJoinToken,
   getTeamMembers,
@@ -26,7 +27,10 @@ teamsGroup.route(GetTeamMembersRouteV2, async ({ ctx, res, user }) => {
         ? new Date(member.joinedTeamAt).getTime()
         : null,
     })),
-    maxTeamSize: teamSizeLimit(user),
+    maxTeamSize: teamSizeLimit(
+      user,
+      (await getResolvedSettings(ctx.var.db, ctx.var.redis)).maxTeamSize
+    ),
     joinToken: player.isCaptain
       ? await getJoinToken(ctx.var.db, player.teamId)
       : null,

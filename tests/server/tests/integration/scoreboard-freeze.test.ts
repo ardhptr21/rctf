@@ -132,13 +132,19 @@ describe('getScoreboardFreezeCutoff', () => {
     ).toBe(5_000)
   })
 
-  test('lifts once the competition ends', () => {
+  test('stays frozen after the competition ends', () => {
     expect(
       getScoreboardFreezeCutoff(
         { ...timing, scoreboardFreezeTime: 5_000 },
         10_000
       )
-    ).toBeNull()
+    ).toBe(5_000)
+    expect(
+      getScoreboardFreezeCutoff(
+        { ...timing, scoreboardFreezeTime: 5_000 },
+        50_000
+      )
+    ).toBe(5_000)
   })
 
   test('ignores a freeze time at or after the end time', () => {
@@ -195,6 +201,28 @@ describe('scoreboard freeze', () => {
       [early.user.id, late.user.id].sort()
     )
     expect(result.challengeInfos.get(challenge.challenge.id)?.solves).toBe(2)
+  })
+
+  test('the leaderboard stays frozen after the CTF ends', async () => {
+    const redis = await createRedis()
+    // the late solve lands between the freeze and the end
+    await updateSettings(
+      getDb(),
+      {
+        scoreboardFreezeTime: now - 2 * HOUR + 1,
+        endTime: now - HOUR / 4,
+      },
+      redis
+    )
+    const frozen = await calculateLeaderboard(getDb())
+    expect(frozen.users.map(user => user.id)).toEqual([early.user.id])
+
+    // clearing the freeze reveals the final standings
+    await updateSettings(getDb(), { scoreboardFreezeTime: null }, redis)
+    const revealed = await calculateLeaderboard(getDb())
+    expect(revealed.users.map(user => user.id).sort()).toEqual(
+      [early.user.id, late.user.id].sort()
+    )
   })
 
   test('the cached calculator rebuilds when the freeze is lifted', async () => {
@@ -389,6 +417,17 @@ describe('scoreboard freeze settings', () => {
     expect(body.data.overrides.scoreboardFreezeTime).toBe(
       config.startTime + HOUR
     )
+  })
+
+  test('accepts a max team size and rejects one below 1', async () => {
+    const body = await expectResponse(
+      await putSettings({ maxTeamSize: 6 }),
+      GoodAdminSettingsUpdate
+    )
+    expect(body.data.overrides.maxTeamSize).toBe(6)
+    expect(body.data.defaults.maxTeamSize).toBe(config.maxTeamSize)
+
+    await expectResponse(await putSettings({ maxTeamSize: 0 }), BadBody)
   })
 
   test('rejects a freeze time before the start', async () => {

@@ -1,5 +1,5 @@
-import { config } from '@rctf/config'
 import { GetPlayerSelfRouteV2 } from '@rctf/types'
+import { getResolvedSettings } from '../../../../services/settings'
 import { getTeamSummary, isRosterLocked } from '../../../../services/teams'
 import teamsGroup from '../group'
 import { playerOf } from '../util'
@@ -20,7 +20,8 @@ teamsGroup.route(GetPlayerSelfRouteV2, async ({ ctx, res }) => {
       isCaptain: player.isCaptain ?? false,
     },
     team: team ?? null,
-    maxTeamSize: config.maxTeamSize,
+    maxTeamSize: (await getResolvedSettings(ctx.var.db, ctx.var.redis))
+      .maxTeamSize,
     rosterLocked: await isRosterLocked(ctx.var.db, ctx.var.redis),
   })
 })

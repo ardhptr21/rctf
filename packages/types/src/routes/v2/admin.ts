@@ -786,7 +786,15 @@ const AdminSettingsUpdateBody = z.object({
       ),
       scoreboardFreezeTime: example(z.nullish(z.int()), 1710777600000).check(
         z.describe(
-          'Scoreboard freeze time as a Unix ms timestamp. Must fall within the event; the freeze lifts at the end time.'
+          'Scoreboard freeze time as a Unix ms timestamp. Must fall within the event. The freeze stays on after the end time; set `null` to reveal the final standings.'
+        )
+      ),
+      maxTeamSize: example(
+        z.nullish(z.int().check(z.gte(1)).check(z.lte(1000))),
+        4
+      ).check(
+        z.describe(
+          'Maximum players per team. Teams already over a lower limit keep their members but cannot take new ones.'
         )
       ),
       teamCreationEnabled: example(z.nullish(z.boolean()), false).check(

@@ -408,6 +408,37 @@ describe('teams', () => {
     )
   })
 
+  test('the team size limit can be changed from the settings', async () => {
+    await updateSettings(getDb(), { maxTeamSize: 2 }, await createRedis())
+
+    const captain = await login()
+    await createTeam(captain.token)
+    const code = await joinToken(captain.token)
+
+    const self = await expectResponse(
+      await get('/api/v2/players/me', captain.token),
+      GoodPlayerSelf
+    )
+    expect(self.data.maxTeamSize).toBe(2)
+
+    const second = await login()
+    await expectResponse(
+      await post('/api/v2/teams/join', second.token, { token: code }),
+      GoodTeamJoin
+    )
+    const third = await login()
+    await expectResponse(
+      await post('/api/v2/teams/join', third.token, { token: code }),
+      BadTeamFull
+    )
+
+    const members = await expectResponse(
+      await get('/api/v2/teams/me/members', captain.token),
+      GoodTeamMembers
+    )
+    expect(members.data.maxTeamSize).toBe(2)
+  })
+
   test('concurrent joins never exceed the limit', async () => {
     const captain = await login()
     await createTeam(captain.token)

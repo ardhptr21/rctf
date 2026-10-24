@@ -21,7 +21,7 @@
       {formatLocalTime(freezeTime)}.
     {:else}
       The scoreboard has been frozen since {formatLocalTime(freezeTime)}. Final
-      standings are revealed when the CTF ends.
+      standings will be revealed by the organizers.
     {/if}
   </span>
   {#if canViewLive}

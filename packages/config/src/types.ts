@@ -82,7 +82,7 @@ export const ServerConfigSchema = z.object({
   // CTF timing
   startTime: z.number(), // unix ms
   endTime: z.number(), // unix ms
-  scoreboardFreezeTime: z.optional(z.number()), // unix ms, lifts at endTime
+  scoreboardFreezeTime: z.optional(z.number()), // unix ms, lasts until cleared
 
   // Page access
   pageAccess: z.prefault(
