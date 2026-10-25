@@ -5,7 +5,6 @@ import { and, asc, eq, gte, inArray, lte, sql } from 'drizzle-orm'
 import { inJsonbArray } from '../lib/db-bulk'
 import { challengeIsPublicSql } from '../services/challenge-queries'
 import {
-  getCompetitionTiming,
   getResolvedSettings,
   getScoreboardFreezeCutoff,
 } from '../services/settings'
@@ -516,12 +515,15 @@ export const bumpDynamicFeedVersion = async (
   await redis.incr(keyDynamicFeedVersion)
 }
 
+// the freeze cutoff is part of the key so points cached before a freeze
+// starts (or after it is cleared) are never served under the other state
 const dynamicGraphCacheKey = (
   feedVersion: string,
+  solveCutoff: number | null,
   userIds: string[]
 ): string => {
   const digest = Bun.hash([...userIds].sort().join(',')).toString(36)
-  return `${keyDynamicGraph}:${feedVersion}:${digest}`
+  return `${keyDynamicGraph}:${feedVersion}:${solveCutoff ?? 'live'}:${digest}`
 }
 
 const deserializeDynamicPoints = (
@@ -543,14 +545,16 @@ const getDynamicGraphPoints = async (
   lastUpdate: number,
   feedVersion: string,
   entries: Array<GraphSourceEntry>,
-  endTime: number
+  endTime: number,
+  // while frozen, only feed events up to the cutoff
+  solveCutoff: number | null
 ): Promise<Map<string, Array<GraphPoint>>> => {
   const userIds = entries.map(entry => entry.id)
   if (userIds.length === 0) {
     return new Map()
   }
 
-  const cacheKey = dynamicGraphCacheKey(feedVersion, userIds)
+  const cacheKey = dynamicGraphCacheKey(feedVersion, solveCutoff, userIds)
   const cached = deserializeDynamicPoints(await redis.get(cacheKey))
   if (cached) {
     return cached
@@ -571,7 +575,10 @@ const getDynamicGraphPoints = async (
     .where(
       and(
         inJsonbArray(scoreEvents.userid, userIds),
-        eq(scoreEvents.source, 'feed')
+        eq(scoreEvents.source, 'feed'),
+        solveCutoff === null
+          ? undefined
+          : lte(scoreEvents.eventAt, new Date(solveCutoff).toISOString())
       )
     )
     .orderBy(asc(scoreEvents.eventAt), asc(scoreEvents.id))
@@ -607,14 +614,14 @@ export const getGraphForEntries = async (
     return []
   }
 
-  const [lastUpdateRaw, feedVersion, graphData, timing] = await Promise.all([
+  const [lastUpdateRaw, feedVersion, graphData, resolved] = await Promise.all([
     redis.get(keyGraphUpdate),
     redis.get(keyDynamicFeedVersion),
     redis.hmget(
       keyGraphData,
       entries.map(entry => entry.id)
     ),
-    getCompetitionTiming(db, redis),
+    getResolvedSettings(db, redis),
   ])
   const lastUpdate = Number.parseInt(lastUpdateRaw ?? '0')
   const dynamicPointsByUser = await getDynamicGraphPoints(
@@ -623,7 +630,8 @@ export const getGraphForEntries = async (
     lastUpdate,
     feedVersion ?? '0',
     entries,
-    timing.endTime
+    resolved.endTime,
+    getScoreboardFreezeCutoff(resolved)
   )
 
   return entries.map((entry, idx) => ({

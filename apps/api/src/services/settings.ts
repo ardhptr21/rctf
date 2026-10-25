@@ -10,7 +10,11 @@ import { eq } from 'drizzle-orm'
 import type { TypedRedis } from '../cache/scripts'
 
 const VALUE_ID = 'value-0'
-const RESOLVED_SETTINGS_CACHE_KEY = 'settings:resolved'
+export const RESOLVED_SETTINGS_CACHE_KEY = 'settings:resolved'
+// bumped after every settings write; a cache entry built from an older
+// generation is ignored, so a reader that loaded the settings just before a
+// write can't put the old values back into the cache
+export const SETTINGS_GENERATION_KEY = 'settings:generation'
 const RESOLVED_SETTINGS_CACHE_TTL = 60_000
 
 export type SettingsPatch = {
@@ -27,6 +31,7 @@ export type FreezeTiming = Pick<
 type CachedResolvedSettings = {
   version: 1
   defaultsSignature: string
+  generation: string
   resolved: ResolvedSettings
 }
 
@@ -77,7 +82,9 @@ export async function updateSettings(
     })
 
   if (redis) {
-    await setCachedResolvedSettings(redis, resolveSettings(updated))
+    // the bump must follow the write: see SETTINGS_GENERATION_KEY
+    const generation = String(await redis.incr(SETTINGS_GENERATION_KEY))
+    await setCachedResolvedSettings(redis, resolveSettings(updated), generation)
   }
 
   return updated
@@ -139,12 +146,18 @@ export function resolveSettings(overrides: EditableSettings) {
 const getConfigDefaultsSignature = (): string =>
   JSON.stringify(getConfigDefaults())
 
+// Returns the cached settings when they belong to the current generation,
+// along with that generation for a reader that has to load and cache them.
 const getCachedResolvedSettings = async (
   redis: TypedRedis
-): Promise<ResolvedSettings | undefined> => {
-  const cached = await redis.get(RESOLVED_SETTINGS_CACHE_KEY)
+): Promise<{ resolved?: ResolvedSettings; generation: string }> => {
+  const [cached, storedGeneration] = await Promise.all([
+    redis.get(RESOLVED_SETTINGS_CACHE_KEY),
+    redis.get(SETTINGS_GENERATION_KEY),
+  ])
+  const generation = storedGeneration ?? '0'
   if (!cached) {
-    return undefined
+    return { generation }
   }
 
   try {
@@ -155,23 +168,30 @@ const getCachedResolvedSettings = async (
       !entry.resolved
     ) {
       await redis.del(RESOLVED_SETTINGS_CACHE_KEY)
-      return undefined
+      return { generation }
     }
 
-    return entry.resolved
+    // written by a reader that loaded the settings before the last write
+    if (entry.generation !== generation) {
+      return { generation }
+    }
+
+    return { resolved: entry.resolved, generation }
   } catch {
     await redis.del(RESOLVED_SETTINGS_CACHE_KEY)
-    return undefined
+    return { generation }
   }
 }
 
 const setCachedResolvedSettings = async (
   redis: TypedRedis,
-  resolved: ResolvedSettings
+  resolved: ResolvedSettings,
+  generation: string
 ): Promise<void> => {
   const entry: CachedResolvedSettings = {
     version: 1,
     defaultsSignature: getConfigDefaultsSignature(),
+    generation,
     resolved,
   }
 
@@ -186,6 +206,7 @@ const setCachedResolvedSettings = async (
 export const invalidateResolvedSettingsCache = async (
   redis: TypedRedis
 ): Promise<void> => {
+  await redis.incr(SETTINGS_GENERATION_KEY)
   await redis.del(RESOLVED_SETTINGS_CACHE_KEY)
 }
 
@@ -193,17 +214,20 @@ export async function getResolvedSettings(
   db: DatabaseClient,
   redis?: TypedRedis
 ): Promise<ResolvedSettings> {
-  if (redis) {
-    const cached = await getCachedResolvedSettings(redis)
-    if (cached) {
-      return cached
-    }
+  if (!redis) {
+    return resolveSettings(await getSettings(db))
+  }
+
+  // the generation is read before the database, so values loaded before a
+  // concurrent write are cached under the old generation and then ignored
+  const { resolved: cached, generation } =
+    await getCachedResolvedSettings(redis)
+  if (cached) {
+    return cached
   }
 
   const resolved = resolveSettings(await getSettings(db))
-  if (redis) {
-    await setCachedResolvedSettings(redis, resolved)
-  }
+  await setCachedResolvedSettings(redis, resolved, generation)
   return resolved
 }
 

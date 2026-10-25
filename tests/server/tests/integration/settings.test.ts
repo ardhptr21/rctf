@@ -735,6 +735,8 @@ describe('admin settings', () => {
       const entry = {
         version: 1,
         defaultsSignature: JSON.stringify(getConfigDefaults()),
+        // entries from another settings generation are ignored
+        generation: (await redis.get('settings:generation')) ?? '0',
         resolved: {
           ...resolveSettings({}),
           sponsors: [

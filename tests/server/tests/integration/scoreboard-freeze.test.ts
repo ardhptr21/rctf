@@ -18,6 +18,7 @@ import {
   GoodLeaderboardGraph,
   GoodLeaderboardChallengesV2,
   GoodLeaderboardV2,
+  GoodLeaderboardWithGraph,
   GoodUserDataV2,
   GoodUserSelfDataV2,
   Permissions,
@@ -38,8 +39,12 @@ import {
   createCachedLeaderboardCalculator,
 } from '../../../../apps/api/src/services/leaderboard-calculation'
 import {
+  getConfigDefaults,
+  getResolvedSettings,
   getScoreboardFreezeCutoff,
   invalidateResolvedSettingsCache,
+  RESOLVED_SETTINGS_CACHE_KEY,
+  SETTINGS_GENERATION_KEY,
   updateSettings,
 } from '../../../../apps/api/src/services/settings'
 import { createRedis } from '../../../../apps/api/src/util/redis'
@@ -592,6 +597,75 @@ describe('scoreboard freeze with dynamic scoring', () => {
       GoodUserDataV2
     )
     expect(dynamicPoints(profile.data)).toBe(100)
+  })
+
+  test('the scoreboard graph stops dynamic points at the freeze', async () => {
+    const graphScores = async () => {
+      await cacheCurrentLeaderboard()
+      const body = await expectResponse(
+        await request(
+          app,
+          '/api/v2/leaderboard/with-graph?limit=100&offset=0',
+          { method: 'GET' }
+        ),
+        GoodLeaderboardWithGraph
+      )
+      const entry = body.data.graph.find((g: any) => g.id === rising.user.id)
+      return (entry?.dynamicPoints ?? []).map((p: any) => p.score)
+    }
+
+    // the live graph is cached first, so the frozen read below proves the
+    // cache entries for the two states are kept apart
+    await setFreezeTime(null)
+    expect(await graphScores()).toContain(300)
+
+    await setFreezeTime(freezeTime)
+    const frozen = await graphScores()
+    expect(frozen).toContain(100)
+    expect(frozen).not.toContain(300)
+  })
+})
+
+describe('settings cache', () => {
+  const cacheEntry = (generation: string | null, freezeTime: number | null) =>
+    JSON.stringify({
+      version: 1,
+      defaultsSignature: JSON.stringify(getConfigDefaults()),
+      generation,
+      resolved: { ...getConfigDefaults(), scoreboardFreezeTime: freezeTime },
+    })
+
+  test('a stale write from a slow reader is not served after an update', async () => {
+    const db = getDb()
+    const redis = await createRedis()
+    // a reader notes the generation, then loads the old settings...
+    const readerGeneration = (await redis.get(SETTINGS_GENERATION_KEY)) ?? '0'
+
+    // ...while an admin sets a freeze...
+    const freezeAt = Date.now() - HOUR
+    await updateSettings(db, { scoreboardFreezeTime: freezeAt }, redis)
+
+    // ...and the reader then caches what it loaded: no freeze
+    await redis.set(
+      RESOLVED_SETTINGS_CACHE_KEY,
+      cacheEntry(readerGeneration, null)
+    )
+
+    const resolved = await getResolvedSettings(db, redis)
+    expect(resolved.scoreboardFreezeTime).toBe(freezeAt)
+  })
+
+  test('an entry from the current generation is served from the cache', async () => {
+    const db = getDb()
+    const redis = await createRedis()
+    await updateSettings(db, { scoreboardFreezeTime: null }, redis)
+    const generation = await redis.get(SETTINGS_GENERATION_KEY)
+
+    // a value only the cache has proves the read did not hit the database
+    await redis.set(RESOLVED_SETTINGS_CACHE_KEY, cacheEntry(generation, 12_345))
+    expect((await getResolvedSettings(db, redis)).scoreboardFreezeTime).toBe(
+      12_345
+    )
   })
 })
 
