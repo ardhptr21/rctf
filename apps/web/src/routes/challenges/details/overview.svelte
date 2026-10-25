@@ -2,6 +2,8 @@
   import type { Challenge } from '@rctf/types'
   import Markdown from '$lib/components/markdown.svelte'
   import { IconDownload, IconFiles } from '$lib/icons'
+  import { reportChallengeDownload } from '$lib/query/challenges'
+  import { useCurrentUser } from '$lib/query/user'
   import { toast } from '$lib/toast'
   import Button from '$lib/ui/button.svelte'
   import Section from '$lib/ui/section.svelte'
@@ -19,10 +21,18 @@
 
   let { challenge, onSolve }: Props = $props()
 
+  const userQuery = useCurrentUser()
+
   let downloading = $state(false)
   let cancelDownload: (() => void) | null = null
 
+  // only a signed-in team's downloads count for cheat detection
+  function reportDownload(url: string) {
+    if (userQuery.data) reportChallengeDownload(challenge.id, url)
+  }
+
   function handleDownloadAll() {
+    for (const file of challenge.files) reportDownload(file.url)
     downloading = true
     cancelDownload = downloadAll(challenge.files, {
       onDone: () => (downloading = false),
@@ -44,7 +54,13 @@
         <files-box>
           <file-list tabindex="-1">
             {#each challenge.files as file (file.url)}
-              <a href={file.url} target="_blank" rel="noopener noreferrer">
+              <a
+                href={file.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                onclick={() => reportDownload(file.url)}
+                onauxclick={() => reportDownload(file.url)}
+              >
                 <IconFiles data-slot="icon" />
                 <file-meta>
                   <span data-slot="name">{file.name}</span>

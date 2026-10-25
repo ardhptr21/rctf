@@ -27,6 +27,7 @@
   import type { MenuItem } from '$lib/ui/menu.svelte'
   import Spinner from '$lib/ui/spinner.svelte'
   import StatusCard from '$lib/ui/status-card.svelte'
+  import Textarea from '$lib/ui/textarea.svelte'
   import { hasPermissions } from '$lib/utils/permissions'
   import ExternalAuthClients from './external-auth-clients.svelte'
   import UploadRow from './upload-row.svelte'
@@ -39,7 +40,9 @@
     parseDatetimeLocal,
     resetGroup,
     sponsorsReducer,
+    validateAiLinkPatterns,
     validateFreeze,
+    validateIntegrity,
     validateTeamSize,
     validateTiming,
     type SettingsFormState,
@@ -61,6 +64,24 @@
 
   const ctfName = $derived(configQuery.data?.ctfName)
   const defaults = $derived(settingsQuery.data?.defaults)
+  const alertsConfigured = $derived(
+    settingsQuery.data?.integrityAlertsConfigured ?? false
+  )
+
+  const detectorOptions = [
+    { key: 'flagSharing', label: "Flag sharing (another team's dynamic flag)" },
+    { key: 'sharedIp', label: 'Shared IPs between teams' },
+    { key: 'duplicateProof', label: 'Duplicate solver proofs' },
+    { key: 'duplicateAiLink', label: 'Duplicate AI links' },
+    {
+      key: 'unlistedAiLink',
+      label: 'AI links that match none of the allowed patterns',
+    },
+    {
+      key: 'solvedWithoutDownload',
+      label: 'Solves without downloading the attachments',
+    },
+  ] as const
 
   let form = $state<SettingsFormState | null>(null)
   let sponsorSelected = $state(0)
@@ -168,6 +189,11 @@
   function resetSubmissionEvidence() {
     if (!form || !defaults) return
     form.submissionEvidence = resetGroup(defaults, 'submissionEvidence')
+  }
+
+  function resetIntegrity() {
+    if (!form || !defaults) return
+    form.integrity = resetGroup(defaults, 'integrity')
   }
 
   function resetPageAccess() {
@@ -291,6 +317,22 @@
       const teamSizeValidation = validateTeamSize(form.teamSize.value)
       if (teamSizeValidation) {
         toast.error(teamSizeValidation)
+        return
+      }
+    }
+    if (form.submissionEvidence.dirty) {
+      const patternsValidation = validateAiLinkPatterns(
+        form.submissionEvidence.aiLinkPatternsText
+      )
+      if (patternsValidation) {
+        toast.error(patternsValidation)
+        return
+      }
+    }
+    if (form.integrity.dirty) {
+      const integrityValidation = validateIntegrity(form.integrity)
+      if (integrityValidation) {
+        toast.error(integrityValidation)
         return
       }
     }
@@ -510,6 +552,105 @@
           >
             Require AI links and solver proof on flag submissions
           </Checkbox>
+          <Field
+            label="Allowed AI link patterns (one regex per line)"
+            error={settingsForm.submissionEvidence.dirty
+              ? (validateAiLinkPatterns(
+                  settingsForm.submissionEvidence.aiLinkPatternsText
+                ) ?? undefined)
+              : undefined}
+          >
+            {#snippet children({ id, describedBy })}
+              <Textarea
+                {id}
+                aria-describedby={describedBy}
+                rows={3}
+                spellcheck="false"
+                placeholder={'^https://chatgpt\\.com/share/\n^https://chat\\.deepseek\\.com/'}
+                value={settingsForm.submissionEvidence.aiLinkPatternsText}
+                oninput={e => {
+                  settingsForm.submissionEvidence.aiLinkPatternsText =
+                    e.currentTarget.value
+                  markGroup('submissionEvidence')
+                }}
+              />
+            {/snippet}
+          </Field>
+        </group-body>
+      </settings-group>
+
+      <settings-group>
+        {@render groupHeader('Cheat detection', resetIntegrity)}
+        <group-body>
+          {#each detectorOptions as option (option.key)}
+            <Checkbox
+              checked={settingsForm.integrity.detectors[option.key]}
+              onchange={e => {
+                settingsForm.integrity.detectors[option.key] =
+                  e.currentTarget.checked
+                markGroup('integrity')
+              }}
+            >
+              {option.label}
+            </Checkbox>
+          {/each}
+          <Field
+            label="Shared-IP window (hours)"
+            error={settingsForm.integrity.dirty
+              ? (validateIntegrity(settingsForm.integrity) ?? undefined)
+              : undefined}
+          >
+            {#snippet children({ id, describedBy })}
+              <Input
+                {id}
+                aria-describedby={describedBy}
+                type="number"
+                min="1"
+                max="720"
+                step="1"
+                value={settingsForm.integrity.windowHours ?? ''}
+                disabled={!settingsForm.integrity.detectors.sharedIp}
+                oninput={e => {
+                  const raw = e.currentTarget.value
+                  settingsForm.integrity.windowHours =
+                    raw === '' ? null : Number(raw)
+                  markGroup('integrity')
+                }}
+              />
+            {/snippet}
+          </Field>
+          <Field label="Ignored IPs and ranges (one per line)">
+            {#snippet children({ id, describedBy })}
+              <Textarea
+                {id}
+                aria-describedby={describedBy}
+                rows={3}
+                spellcheck="false"
+                placeholder={'10.0.0.0/8\n203.0.113.7'}
+                disabled={!settingsForm.integrity.detectors.sharedIp}
+                value={settingsForm.integrity.allowlistText}
+                oninput={e => {
+                  settingsForm.integrity.allowlistText = e.currentTarget.value
+                  markGroup('integrity')
+                }}
+              />
+            {/snippet}
+          </Field>
+          <Checkbox
+            checked={settingsForm.integrity.alerts}
+            disabled={!alertsConfigured}
+            onchange={e => {
+              settingsForm.integrity.alerts = e.currentTarget.checked
+              markGroup('integrity')
+            }}
+          >
+            Send alerts for new signals
+          </Checkbox>
+          {#if !alertsConfigured}
+            <field-note>
+              Alerts need <code>integrity.alertDestinations</code> in the config.
+            </field-note>
+          {/if}
         </group-body>
       </settings-group>
 
@@ -739,6 +880,15 @@
 {/if}
 
 <style>
+  field-note {
+    font-size: var(--step--1);
+    color: var(--foreground-l3);
+
+    code {
+      font-family: var(--font-mono);
+    }
+  }
+
   settings-status {
     display: flex;
     flex: 1;

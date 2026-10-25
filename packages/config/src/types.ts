@@ -1,4 +1,7 @@
 import {
+  IntegritySeverity,
+  isAiLinkPattern,
+  isIpRule,
   normalizeSponsorIcons,
   NumericString,
   PageAccess,
@@ -123,6 +126,60 @@ export const ServerConfigSchema = z.object({
   // Flag submissions must include AI links and a solver proof file
   requireSubmissionEvidence: z._default(z.boolean(), true),
   maxProofSize: z._default(z.int().check(z.gte(1)), 5 * 1024 * 1024),
+  // allowed AI link sites, as regular expressions; cheat detection records
+  // links matching none of them
+  aiLinkPatterns: z._default(
+    z.array(
+      z.string().check(
+        z.refine(isAiLinkPattern, {
+          message: 'must be a valid regular expression',
+        })
+      )
+    ),
+    []
+  ),
+
+  // Cheat detection: defaults for the admin "Cheat detection" settings, and
+  // the alert destinations, which stay config-only since they hold secrets
+  integrity: z.prefault(
+    z.object({
+      detectors: z.prefault(
+        z.object({
+          flagSharing: z._default(z.boolean(), true),
+          sharedIp: z._default(z.boolean(), true),
+          duplicateProof: z._default(z.boolean(), true),
+          duplicateAiLink: z._default(z.boolean(), true),
+          solvedWithoutDownload: z._default(z.boolean(), true),
+          unlistedAiLink: z._default(z.boolean(), true),
+        }),
+        {}
+      ),
+      sharedIpWindowHours: z._default(
+        z.int().check(z.gte(1)).check(z.lte(720)),
+        24
+      ),
+      ipAllowlist: z._default(
+        z.array(
+          z.string().check(
+            z.refine(isIpRule, {
+              message: 'must be an IP address or CIDR range',
+            })
+          )
+        ),
+        []
+      ),
+      alerts: z._default(z.boolean(), true),
+      alertDestinations: z._default(
+        z.array(z.object({ provider: ProviderConfigSchema })),
+        []
+      ),
+      alertMinSeverity: z._default(
+        z.enum(IntegritySeverity),
+        IntegritySeverity.HIGH
+      ),
+    }),
+    {}
+  ),
 
   // Captcha
   captcha: z.optional(

@@ -12,6 +12,7 @@ aside: true
 | --- | --- |
 | [Challenge list](/api/challenges/list/) | `<route>GET /api/[v2,v1]/challs</route>` |
 | [Challenge solves](/api/challenges/solves/) | `<route>GET /api/[v2,v1]/challs/:id/solves</route>` |
+| [Record a download](/api/challenges/record-download/) | `<route>POST /api/v2/challs/:id/downloads</route>` |
 | [Submit a flag with evidence](/api/challenges/submit-v2/) | `<route>POST /api/v2/challs/:id/submit</route>` |
 | [Submit a flag](/api/challenges/submit/) | `<route>POST /api/v1/challs/:id/submit</route>` |
 | [Submit dynamic scores](/api/challenges/submit-dynamic-scores/) | `<route>POST /api/v2/challs/:id/scores</route>` |

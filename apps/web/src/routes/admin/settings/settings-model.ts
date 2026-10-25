@@ -1,4 +1,9 @@
-import { PageAccess } from '@rctf/types'
+import {
+  isAiLinkPattern,
+  isIpRule,
+  PageAccess,
+  type IntegritySettings,
+} from '@rctf/types'
 
 export interface Sponsor {
   name: string
@@ -25,6 +30,8 @@ export interface AdminSettingsShape {
   teamCreationEnabled?: boolean
   maxTeamSize?: number
   requireSubmissionEvidence?: boolean
+  aiLinkPatterns?: string[]
+  integrity?: IntegritySettings
   pageAccess?: { challenges?: PageAccess; scores?: PageAccess }
   homeContent?: string
   logoLightUrl?: string
@@ -56,6 +63,17 @@ interface TeamCreationGroup {
 
 interface SubmissionEvidenceGroup {
   required: boolean
+  // allowed AI link patterns, one regular expression per line
+  aiLinkPatternsText: string
+  dirty: boolean
+}
+
+export interface IntegrityGroup {
+  detectors: IntegritySettings['detectors']
+  windowHours: number | null
+  // one IP or CIDR range per line
+  allowlistText: string
+  alerts: boolean
   dirty: boolean
 }
 
@@ -95,6 +113,7 @@ export interface SettingsFormState {
   teamCreation: TeamCreationGroup
   teamSize: TeamSizeGroup
   submissionEvidence: SubmissionEvidenceGroup
+  integrity: IntegrityGroup
   pageAccess: PageAccessGroup
   logo: LogoGroup
   homeContent: ScalarGroup
@@ -111,6 +130,8 @@ export interface SettingsPatch {
   teamCreationEnabled?: boolean | null
   maxTeamSize?: number | null
   requireSubmissionEvidence?: boolean | null
+  aiLinkPatterns?: string[] | null
+  integrity?: IntegritySettings | null
   pageAccess?: { challenges: PageAccess; scores: PageAccess } | null
   homeContent?: string | null
   logoLightUrl?: string | null
@@ -166,13 +187,22 @@ export function buildPatch(
   }
 
   if (state.submissionEvidence.dirty) {
-    patch.requireSubmissionEvidence = groupMatchesDefaults(
-      state,
-      'submissionEvidence',
-      defaults
-    )
+    // each field goes back to its own default when it matches it
+    const { required, aiLinkPatternsText } = state.submissionEvidence
+    const patterns = nonEmptyLines(aiLinkPatternsText)
+    patch.requireSubmissionEvidence =
+      required === (defaults.requireSubmissionEvidence ?? true)
+        ? null
+        : required
+    patch.aiLinkPatterns = sameLines(patterns, defaults.aiLinkPatterns ?? [])
       ? null
-      : state.submissionEvidence.required
+      : patterns
+  }
+
+  if (state.integrity.dirty) {
+    patch.integrity = groupMatchesDefaults(state, 'integrity', defaults)
+      ? null
+      : integrityPayload(state.integrity)
   }
 
   if (state.pageAccess.dirty) {
@@ -243,6 +273,70 @@ export function validateTeamSize(value: number | null): string | null {
     return 'Max team members must be a whole number from 1 to 1000.'
   }
   return null
+}
+
+// used only if the server sent no defaults, which it always does
+const FALLBACK_INTEGRITY: IntegritySettings = {
+  detectors: {
+    flagSharing: true,
+    sharedIp: true,
+    duplicateProof: true,
+    duplicateAiLink: true,
+    solvedWithoutDownload: true,
+    unlistedAiLink: true,
+  },
+  sharedIpWindowHours: 24,
+  ipAllowlist: [],
+  alerts: true,
+}
+
+export const nonEmptyLines = (text: string): string[] =>
+  text
+    .split('\n')
+    .map(line => line.trim())
+    .filter(line => line !== '')
+
+const sameLines = (a: readonly string[], b: readonly string[]): boolean =>
+  a.length === b.length && a.every((line, index) => line === b[index])
+
+export function validateAiLinkPatterns(text: string): string | null {
+  const invalid = nonEmptyLines(text).find(line => !isAiLinkPattern(line))
+  return invalid === undefined
+    ? null
+    : `"${invalid}" is not a valid regular expression.`
+}
+
+export function integrityPayload(group: IntegrityGroup): IntegritySettings {
+  return {
+    detectors: { ...group.detectors },
+    sharedIpWindowHours: group.windowHours ?? 0,
+    ipAllowlist: nonEmptyLines(group.allowlistText),
+    alerts: group.alerts,
+  }
+}
+
+export function validateIntegrity(group: IntegrityGroup): string | null {
+  const hours = group.windowHours
+  if (hours === null || !Number.isInteger(hours) || hours < 1 || hours > 720) {
+    return 'The shared-IP window must be a whole number of hours from 1 to 720.'
+  }
+  const invalidIp = nonEmptyLines(group.allowlistText).find(
+    line => !isIpRule(line)
+  )
+  if (invalidIp !== undefined) {
+    return `"${invalidIp}" is not an IP address or CIDR range.`
+  }
+  return null
+}
+
+function toIntegrityGroup(settings: IntegritySettings): IntegrityGroup {
+  return {
+    detectors: { ...settings.detectors },
+    windowHours: settings.sharedIpWindowHours,
+    allowlistText: settings.ipAllowlist.join('\n'),
+    alerts: settings.alerts,
+    dirty: false,
+  }
 }
 
 export function emptySponsor(): Sponsor {
@@ -349,8 +443,16 @@ export function initialFormState(
         overrides.requireSubmissionEvidence ??
         defaults.requireSubmissionEvidence ??
         true,
+      aiLinkPatternsText: (
+        overrides.aiLinkPatterns ??
+        defaults.aiLinkPatterns ??
+        []
+      ).join('\n'),
       dirty: false,
     },
+    integrity: toIntegrityGroup(
+      overrides.integrity ?? defaults.integrity ?? FALLBACK_INTEGRITY
+    ),
     pageAccess: {
       challenges:
         overrides.pageAccess?.challenges ??
@@ -410,7 +512,16 @@ export function groupMatchesDefaults(
     case 'submissionEvidence':
       return (
         form.submissionEvidence.required ===
-        (defaults.requireSubmissionEvidence ?? true)
+          (defaults.requireSubmissionEvidence ?? true) &&
+        sameLines(
+          nonEmptyLines(form.submissionEvidence.aiLinkPatternsText),
+          defaults.aiLinkPatterns ?? []
+        )
+      )
+    case 'integrity':
+      return (
+        JSON.stringify(integrityPayload(form.integrity)) ===
+        JSON.stringify(defaults.integrity ?? FALLBACK_INTEGRITY)
       )
     case 'pageAccess':
       return (
@@ -454,6 +565,7 @@ const settingsGroupKeys = [
   'teamCreation',
   'teamSize',
   'submissionEvidence',
+  'integrity',
   'pageAccess',
   'logo',
   'homeContent',

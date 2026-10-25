@@ -16,6 +16,7 @@ import {
   BadReplayedRequest,
   BadSignature,
   BadUnknownUser,
+  GoodChallengeDownload,
   GoodChallengeScoresV2,
   GoodFlag,
   GoodChallengeSolvesV2,
@@ -56,6 +57,36 @@ export const SubmitDynamicScoresRouteV2 = defineRoute({
     id: z.string().check(z.describe('Challenge ID.')),
   }),
   body: DynamicScoresPayloadSchema,
+})
+
+// The challenge page reports attachment downloads, since files are served
+// straight from the upload host; cheat detection compares them with solves.
+export const RecordChallengeDownloadRouteV2 = defineRoute({
+  path: '/v2/challs/:id/downloads',
+  method: 'POST',
+  goodResponses: [GoodChallengeDownload],
+  badResponses: [
+    BadNotStarted,
+    BadChallenge,
+    BadBody,
+    BadPerms,
+    BadToken,
+    BadNoTeam,
+  ],
+  authRequired: true,
+  params: z.object({
+    id: z.string().check(z.describe('Challenge ID.')),
+  }),
+  body: z.object({
+    url: z
+      .string()
+      .check(z.minLength(1))
+      .check(z.maxLength(2048))
+      .check(z.describe('URL of the attachment, as listed on the challenge.')),
+  }),
+  onlyWhenStarted: true,
+  onlyWhenStartedPermissionsBypass: Permissions.challsRead,
+  pageAccess: AccessControlledPage.Challenges,
 })
 
 export const GetChallengeSolvesRouteV2 = defineRoute({

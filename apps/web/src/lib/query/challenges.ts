@@ -15,6 +15,7 @@ import {
   GoodChallengeSolvesV2,
   GoodChallengesV2,
   GoodInstanceStatus,
+  RecordChallengeDownloadRouteV2,
 } from '@rctf/types'
 import {
   createInfiniteQuery,
@@ -309,4 +310,12 @@ export function invalidateAfterSolve(
       queryKey: queryKeys.challenge(challengeId),
     })
   }, 500)
+}
+
+// Tells the server a team downloaded an attachment, for cheat detection.
+// Best effort: it must never get in the way of the download itself.
+export function reportChallengeDownload(challengeId: string, url: string) {
+  apiRequest(RecordChallengeDownloadRouteV2, { id: challengeId, url }).catch(
+    () => {}
+  )
 }

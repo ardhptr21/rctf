@@ -9,6 +9,7 @@
   import ThemeToggle from '$lib/components/theme-toggle.svelte'
   import {
     IconCopy,
+    IconFingerprint,
     IconFlagBannerFold,
     IconGear,
     IconGlobeHemisphereWest,
@@ -135,6 +136,13 @@
         activePath: '/admin/submissions',
         label: 'Submissions',
         icon: IconTableFilled,
+        show: isAdmin && canReadChallenges && canManageUsers,
+      },
+      {
+        href: '/admin/integrity',
+        activePath: '/admin/integrity',
+        label: 'Integrity',
+        icon: IconFingerprint,
         show: isAdmin && canReadChallenges && canManageUsers,
       },
       {

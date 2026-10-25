@@ -5,6 +5,7 @@ import {
   ADMIN_PERMISSIONS,
   normalizeSponsorIcons,
   PageAccess,
+  type IntegritySettings,
 } from '@rctf/types'
 import { eq } from 'drizzle-orm'
 import type { TypedRedis } from '../cache/scripts'
@@ -90,6 +91,30 @@ export async function updateSettings(
   return updated
 }
 
+const integrityDefaults = (): IntegritySettings => ({
+  detectors: { ...config.integrity.detectors },
+  sharedIpWindowHours: config.integrity.sharedIpWindowHours,
+  ipAllowlist: [...config.integrity.ipAllowlist],
+  alerts: config.integrity.alerts,
+})
+
+// settings saved before a detector existed don't mention it, so it falls
+// back to its default instead of reading as off
+const resolveIntegrity = (
+  saved: Partial<IntegritySettings> | undefined
+): IntegritySettings => {
+  const defaults = integrityDefaults()
+  if (!saved) return defaults
+  return {
+    ...defaults,
+    ...saved,
+    detectors: { ...defaults.detectors, ...saved.detectors },
+  }
+}
+
+export const integrityAlertsConfigured = (): boolean =>
+  config.integrity.alertDestinations.length > 0
+
 export function getConfigDefaults(): EditableSettings {
   return {
     ctfName: config.ctfName,
@@ -100,6 +125,8 @@ export function getConfigDefaults(): EditableSettings {
     teamCreationEnabled: config.teamCreationEnabled,
     maxTeamSize: config.maxTeamSize,
     requireSubmissionEvidence: config.requireSubmissionEvidence,
+    aiLinkPatterns: config.aiLinkPatterns,
+    integrity: integrityDefaults(),
     pageAccess: config.pageAccess,
     sponsors: config.sponsors,
     meta: config.meta,
@@ -122,6 +149,10 @@ export function resolveSettings(overrides: EditableSettings) {
     maxTeamSize: overrides.maxTeamSize ?? config.maxTeamSize,
     requireSubmissionEvidence:
       overrides.requireSubmissionEvidence ?? config.requireSubmissionEvidence,
+    aiLinkPatterns: overrides.aiLinkPatterns ?? config.aiLinkPatterns,
+    // the admin form always saves the whole object, so it replaces the
+    // config defaults as a unit
+    integrity: resolveIntegrity(overrides.integrity),
     pageAccess: {
       challenges:
         overrides.pageAccess?.challenges ??

@@ -214,14 +214,52 @@ See [Page access](/admin/#page-access) for what each level means. Both values ca
 ```yaml
 requireSubmissionEvidence: true
 maxProofSize: 5242880 # 5 MB
+aiLinkPatterns:
+  - '^https://chatgpt\.com/share/'
+  - '^https://chat\.deepseek\.com/'
 ```
 
 | Field | Type | Default | Description |
 | --- | --- | --- | --- |
 | `<red>requireSubmissionEvidence</red>` | `boolean{:ts}` | `true{:ts}` | Whether every flag submission needs AI links and a solver proof file. Can also be changed at runtime from the admin settings |
 | `<red>maxProofSize</red>` | `number{:ts}` | `5242880{:ts}` | Maximum solver proof file size in bytes |
+| `<red>aiLinkPatterns</red>` | `string[]{:ts}` | `[]{:ts}` | Regular expressions for allowed AI links, matched regardless of case. [Cheat detection](/admin/integrity/) records links matching none of them; empty turns that check off. Submissions are never rejected for it. Can also be changed at runtime from the admin settings |
 
 See [AI links and solver proof](/admin/submissions/#ai-links-and-solver-proof).
+
+### Cheat detection
+
+```yaml
+integrity:
+  detectors:
+    flagSharing: true
+    sharedIp: true
+    duplicateProof: true
+    duplicateAiLink: true
+    unlistedAiLink: true
+    solvedWithoutDownload: true
+  sharedIpWindowHours: 24
+  ipAllowlist:
+    - 10.0.0.0/8 # the venue network
+  alerts: true
+  alertMinSeverity: high
+  alertDestinations:
+    - provider:
+        name: messages/discord
+        options:
+          url: https://discord.com/api/webhooks/...
+```
+
+| Field | Type | Default | Description |
+| --- | --- | --- | --- |
+| `<red>integrity.detectors.*</red>` | `boolean{:ts}` | `true{:ts}` | Turns each detector on or off |
+| `<red>integrity.sharedIpWindowHours</red>` | `number{:ts}` | `24{:ts}` | How far back shared-IP matching looks (1-720) |
+| `<red>integrity.ipAllowlist</red>` | `string[]{:ts}` | `[]{:ts}` | IPs or CIDR ranges that never count as shared, such as a venue network |
+| `<red>integrity.alerts</red>` | `boolean{:ts}` | `true{:ts}` | Whether to send alerts for new signals |
+| `<red>integrity.alertMinSeverity</red>` | `'low' \| 'medium' \| 'high'{:ts}` | `'high'{:ts}` | Lowest severity that sends an alert |
+| `<red>integrity.alertDestinations</red>` | `array{:ts}` | `[]{:ts}` | Messages providers to alert, in the same format as the blood bot's destinations |
+
+The detectors, window, allow-list and `alerts` are only defaults: change them at runtime under **Admin → Settings → Cheat detection**. Alert destinations hold webhook URLs and tokens, so they can only be set here. See [Cheat detection](/admin/integrity/).
 
 ### Divisions
 

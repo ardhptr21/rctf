@@ -65,12 +65,14 @@ import {
 import {
   AdminTeamSortBy,
   AdminTeamStatus,
+  AiLinkPatternsSchema,
   ChallengeFileSchemaV2,
   ChallengePointsSchema,
   ChallengeScoringSchema,
   FileFieldSchema,
   FlagEntrySchema,
   HttpUrl,
+  IntegritySettingsSchema,
   MultipleFileFieldSchema,
   PartialInstancerConfigSchema,
   searchFilter,
@@ -834,6 +836,14 @@ const AdminSettingsUpdateBody = z.object({
           'Whether players can create new teams. Joining existing teams is unaffected.'
         )
       ),
+      aiLinkPatterns: z.nullish(AiLinkPatternsSchema),
+      integrity: z
+        .nullish(IntegritySettingsSchema)
+        .check(
+          z.describe(
+            'Cheat detection settings. Replaces the whole object; `null` restores the defaults.'
+          )
+        ),
       pageAccess: z.nullish(
         z.object({
           challenges: example(

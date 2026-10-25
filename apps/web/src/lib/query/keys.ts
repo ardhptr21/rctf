@@ -1,6 +1,7 @@
 import type {
   FilterAdminSubmissionsRouteV2,
   FilterAdminUsersRouteV2,
+  IntegrityCaseStatus,
   RouteBody,
   RouteQuery,
 } from '@rctf/types'
@@ -25,6 +26,11 @@ export type AdminPlayersQueryParams = {
   statuses?: string | undefined
 }
 
+export type AdminIntegrityCasesQueryParams = {
+  status: IntegrityCaseStatus
+  limit: number
+}
+
 export const queryKeys = {
   clientConfig: ['clientConfig'] as const,
   userSelf: ['user', 'self'] as const,
@@ -45,6 +51,9 @@ export const queryKeys = {
   adminUserVerifications: ['admin', 'user-verifications'] as const,
   adminPlayers: (params: AdminPlayersQueryParams) =>
     ['admin', 'players', 'list', params] as const,
+  adminIntegrityCases: (params: AdminIntegrityCasesQueryParams) =>
+    ['admin', 'integrity', 'list', params] as const,
+  adminIntegrityCase: (id: string) => ['admin', 'integrity', id] as const,
   fullLeaderboard: ['leaderboard'] as const,
   leaderboard: (params: { limit: number; offset: number; division?: string }) =>
     ['leaderboard', params] as const,

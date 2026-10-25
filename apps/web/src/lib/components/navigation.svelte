@@ -10,6 +10,7 @@
   import ThemeToggle from '$lib/components/theme-toggle.svelte'
   import {
     IconCopy,
+    IconFingerprint,
     IconFlagBannerFold,
     IconGavel,
     IconGear,
@@ -105,6 +106,13 @@
         label: 'Submissions',
         icon: IconTableFilled,
         href: '/admin/submissions',
+        show: canReadChallenges && canManageUsers,
+      },
+      {
+        value: 'admin-integrity',
+        label: 'Integrity',
+        icon: IconFingerprint,
+        href: '/admin/integrity',
         show: canReadChallenges && canManageUsers,
       },
       {

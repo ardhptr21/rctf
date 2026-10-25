@@ -69,6 +69,7 @@ import {
   getScoreboardFreezeCutoff,
   isAdminUser,
 } from './settings'
+import { scanAttempt } from './integrity'
 import { storeSubmissionProof } from './submission-proofs'
 import { createSubmission } from './submissions'
 import { getUser } from './users'
@@ -1306,14 +1307,29 @@ export const submitFlag = async (
     return res.badRateLimit({ timeLeft })
   }
 
+  const proof = params.evidence?.proofFile
+    ? await storeSubmissionProof(db, params.evidence.proofFile)
+    : undefined
   const evidenceDetails: SubmissionDetails = params.evidence
-    ? {
-        aiLinks: params.evidence.aiLinks,
-        ...(params.evidence.proofFile
-          ? { proof: await storeSubmissionProof(db, params.evidence.proofFile) }
-          : {}),
-      }
+    ? { aiLinks: params.evidence.aiLinks, ...(proof ? { proof } : {}) }
     : {}
+
+  // checks the attempt for signs of cheating in the background, once its
+  // outcome is on record
+  const scan = ({
+    solved = false,
+    cheatedFrom,
+  }: { solved?: boolean; cheatedFrom?: string | undefined } = {}) =>
+    void scanAttempt(db, redis, log, {
+      teamId: params.userId,
+      challengeId: params.challengeId,
+      ip: params.submissionIp ?? 'unknown',
+      flag: params.flag,
+      aiLinks: params.evidence?.aiLinks ?? [],
+      proof: proof ? { sha256: proof.sha256, name: proof.name } : null,
+      solved,
+      cheatedFrom: cheatedFrom ?? null,
+    })
 
   const { matched, cheated, cheatedFrom } = await verifyFlagEntries(
     flagEntries,
@@ -1337,6 +1353,7 @@ export const submitFlag = async (
         'failed to record incorrect flag submission'
       )
     )
+    scan()
     return res.badFlag()
   }
 
@@ -1390,6 +1407,7 @@ export const submitFlag = async (
           'failed to record already-solved flag submission'
         )
       )
+      scan()
       return res.badAlreadySolvedChallenge()
     }
     if (constraintName === 'uuid_fkey') {
@@ -1420,6 +1438,7 @@ export const submitFlag = async (
       })
   }
 
+  scan({ solved: true, cheatedFrom })
   requestChallengeRecompute(redis, params.challengeId, 'flag')
   forceLeaderboardUpdate(redis)
   return res.goodFlag()

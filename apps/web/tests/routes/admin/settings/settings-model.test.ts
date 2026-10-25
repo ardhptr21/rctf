@@ -11,7 +11,9 @@ import {
   resetGroup,
   sponsorPayload,
   sponsorsReducer,
+  validateAiLinkPatterns,
   validateFreeze,
+  validateIntegrity,
   validateTeamSize,
   validateTiming,
   type SettingsFormState,
@@ -27,7 +29,25 @@ function cleanState(): SettingsFormState {
     freeze: { time: null, dirty: false },
     teamCreation: { enabled: true, dirty: false },
     teamSize: { value: null, dirty: false },
-    submissionEvidence: { required: true, dirty: false },
+    submissionEvidence: {
+      required: true,
+      aiLinkPatternsText: '',
+      dirty: false,
+    },
+    integrity: {
+      detectors: {
+        flagSharing: true,
+        sharedIp: true,
+        duplicateProof: true,
+        duplicateAiLink: true,
+        solvedWithoutDownload: true,
+        unlistedAiLink: true,
+      },
+      windowHours: 24,
+      allowlistText: '',
+      alerts: true,
+      dirty: false,
+    },
     pageAccess: {
       challenges: PageAccess.Public,
       scores: PageAccess.Public,
@@ -617,5 +637,92 @@ describe('max team size setting', () => {
     expect(validateTeamSize(2.5)).not.toBeNull()
     expect(validateTeamSize(1001)).not.toBeNull()
     expect(validateTeamSize(null)).not.toBeNull()
+  })
+})
+
+describe('cheat detection group', () => {
+  const integrityDefaults = {
+    detectors: {
+      flagSharing: true,
+      sharedIp: true,
+      duplicateProof: true,
+      duplicateAiLink: true,
+      solvedWithoutDownload: true,
+      unlistedAiLink: true,
+    },
+    sharedIpWindowHours: 24,
+    ipAllowlist: [],
+    alerts: true,
+  }
+
+  it('sends the whole object, with the allow-list split into lines', () => {
+    const state = cleanState()
+    state.integrity.detectors.sharedIp = false
+    state.integrity.allowlistText = ' 10.0.0.0/8 \n\n2001:db8::/32\n'
+    state.integrity.dirty = true
+    expect(buildPatch(state, { integrity: integrityDefaults })).toEqual({
+      integrity: {
+        ...integrityDefaults,
+        detectors: { ...integrityDefaults.detectors, sharedIp: false },
+        ipAllowlist: ['10.0.0.0/8', '2001:db8::/32'],
+      },
+    })
+  })
+
+  it('clears the override when it matches the defaults again', () => {
+    const state = cleanState()
+    state.integrity.dirty = true
+    expect(buildPatch(state, { integrity: integrityDefaults })).toEqual({
+      integrity: null,
+    })
+  })
+
+  it('validates the window and every allow-list line', () => {
+    const state = cleanState()
+    expect(validateIntegrity(state.integrity)).toBeNull()
+
+    state.integrity.windowHours = 0
+    expect(validateIntegrity(state.integrity)).toContain('1 to 720')
+
+    state.integrity.windowHours = 24
+    state.integrity.allowlistText = '10.0.0.0/8\nvenue-wifi'
+    expect(validateIntegrity(state.integrity)).toBe(
+      '"venue-wifi" is not an IP address or CIDR range.'
+    )
+  })
+})
+
+describe('submissions group', () => {
+  const defaults = { requireSubmissionEvidence: true, aiLinkPatterns: [] }
+
+  it('sends AI link patterns, one per non-empty line', () => {
+    const state = cleanState()
+    state.submissionEvidence.aiLinkPatternsText =
+      '^https://chatgpt\\.com/share/\n\n^https://chat\\.deepseek\\.com/'
+    state.submissionEvidence.dirty = true
+    expect(buildPatch(state, defaults)).toEqual({
+      requireSubmissionEvidence: null,
+      aiLinkPatterns: [
+        '^https://chatgpt\\.com/share/',
+        '^https://chat\\.deepseek\\.com/',
+      ],
+    })
+  })
+
+  it('clears each field that matches its default', () => {
+    const state = cleanState()
+    state.submissionEvidence.required = false
+    state.submissionEvidence.dirty = true
+    expect(buildPatch(state, defaults)).toEqual({
+      requireSubmissionEvidence: false,
+      aiLinkPatterns: null,
+    })
+  })
+
+  it('rejects invalid patterns', () => {
+    expect(validateAiLinkPatterns('^https://claude\\.ai/share/')).toBeNull()
+    expect(validateAiLinkPatterns('ok\n^https://([a-z')).toBe(
+      '"^https://([a-z" is not a valid regular expression.'
+    )
   })
 })

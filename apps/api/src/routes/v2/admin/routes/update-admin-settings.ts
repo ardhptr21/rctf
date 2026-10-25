@@ -2,6 +2,7 @@ import { UpdateAdminSettingsRouteV2 } from '@rctf/types'
 import {
   getConfigDefaults,
   getSettings,
+  integrityAlertsConfigured,
   patchSettings,
   resolveSettings,
   updateSettings,
@@ -34,5 +35,9 @@ adminGroup.route(UpdateAdminSettingsRouteV2, async ({ res, ctx, body }) => {
     forceLeaderboardUpdate(ctx.var.redis)
   }
   const defaults = getConfigDefaults()
-  return res.goodAdminSettingsUpdate({ overrides, defaults })
+  return res.goodAdminSettingsUpdate({
+    overrides,
+    defaults,
+    integrityAlertsConfigured: integrityAlertsConfigured(),
+  })
 })

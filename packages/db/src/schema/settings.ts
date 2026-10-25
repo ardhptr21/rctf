@@ -1,4 +1,4 @@
-import type { PageAccess } from '@rctf/types'
+import type { IntegritySettings, PageAccess } from '@rctf/types'
 import { jsonb, pgTable, text } from 'drizzle-orm/pg-core'
 
 export interface EditableSponsor {
@@ -19,6 +19,8 @@ export interface EditableSettings {
   teamCreationEnabled?: boolean
   maxTeamSize?: number
   requireSubmissionEvidence?: boolean
+  aiLinkPatterns?: string[]
+  integrity?: IntegritySettings
   pageAccess?: {
     challenges?: PageAccess
     scores?: PageAccess

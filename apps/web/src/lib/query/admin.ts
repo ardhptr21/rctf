@@ -4,6 +4,8 @@ import {
   GetAdminBotStatusRouteV2,
   GetAdminChallengeRouteV2,
   GetAdminChallengesRouteV2,
+  GetAdminIntegrityCaseRouteV2,
+  GetAdminIntegrityCasesRouteV2,
   GetAdminPlayersRouteV2,
   GetAdminSettingsRouteV2,
   GetAdminUserRouteV2,
@@ -14,6 +16,8 @@ import {
   GoodAdminChallengesV2,
   GoodAdminChallengeV2,
   GoodAdminExternalAuthClients,
+  GoodAdminIntegrityCase,
+  GoodAdminIntegrityCases,
   GoodAdminPlayers,
   GoodAdminSettings,
   GoodAdminSubmissions,
@@ -39,6 +43,7 @@ import {
 import { unwrapData } from '$lib/query/core'
 import {
   queryKeys,
+  type AdminIntegrityCasesQueryParams,
   type AdminPlayersQueryParams,
   type AdminSubmissionsQueryParams,
   type AdminUsersQueryParams,
@@ -162,6 +167,55 @@ export function useAdminPlayersInfinite(
       placeholderData: keepPreviousData,
     }
   })
+}
+
+export function useAdminIntegrityCasesInfinite(
+  params: () => AdminIntegrityCasesQueryParams,
+  enabled: () => boolean = () => true
+) {
+  return createInfiniteQuery(() => {
+    const query = params()
+    return {
+      queryKey: queryKeys.adminIntegrityCases(query),
+      queryFn: async ({ pageParam }) => {
+        const response = await apiRequest(GetAdminIntegrityCasesRouteV2, {
+          ...query,
+          offset: pageParam,
+        })
+        return {
+          ...unwrapData(response, GoodAdminIntegrityCases),
+          offset: pageParam,
+        }
+      },
+      enabled: enabled(),
+      initialPageParam: 0,
+      getNextPageParam: lastPage => nextPageOffset(lastPage, lastPage.cases),
+      placeholderData: keepPreviousData,
+    }
+  })
+}
+
+export function useAdminIntegrityCase(id: () => string | null) {
+  return createQuery(() => {
+    const caseId = id()
+    return {
+      queryKey: queryKeys.adminIntegrityCase(caseId ?? ''),
+      queryFn: async () =>
+        unwrapData(
+          await apiRequest(GetAdminIntegrityCaseRouteV2, { id: caseId! }),
+          GoodAdminIntegrityCase
+        ),
+      enabled: caseId !== null,
+    }
+  })
+}
+
+// banning from a case also changes the teams lists
+export function invalidateAdminIntegrityQueries(
+  queryClient: QueryClient
+): void {
+  queryClient.invalidateQueries({ queryKey: ['admin', 'integrity'] })
+  queryClient.invalidateQueries({ queryKey: ['admin', 'users'] })
 }
 
 // player changes also change team rosters and member counts

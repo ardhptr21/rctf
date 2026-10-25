@@ -61,3 +61,34 @@ export const AiLinksSchema = z
       'Links to the AI conversations used, or exactly `no ai`. Repeat the field for more links (max 10).'
     )
   )
+
+export const MAX_AI_LINK_PATTERN_LENGTH = 500
+
+// Allowed AI link patterns are JavaScript regular expressions, matched
+// without regard to case.
+export const compileAiLinkPattern = (pattern: string): RegExp | null => {
+  if (pattern.length > MAX_AI_LINK_PATTERN_LENGTH) return null
+  try {
+    return new RegExp(pattern, 'i')
+  } catch {
+    return null
+  }
+}
+
+export const isAiLinkPattern = (pattern: string): boolean =>
+  pattern.trim() !== '' && compileAiLinkPattern(pattern) !== null
+
+export const AiLinkPatternsSchema = z
+  .array(
+    z.string().check(
+      z.refine(isAiLinkPattern, {
+        message: 'must be a valid regular expression',
+      })
+    )
+  )
+  .check(z.maxLength(50))
+  .check(
+    z.describe(
+      'Regular expressions for allowed AI links, matched without regard to case. Cheat detection records links matching none of them; an empty list turns that check off.'
+    )
+  )

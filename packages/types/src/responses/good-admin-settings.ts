@@ -1,7 +1,11 @@
 import { z } from 'zod/mini'
 import { PageAccess } from '../enums'
 import { response } from '../internal'
-import { SponsorSchemaV2 } from '../util'
+import {
+  AiLinkPatternsSchema,
+  IntegritySettingsSchema,
+  SponsorSchemaV2,
+} from '../util'
 import { example } from '../util/example'
 
 export const AdminSettingsSchema = z.object({
@@ -35,6 +39,10 @@ export const AdminSettingsSchema = z.object({
   teamCreationEnabled: example(z.optional(z.boolean()), true).check(
     z.describe('Whether players can create new teams.')
   ),
+  aiLinkPatterns: z.optional(AiLinkPatternsSchema),
+  integrity: z
+    .optional(IntegritySettingsSchema)
+    .check(z.describe('Cheat detection settings.')),
   pageAccess: z.optional(
     z.object({
       challenges: example(
@@ -73,11 +81,16 @@ export const AdminSettingsSchema = z.object({
   ).check(z.describe('Dark-theme logo URL.')),
 })
 
-const AdminSettingsResponseData = z.object({
+export const AdminSettingsResponseData = z.object({
   overrides: AdminSettingsSchema.check(
     z.describe('Operator-set values overriding the defaults.')
   ),
   defaults: AdminSettingsSchema.check(z.describe('Built-in default values.')),
+  integrityAlertsConfigured: example(z.boolean(), false).check(
+    z.describe(
+      'Whether cheat detection alert destinations are set in the config. The `alerts` setting has no effect without them.'
+    )
+  ),
 })
 
 export const GoodAdminSettings = response('goodAdminSettings', {
