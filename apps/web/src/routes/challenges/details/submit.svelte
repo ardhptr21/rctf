@@ -15,6 +15,7 @@
     IconPaperPlaneTilt,
     IconPlus,
     IconSignIn,
+    IconWarningCircle,
     IconX,
   } from '$lib/icons'
   import { useClientConfig } from '$lib/query/config'
@@ -51,11 +52,19 @@
 
   const userQuery = useCurrentUser()
   const isAuthenticated = $derived(userQuery.data != null)
+  const isBanned = $derived(userQuery.data?.banned ?? false)
 
   let now = $state(Date.now())
 
   const submitState = $derived(
-    resolveSubmitState({ isArchived, endTime, now, isAuthenticated, isSolved })
+    resolveSubmitState({
+      isArchived,
+      endTime,
+      now,
+      isAuthenticated,
+      isBanned,
+      isSolved,
+    })
   )
 
   $effect(() => {
@@ -174,6 +183,11 @@
     <submit-notice>
       <IconInfo />
       <span>The CTF has ended.</span>
+    </submit-notice>
+  {:else if submitState === 'banned'}
+    <submit-notice data-tone="danger">
+      <IconWarningCircle />
+      <span>Your team is banned and can't submit flags.</span>
     </submit-notice>
   {:else if submitState === 'login'}
     <Button href="/login">
@@ -532,6 +546,15 @@
     &[data-tone='success'] {
       color: var(--foreground-success);
       background: var(--background-success);
+    }
+
+    &[data-tone='danger'] {
+      color: var(--foreground-destructive);
+      background: color-mix(
+        in srgb,
+        var(--foreground-destructive) 14%,
+        var(--background-l4)
+      );
     }
 
     span {

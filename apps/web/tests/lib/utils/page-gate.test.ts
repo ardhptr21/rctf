@@ -56,3 +56,32 @@ describe('decidePageGate for players without a team', () => {
     ).toBe('ok')
   })
 })
+
+describe('decidePageGate for banned teams', () => {
+  const banned = { perms: 0, banned: true }
+
+  it('blocks the challenges page whatever its access setting', () => {
+    for (const access of [
+      PageAccess.Public,
+      PageAccess.Private,
+      PageAccess.Admin,
+    ]) {
+      expect(decidePageGate(access, banned, { page: 'challenges' })).toBe(
+        'banned'
+      )
+    }
+  })
+
+  it('leaves other pages alone and lets banned admins through', () => {
+    expect(decidePageGate(PageAccess.Public, banned, { page: 'scores' })).toBe(
+      'ok'
+    )
+    expect(
+      decidePageGate(
+        PageAccess.Public,
+        { perms: Permissions.challsRead, banned: true },
+        { page: 'challenges' }
+      )
+    ).toBe('ok')
+  })
+})

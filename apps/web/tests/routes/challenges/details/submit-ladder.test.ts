@@ -11,6 +11,7 @@ function input(overrides: Partial<SubmitLadderInput> = {}): SubmitLadderInput {
     endTime: 100,
     now: 50,
     isAuthenticated: true,
+    isBanned: false,
     isSolved: false,
     ...overrides,
   }
@@ -34,6 +35,9 @@ describe('resolveSubmitState', () => {
     ],
     ['login when unauthenticated', { isAuthenticated: false }, 'login'],
     ['login beats solved', { isAuthenticated: false, isSolved: true }, 'login'],
+    ['banned when the team is banned', { isBanned: true }, 'banned'],
+    ['banned beats solved', { isBanned: true, isSolved: true }, 'banned'],
+    ['ended beats banned', { now: 200, isBanned: true }, 'ended'],
     ['solved when solved', { isSolved: true }, 'solved'],
     ['form otherwise', {}, 'form'],
   ])('%s', (_label, overrides, expected) => {

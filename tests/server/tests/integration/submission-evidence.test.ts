@@ -4,6 +4,7 @@ import {
   settings,
   submissionProofs,
   submissions,
+  users,
 } from '@rctf/db'
 import {
   BadAiLinks,
@@ -11,6 +12,8 @@ import {
   BadPerms,
   BadProofFileSize,
   BadProofRequired,
+  BadTeamBanned,
+  GoodChallengesV2,
   GoodFlag,
   GoodSubmissionProof,
   Permissions,
@@ -30,6 +33,7 @@ import {
   invalidateResolvedSettingsCache,
   updateSettings,
 } from '../../../../apps/api/src/services/settings'
+import { invalidateUserCache } from '../../../../apps/api/src/cache/auth-cache'
 import { createRedis } from '../../../../apps/api/src/util/redis'
 import { getApp, request } from '../../app'
 import {
@@ -334,5 +338,62 @@ describe('admin proof download', () => {
       }),
       BadPerms
     )
+  })
+})
+
+describe('banned teams', () => {
+  test('v2 says the team is banned; v1 keeps answering badPerms', async () => {
+    const challenge = await newChallenge()
+    const setBanned = (banned: boolean) =>
+      getDb().update(users).set({ banned }).where(eq(users.id, team.user.id))
+
+    await setBanned(true)
+    try {
+      await expectResponse(
+        await submitV2(challenge.id, { flag: challenge.flag }),
+        BadTeamBanned
+      )
+      await expectResponse(
+        await request(app, `/api/v1/challs/${challenge.id}/submit`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${await generateAuthToken(team.user.id)}`,
+          },
+          body: JSON.stringify({ flag: challenge.flag }),
+        }),
+        BadPerms
+      )
+    } finally {
+      await setBanned(false)
+    }
+  })
+
+  test('a banned team cannot load challenges or their solvers', async () => {
+    const challenge = await newChallenge()
+    const setBanned = (banned: boolean) =>
+      getDb().update(users).set({ banned }).where(eq(users.id, team.user.id))
+    const get = async (path: string) =>
+      request(app, path, {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${await generateAuthToken(team.user.id)}`,
+        },
+      })
+
+    await setBanned(true)
+    await invalidateUserCache(await createRedis(), team.user.id)
+    try {
+      await expectResponse(await get('/api/v2/challs'), BadTeamBanned)
+      await expectResponse(await get('/api/v1/challs'), BadTeamBanned)
+      await expectResponse(
+        await get(`/api/v2/challs/${challenge.id}/solves?limit=10&offset=0`),
+        BadTeamBanned
+      )
+    } finally {
+      await setBanned(false)
+      await invalidateUserCache(await createRedis(), team.user.id)
+    }
+    await expectResponse(await get('/api/v2/challs'), GoodChallengesV2)
   })
 })

@@ -1,7 +1,12 @@
 <script lang="ts">
   import type { AccessControlledPage } from '@rctf/types'
   import type { Snippet } from 'svelte'
-  import { IconSignIn, IconUsersThree, IconWarningCircle } from '$lib/icons'
+  import {
+    IconGavel,
+    IconSignIn,
+    IconUsersThree,
+    IconWarningCircle,
+  } from '$lib/icons'
   import { useClientConfig } from '$lib/query/config'
   import { usePlayerSelf } from '$lib/query/team'
   import { useCurrentUser } from '$lib/query/user'
@@ -56,6 +61,17 @@
       subtitle={`You need to be on a team to view the ${title.toLowerCase()}. Create a team or join one with its team token.`}
     >
       <Button href="/team">Create or join a team</Button>
+    </StatusCard>
+  </gate-status>
+{:else if gate === 'banned'}
+  <gate-status>
+    <StatusCard
+      variant="plain"
+      icon={IconGavel}
+      title="Your team has been banned"
+      subtitle={`Banned teams can't view the ${title.toLowerCase()}. Contact the organizers if you think this is a mistake.`}
+    >
+      <Button href="/">Home</Button>
     </StatusCard>
   </gate-status>
 {:else if gate === 'noPerms'}

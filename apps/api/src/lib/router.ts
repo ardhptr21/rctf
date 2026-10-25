@@ -27,6 +27,7 @@ import {
   BadEndpoint,
   BadNoTeam,
   BadNotCaptain,
+  BadTeamBanned,
   BadToken,
   PageAccess,
   AccessControlledPage,
@@ -137,6 +138,10 @@ const respond = {
   noTeam: (): JsonResponse => [
     { kind: BadNoTeam.kind, message: BadNoTeam.message },
     BadNoTeam.status as ContentfulStatusCode,
+  ],
+  teamBanned: (): JsonResponse => [
+    { kind: BadTeamBanned.kind, message: BadTeamBanned.message },
+    BadTeamBanned.status as ContentfulStatusCode,
   ],
 
   notStarted: (): JsonResponse => [
@@ -356,6 +361,14 @@ export const declareRouter = <
           access !== PageAccess.Public)
       ) {
         return context.json(...respond.noTeam())
+      }
+      // a banned team can't see challenges at all; admins still can
+      if (
+        page === AccessControlledPage.Challenges &&
+        user?.banned &&
+        !isAdminUser(user)
+      ) {
+        return context.json(...respond.teamBanned())
       }
       if (access !== PageAccess.Public && !user) {
         return context.json(...respond.unauthorized())

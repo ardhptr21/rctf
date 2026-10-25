@@ -1,12 +1,18 @@
 import { config } from '@rctf/config'
 import { SubmitFlagRouteV2 } from '@rctf/types'
-import { submitFlag } from '../../../../services/challenges'
+import { getSubmitterState, submitFlag } from '../../../../services/challenges'
 import { getResolvedSettings } from '../../../../services/settings'
 import challsGroup from '../group'
 
 challsGroup.route(
   SubmitFlagRouteV2,
   async ({ res, ctx, params, body, user }) => {
+    // read past the auth cache so a fresh ban shows straight away; v1
+    // keeps answering badPerms for compatibility
+    if ((await getSubmitterState(ctx.var.db, user.id))?.banned) {
+      return res.badTeamBanned()
+    }
+
     const { requireSubmissionEvidence } = await getResolvedSettings(
       ctx.var.db,
       ctx.var.redis

@@ -4,6 +4,8 @@
   type Props = {
     icon?: Component
     tone?: 'neutral' | 'danger'
+    // 'plain' drops the card background and centers the content
+    variant?: 'card' | 'plain'
     title: string
     subtitle?: string
     detail?: string
@@ -13,6 +15,7 @@
   let {
     icon: Icon,
     tone = 'neutral',
+    variant = 'card',
     title,
     subtitle,
     detail,
@@ -20,7 +23,7 @@
   }: Props = $props()
 </script>
 
-<status-card data-tone={tone}>
+<status-card data-tone={tone} data-variant={variant}>
   {#if Icon}
     <status-icon aria-hidden="true"><Icon /></status-icon>
   {/if}
@@ -46,6 +49,12 @@
     padding: var(--space-m);
     background: var(--background-l1);
     border-radius: var(--radius-lg);
+
+    &[data-variant='plain'] {
+      align-items: center;
+      text-align: center;
+      background: none;
+    }
   }
 
   status-icon {
