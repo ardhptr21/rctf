@@ -434,10 +434,7 @@
       <settings-group>
         {@render groupHeader('Scoreboard freeze', resetFreeze)}
         <group-body>
-          <Field
-            label="Freeze at (local time)"
-            description="Teams can keep solving, but the public scoreboard freezes at this time and stays frozen after the CTF ends. Clear this field to reveal the final standings. Leave empty for a live scoreboard."
-          >
+          <Field label="Freeze at (local time)">
             {#snippet children({ id, describedBy })}
               <Input
                 {id}
@@ -472,13 +469,8 @@
             >
               Allow players to create new teams
             </Checkbox>
-            <field-description>
-              When off, players can only join an existing team with its team
-              token.
-            </field-description>
             <Field
               label="Max team members"
-              description="Players per team. Teams with admin permissions have no limit. Lowering it keeps existing members but stops new joins."
               error={settingsForm.teamSize.dirty
                 ? (validateTeamSize(settingsForm.teamSize.value) ?? undefined)
                 : undefined}
@@ -518,11 +510,6 @@
           >
             Require AI links and solver proof on flag submissions
           </Checkbox>
-          <field-description>
-            Players must add links to the AI conversations they used (or
-            &quot;no ai&quot;) and upload one solver proof file with every flag.
-            Admins can review them on the Submissions page.
-          </field-description>
         </group-body>
       </settings-group>
 
@@ -836,12 +823,6 @@
     display: block;
     font-size: var(--step--1);
     color: var(--foreground-destructive);
-  }
-
-  field-description {
-    display: block;
-    font-size: var(--step--1);
-    color: var(--foreground-l3);
   }
 
   timing-grid {

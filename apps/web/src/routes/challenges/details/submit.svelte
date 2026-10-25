@@ -5,6 +5,7 @@
     SubmitFlagRouteV2,
     type Challenge,
   } from '@rctf/types'
+  import { tick } from 'svelte'
   import { showApiError } from '$lib/api'
   import { useApiForm } from '$lib/forms/use-api-form.svelte'
   import {
@@ -72,6 +73,7 @@
   let noAi = $state(false)
   let proof = $state<File | null>(null)
   let proofInput = $state<HTMLInputElement | null>(null)
+  let linkList = $state<HTMLElement | null>(null)
   let evidenceErrors = $state<EvidenceErrors>({})
 
   function resetEvidence() {
@@ -82,8 +84,27 @@
     if (proofInput) proofInput.value = ''
   }
 
-  function addLink() {
+  async function addLink() {
+    // fill in the existing fields before adding another
+    const emptyIndex = aiLinks.findIndex(link => link.trim() === '')
+    if (emptyIndex !== -1) {
+      evidenceErrors = {
+        ...evidenceErrors,
+        aiLinks: 'Fill in the empty link before adding another.',
+      }
+      const empty = linkList?.querySelectorAll('input')[emptyIndex]
+      empty?.focus({ preventScroll: true })
+      empty?.scrollIntoView({ block: 'nearest' })
+      return
+    }
     aiLinks = [...aiLinks, '']
+    // the list scrolls once it is taller than a few rows; bring the new
+    // field into view and focus it
+    await tick()
+    const inputs = linkList?.querySelectorAll('input')
+    const added = inputs?.[inputs.length - 1]
+    added?.focus({ preventScroll: true })
+    added?.scrollIntoView({ block: 'nearest' })
   }
 
   function removeLink(index: number) {
@@ -176,35 +197,37 @@
               I didn&apos;t use AI
             </Checkbox>
             {#if !noAi}
-              {#each aiLinks as _, index (index)}
-                <link-row>
-                  <Input
-                    type="url"
-                    placeholder="https://chatgpt.com/share/..."
-                    aria-label={`AI link ${index + 1}`}
-                    aria-invalid={!!evidenceErrors.aiLinks || undefined}
-                    disabled={form.submitting}
-                    bind:value={aiLinks[index]}
-                    oninput={() =>
-                      (evidenceErrors = {
-                        ...evidenceErrors,
-                        aiLinks: undefined,
-                      })}
-                  />
-                  {#if aiLinks.length > 1}
-                    <Button
-                      type="button"
-                      size="icon-sm"
-                      variant="ghost"
-                      aria-label={`Remove AI link ${index + 1}`}
+              <link-list bind:this={linkList}>
+                {#each aiLinks as _, index (index)}
+                  <link-row>
+                    <Input
+                      type="url"
+                      placeholder="https://chatgpt.com/share/..."
+                      aria-label={`AI link ${index + 1}`}
+                      aria-invalid={!!evidenceErrors.aiLinks || undefined}
                       disabled={form.submitting}
-                      onclick={() => removeLink(index)}
-                    >
-                      <IconX />
-                    </Button>
-                  {/if}
-                </link-row>
-              {/each}
+                      bind:value={aiLinks[index]}
+                      oninput={() =>
+                        (evidenceErrors = {
+                          ...evidenceErrors,
+                          aiLinks: undefined,
+                        })}
+                    />
+                    {#if aiLinks.length > 1}
+                      <Button
+                        type="button"
+                        size="icon-sm"
+                        variant="ghost"
+                        aria-label={`Remove AI link ${index + 1}`}
+                        disabled={form.submitting}
+                        onclick={() => removeLink(index)}
+                      >
+                        <IconX />
+                      </Button>
+                    {/if}
+                  </link-row>
+                {/each}
+              </link-list>
               {#if aiLinks.length < 10}
                 <add-link>
                   <Button
@@ -429,6 +452,20 @@
     color: var(--foreground-l0);
     background: var(--background-l2);
     border-radius: var(--radius-md);
+  }
+
+  /* capped at about three rows so many links can't crowd out the rest of
+     the panel; the extra rows scroll */
+  link-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2xs);
+    max-block-size: 8.75rem;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    /* room for focus rings, which overflow would otherwise clip */
+    margin: -3px;
+    padding: 3px;
   }
 
   link-row {

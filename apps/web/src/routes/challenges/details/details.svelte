@@ -177,6 +177,9 @@
     display: flex;
     flex-direction: column;
     flex-shrink: 0;
+    /* keeps the description visible on short screens */
+    max-block-size: 70%;
+    overflow-y: auto;
     gap: 0.5rem;
     padding: 0.5rem 1.25rem 1rem;
     background: var(--background-l2);
