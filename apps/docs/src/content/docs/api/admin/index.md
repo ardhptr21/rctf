@@ -24,6 +24,11 @@ aside: true
 | [Update team](/api/admin/team-update/) | `<route>PUT /api/v2/admin/users/:id</route>` |
 | [Delete team](/api/admin/team-delete/) | `<route>DELETE /api/v2/admin/users/:id</route>` |
 | [Create team token](/api/admin/team-token/) | `<route>POST /api/v2/admin/users/:id/token</route>` |
+| [List players](/api/admin/players/) | `<route>GET /api/v2/admin/players</route>` |
+| [Set player team](/api/admin/player-team/) | `<route>PUT /api/v2/admin/players/:id/team</route>` |
+| [Make player captain](/api/admin/player-captain/) | `<route>POST /api/v2/admin/players/:id/captain</route>` |
+| [Ban player](/api/admin/player-ban/) | `<route>PUT /api/v2/admin/players/:id/ban</route>` |
+| [Delete player](/api/admin/player-delete/) | `<route>DELETE /api/v2/admin/players/:id</route>` |
 | [Pending verifications](/api/admin/verifications/) | `<route>GET /api/v2/admin/user-verifications</route>` |
 | [Complete verification](/api/admin/verification-complete/) | `<route>POST /api/v2/admin/user-verifications/:id/complete</route>` |
 | [Resend verification](/api/admin/verification-resend/) | `<route>POST /api/v2/admin/user-verifications/:id/resend</route>` |
@@ -63,7 +68,7 @@ Permissions, captcha actions, and rate limit conventions are documented in the [
 | `challsRead{:ts}` | Reading admin challenge data, challenge solves, upload state, instancer schemas, admin bot status, admin user solve history, and managing the admin's own instances. |
 | `challsWrite{:ts}` | Updating challenges and uploading files. |
 | `challsSolveWrite{:ts}` | Removing solves. |
-| `usersWrite{:ts}` | Listing and editing teams, creating team tokens, managing pending verifications, and reading submission audit rows. |
+| `usersWrite{:ts}` | Listing and editing teams and players, creating team tokens, managing pending verifications, and reading submission audit rows. |
 | `settingsWrite{:ts}` | Reading and updating runtime settings. |
 
 When a route lists more than one permission bit, the token needs every listed bit.

@@ -11,6 +11,7 @@ import {
   BadName,
   BadNoTeam,
   BadNotCaptain,
+  BadPlayerBanned,
   BadRosterLocked,
   BadTeamBanned,
   BadTeamCreationClosed,
@@ -44,7 +45,13 @@ export const DiscordLoginRouteV2 = defineRoute({
     ).check(z.describe('Redirect URI used for the authorization request.')),
   }),
   goodResponses: [GoodDiscordLogin],
-  badResponses: [BadEndpoint, BadBody, BadDiscordCode, BadDiscordGuild],
+  badResponses: [
+    BadEndpoint,
+    BadBody,
+    BadDiscordCode,
+    BadDiscordGuild,
+    BadPlayerBanned,
+  ],
 })
 
 export const GetPlayerSelfRouteV2 = defineRoute({

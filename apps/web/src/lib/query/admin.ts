@@ -4,6 +4,7 @@ import {
   GetAdminBotStatusRouteV2,
   GetAdminChallengeRouteV2,
   GetAdminChallengesRouteV2,
+  GetAdminPlayersRouteV2,
   GetAdminSettingsRouteV2,
   GetAdminUserRouteV2,
   GetAdminUserVerificationsRouteV2,
@@ -13,6 +14,7 @@ import {
   GoodAdminChallengesV2,
   GoodAdminChallengeV2,
   GoodAdminExternalAuthClients,
+  GoodAdminPlayers,
   GoodAdminSettings,
   GoodAdminSubmissions,
   GoodAdminUsersV2,
@@ -37,6 +39,7 @@ import {
 import { unwrapData } from '$lib/query/core'
 import {
   queryKeys,
+  type AdminPlayersQueryParams,
   type AdminSubmissionsQueryParams,
   type AdminUsersQueryParams,
 } from '$lib/query/keys'
@@ -136,6 +139,37 @@ export function useAdminUsersInfinite(
       placeholderData: keepPreviousData,
     }
   })
+}
+
+export function useAdminPlayersInfinite(
+  params: () => AdminPlayersQueryParams,
+  enabled: () => boolean = () => true
+) {
+  return createInfiniteQuery(() => {
+    const query = params()
+    return {
+      queryKey: queryKeys.adminPlayers(query),
+      queryFn: async ({ pageParam }) => {
+        const response = await apiRequest(GetAdminPlayersRouteV2, {
+          ...query,
+          offset: pageParam,
+        })
+        return { ...unwrapData(response, GoodAdminPlayers), offset: pageParam }
+      },
+      enabled: enabled(),
+      initialPageParam: 0,
+      getNextPageParam: lastPage => nextPageOffset(lastPage, lastPage.players),
+      placeholderData: keepPreviousData,
+    }
+  })
+}
+
+// player changes also change team rosters and member counts
+export function invalidateAdminPlayerQueries(queryClient: QueryClient): void {
+  queryClient.invalidateQueries({ queryKey: ['admin', 'players'] })
+  queryClient.invalidateQueries({ queryKey: ['admin', 'users'] })
+  queryClient.invalidateQueries({ queryKey: queryKeys.teamMembers })
+  queryClient.invalidateQueries({ queryKey: queryKeys.playerSelf })
 }
 
 export function useAdminSubmissionsInfinite(

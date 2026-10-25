@@ -1,4 +1,5 @@
 import adminGroup from './group'
+import './routes/admin-players'
 import './routes/complete-admin-user-verification'
 import './routes/complete-admin-bot-job'
 import './routes/create-admin-instance'

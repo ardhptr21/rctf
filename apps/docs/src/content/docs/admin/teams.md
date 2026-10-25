@@ -34,6 +34,30 @@ Log in with Discord and you are the captain of `organizers`. Share the printed t
 
 To make an existing team an admin team instead, run `rctf user promote <team name>` (a team email or a member's Discord ID also works). See the [CLI reference](/admin/cli/) for both commands.
 
+### Admin teams don't score
+
+A team with any admin permission takes no part in scoring. Its members can submit flags to test challenges, and they still see their own solves, but those solves never count:
+
+- The team has no score or rank and doesn't appear on the scoreboard, the graph or the CTFtime feed.
+- Its solves don't lower decaying challenge points, don't add to solve counts and never take a first blood.
+- Players don't see the team in solver lists, and its profile is hidden from everyone except its own members and other admins. Admin pages still list its solves.
+
+Promoting or demoting a team recalculates points and the standings right away, the same way a ban does.
+
+### Managing players
+
+**Manage players** in the admin menu (`/admin/players`) lists every player who has signed in with Discord, newest first. You can search by Discord username, display name, Discord ID or team name, and filter by role (captain, member, or no team) and by status (active or banned). Each row shows the player's team, when they joined it and when they first signed in.
+
+From a player's row you can:
+
+- **Make captain** of their current team. The old captain stays on as a member.
+- **Move to another team**, or **add to a team** if they have none. The target team must not be banned and must have room under **Max team members**. A player moved into an empty team becomes its captain.
+- **Remove from team.** If they were captain, the earliest-joined member takes over.
+- **Ban the player.** They are signed out straight away and can't sign in again with that Discord account until you unban them. A ban is about the person: they stay on their team, and the team's solves and score are untouched. Ban the team as well if it should leave the standings.
+- **Delete the player.** This signs them out and removes the account. Signing in with Discord again starts a new account with no team. Banned players can't be deleted, because deleting the account would also lift the ban: unban them first.
+
+These actions work at any time, including after rosters lock when the CTF starts. Solves belong to the team, so a player who moves leaves their team's solves behind. A team emptied this way is kept rather than deleted, so you can delete it from the teams list if you want to.
+
 ## Listing and searching teams
 
 The admin panel lets you browse all registered teams with their scores, paginate through them, and search by name.

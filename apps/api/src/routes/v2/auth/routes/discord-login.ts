@@ -28,6 +28,9 @@ authGroup.route(DiscordLoginRouteV2, async ({ ctx, res, body }) => {
     ctx.var.redis,
     result.profile
   )
+  if (player.banned) {
+    return res.badPlayerBanned()
+  }
   return res.goodDiscordLogin({
     authToken: await createToken(TokenKind.PlayerAuth, player.id),
   })

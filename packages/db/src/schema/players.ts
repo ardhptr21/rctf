@@ -20,6 +20,8 @@ export const players = pgTable(
     avatarUrl: text('avatar_url'),
     teamId: text('team_id'),
     isCaptain: boolean('is_captain').notNull().default(false),
+    // banned players can't sign in, and their sessions stop working
+    banned: boolean().notNull().default(false),
     joinedTeamAt: timestamp('joined_team_at', {
       withTimezone: true,
       mode: 'string',

@@ -124,6 +124,13 @@
         show: isAdmin && canManageUsers,
       },
       {
+        href: '/admin/players',
+        activePath: '/admin/players',
+        label: 'Manage players',
+        icon: IconUsersThree,
+        show: isAdmin && canManageUsers,
+      },
+      {
         href: '/admin/submissions',
         activePath: '/admin/submissions',
         label: 'Submissions',

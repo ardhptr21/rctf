@@ -206,7 +206,8 @@ const getAuthenticatedPrincipal = async (
   }
 
   const player = await getCachedPlayer(context.var.db, context.var.redis, id)
-  if (!player) {
+  // a banned player's sessions stop working, as if signed out
+  if (!player || player.banned) {
     return {}
   }
   return {

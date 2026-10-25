@@ -94,6 +94,13 @@
         show: canManageUsers,
       },
       {
+        value: 'admin-players',
+        label: 'Manage players',
+        icon: IconUsersThree,
+        href: '/admin/players',
+        show: canManageUsers,
+      },
+      {
         value: 'admin-submissions',
         label: 'Submissions',
         icon: IconTableFilled,

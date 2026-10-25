@@ -17,6 +17,14 @@ export type AdminSubmissionsQueryParams = Pick<
 > &
   RouteBody<typeof FilterAdminSubmissionsRouteV2>
 
+// roles and statuses go over the wire as comma-separated lists
+export type AdminPlayersQueryParams = {
+  limit: number
+  search?: string | undefined
+  roles?: string | undefined
+  statuses?: string | undefined
+}
+
 export const queryKeys = {
   clientConfig: ['clientConfig'] as const,
   userSelf: ['user', 'self'] as const,
@@ -35,6 +43,8 @@ export const queryKeys = {
     ['admin', 'users', 'list', params] as const,
   adminUser: (id: string) => ['admin', 'users', id] as const,
   adminUserVerifications: ['admin', 'user-verifications'] as const,
+  adminPlayers: (params: AdminPlayersQueryParams) =>
+    ['admin', 'players', 'list', params] as const,
   fullLeaderboard: ['leaderboard'] as const,
   leaderboard: (params: { limit: number; offset: number; division?: string }) =>
     ['leaderboard', params] as const,

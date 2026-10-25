@@ -9,6 +9,7 @@ import {
   BadEndpoint,
   BadNoTeam,
   BadNotCaptain,
+  BadPlayerBanned,
   BadRosterLocked,
   BadTeamCreationClosed,
   BadTeamFull,
@@ -26,7 +27,10 @@ import {
   GoodTeamTokenRotate,
   GoodUserSelfDataV2,
   GoodChallengesV2,
+  GoodAdminPlayers,
+  GoodAdminPlayerUpdate,
   PageAccess,
+  Permissions,
 } from '@rctf/types'
 import {
   afterAll,
@@ -49,7 +53,12 @@ import {
 } from '../../../../apps/api/src/services/teams'
 import { createRedis } from '../../../../apps/api/src/util/redis'
 import { getApp, request } from '../../app'
-import { expectResponse, generateChallenge } from '../../util'
+import {
+  expectResponse,
+  generateAuthToken,
+  generateChallenge,
+  generateRealTestUser,
+} from '../../util'
 
 const getDb = () => createDatabase(config.database.sql).db
 
@@ -753,5 +762,65 @@ describe('createAdminTeam', () => {
       perms: ALL_PERMISSIONS,
     })
     expect(result).toEqual({ ok: false, error: 'badKnownName' })
+  })
+})
+
+describe('player bans', () => {
+  test('a banned player is signed out and cannot sign in until unbanned', async () => {
+    const admin = await generateRealTestUser(Permissions.usersWrite)
+    try {
+      const adminToken = await generateAuthToken(admin.user.id)
+      const { token, discordId } = await login()
+      const id = await playerId(token)
+      const setBanned = (banned: boolean) =>
+        request(app, `/api/v2/admin/players/${id}/ban`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${adminToken}`,
+          },
+          body: JSON.stringify({ banned }),
+        })
+
+      const banned = await expectResponse(
+        await setBanned(true),
+        GoodAdminPlayerUpdate
+      )
+      expect(banned.data.banned).toBe(true)
+
+      // the existing session stops working straight away
+      await expectResponse(await get('/api/v2/players/me', token), BadToken)
+      await expectResponse(
+        await post('/api/v2/auth/discord', null, {
+          code: discordId,
+          redirectUri,
+        }),
+        BadPlayerBanned
+      )
+
+      const listed = await expectResponse(
+        await get(
+          `/api/v2/admin/players?limit=10&offset=0&statuses=banned&search=${discordId}`,
+          adminToken
+        ),
+        GoodAdminPlayers
+      )
+      expect(listed.data.players.map((p: any) => p.id)).toEqual([id])
+
+      // deleting would lift the ban, so it is refused
+      await expectResponse(
+        await request(app, `/api/v2/admin/players/${id}`, {
+          method: 'DELETE',
+          headers: { Authorization: `Bearer ${adminToken}` },
+        }),
+        BadPlayerBanned
+      )
+
+      await expectResponse(await setBanned(false), GoodAdminPlayerUpdate)
+      const again = await login(discordId)
+      expect(await playerId(again.token)).toBe(id)
+    } finally {
+      await admin.cleanup()
+    }
   })
 })
