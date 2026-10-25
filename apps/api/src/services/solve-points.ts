@@ -13,7 +13,7 @@ import type { TypedRedis } from '../cache/scripts'
 import { inJsonbArray, insertInChunks } from '../lib/db-bulk'
 import { scoreProvider } from '../providers/instances/score'
 import { requestChallengeRecompute } from '../workers'
-import { userIsNotBanned } from './challenge-queries'
+import { userIsScored, userIsUnscoredSql } from './challenge-queries'
 import {
   getDecayChallenge,
   getDecayChallenges,
@@ -100,7 +100,8 @@ const recomputeDecayWithinTx = async (
       userid: solves.userid,
       createdat: solves.createdat,
       points: solves.points,
-      banned: users.banned,
+      // admin teams don't count toward decay, like banned ones
+      banned: userIsUnscoredSql,
     })
     .from(solves)
     .innerJoin(users, eq(users.id, solves.userid))
@@ -240,9 +241,7 @@ export const upsertDynamicSolves = async (
         : await tx
             .select({ id: users.id })
             .from(users)
-            .where(
-              and(inJsonbArray(users.id, involvedUserIds), userIsNotBanned)
-            )
+            .where(and(inJsonbArray(users.id, involvedUserIds), userIsScored))
             .for('share')
             .then(rows => new Set(rows.map(r => r.id)))
 

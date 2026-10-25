@@ -1,5 +1,5 @@
 import { challenges } from '@rctf/db'
-import { GetLeaderboardChallengesRouteV2 } from '@rctf/types'
+import { ADMIN_PERMISSIONS, GetLeaderboardChallengesRouteV2 } from '@rctf/types'
 import { sql } from 'drizzle-orm'
 import { preparedPerDb } from '../../../../lib/prepared'
 import {
@@ -29,6 +29,7 @@ const preparedLeaderboardChallenges = preparedPerDb(db =>
             WHERE solves.challengeid = challenges.id
               AND solves.source = 'flag'
               AND "users".banned = false
+              AND ("users".perms & ${ADMIN_PERMISSIONS}) = 0
               AND solves.createdat <= COALESCE(${sql.placeholder('solveCutoff')}::timestamptz, 'infinity'::timestamptz)
             ORDER BY solves.createdat ASC, solves.id ASC
             LIMIT 3

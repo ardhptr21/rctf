@@ -17,8 +17,9 @@ import { scoreProvider } from '../providers/instances/score'
 import {
   challengeIsPublicSql,
   feedPointsAtSql,
-  nonBannedUserJoin,
+  scoredUserJoin,
   scoringKindOf,
+  userIsUnscoredSql,
 } from './challenge-queries'
 import {
   getResolvedSettings,
@@ -179,7 +180,8 @@ const getUsersSnapshot = (db: DatabaseClient): Promise<UserSnapshot[]> =>
       id: users.id,
       name: users.name,
       division: users.division,
-      banned: users.banned,
+      // admin teams are left out of scoring just like banned ones
+      banned: userIsUnscoredSql,
     })
     .from(users)
     .orderBy(asc(users.createdAt))
@@ -806,7 +808,7 @@ const refreshDynamicContribs = async (
       pointsUpdatedAt: solves.pointsUpdatedAt,
     })
     .from(solves)
-    .innerJoin(users, nonBannedUserJoin(solves.userid))
+    .innerJoin(users, scoredUserJoin(solves.userid))
     .where(
       and(
         inArray(solves.challengeid, dynamicIds),

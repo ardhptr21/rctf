@@ -1,11 +1,25 @@
 import { challenges, scoreEvents, solves, users } from '@rctf/db'
-import { ChallengeScoringKind } from '@rctf/types'
+import { ADMIN_PERMISSIONS, ChallengeScoringKind } from '@rctf/types'
 import { and, eq, sql, type SQL } from 'drizzle-orm'
 import type { PgColumn } from 'drizzle-orm/pg-core'
 
 export const userIsNotBanned = eq(users.banned, false)
 export const nonBannedUserJoin = (ownerId: PgColumn) =>
   and(eq(users.id, ownerId), userIsNotBanned)
+
+// Teams that count toward scoring: not banned and without admin
+// permissions. Admin teams can still solve challenges (to test them), but
+// their solves never count toward points, solve counts, bloods, ranks or
+// any public standings.
+export const userIsAdminSql = sql<boolean>`(${users.perms} & ${ADMIN_PERMISSIONS}) <> 0`
+export const userIsScored = and(
+  userIsNotBanned,
+  sql`(${users.perms} & ${ADMIN_PERMISSIONS}) = 0`
+)!
+export const scoredUserJoin = (ownerId: PgColumn) =>
+  and(eq(users.id, ownerId), userIsScored)
+// true for teams left out of scoring, for code that filters in memory
+export const userIsUnscoredSql = sql<boolean>`(${users.banned} OR ${userIsAdminSql})`
 
 export const challengeIsPublicSql = and(
   sql`COALESCE((${challenges.data} ->> 'hidden')::boolean, false) = false`,

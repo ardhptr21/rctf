@@ -58,14 +58,16 @@ import {
   feedPointsAtSql,
   isDecayKind,
   nonBannedUserJoin,
+  scoredUserJoin,
   scoringKindOf,
-  userIsNotBanned,
+  userIsScored,
 } from './challenge-queries'
 import { rateLimitFlag } from './rate-limit'
 import {
   getCompetitionTiming,
   getResolvedSettings,
   getScoreboardFreezeCutoff,
+  isAdminUser,
 } from './settings'
 import { storeSubmissionProof } from './submission-proofs'
 import { createSubmission } from './submissions'
@@ -85,7 +87,7 @@ type SubmitResponseHelpers = ResponseHelpers<
   ]
 >
 
-const getSubmitterState = async (
+export const getSubmitterState = async (
   db: DatabaseClient,
   userId: string
 ): Promise<{ banned: boolean } | undefined> => {
@@ -160,7 +162,9 @@ const createRankedSolvesForChallenges = (
   db: DatabaseClient,
   challengeIds: string[],
   solveCutoff: number | null = null,
-  viewerId: string | null = null
+  viewerId: string | null = null,
+  // the admin view lists admin teams' solves too
+  includeAdmins = false
 ) =>
   db.$with('ranked').as(
     db
@@ -180,7 +184,12 @@ const createRankedSolvesForChallenges = (
           ),
       })
       .from(solves)
-      .innerJoin(users, nonBannedUserJoin(solves.userid))
+      .innerJoin(
+        users,
+        includeAdmins
+          ? nonBannedUserJoin(solves.userid)
+          : scoredUserJoin(solves.userid)
+      )
       .where(
         and(
           inArray(solves.challengeid, challengeIds),
@@ -327,14 +336,14 @@ export const getDecayChallenges = (tx: DatabaseTx): Promise<DecayChallenge[]> =>
     .where(isDecayKind)
     .orderBy(asc(challenges.id))
 
-export const countNonBannedSolvesForChallenge = async (
+export const countScoredSolvesForChallenge = async (
   db: DatabaseClient | DatabaseTx,
   challengeId: string
 ): Promise<number> => {
   const row = await db
     .select({ count: sql<number>`COUNT(*)::int` })
     .from(solves)
-    .innerJoin(users, nonBannedUserJoin(solves.userid))
+    .innerJoin(users, scoredUserJoin(solves.userid))
     .where(and(eq(solves.challengeid, challengeId), eq(solves.source, 'flag')))
     .then(takeUnique)
   return row?.count ?? 0
@@ -359,7 +368,7 @@ export const getMaxSolveCount = async (
   const perChallenge = db
     .select({ count: sql<number>`COUNT(*)::int`.as('count') })
     .from(solves)
-    .innerJoin(users, nonBannedUserJoin(solves.userid))
+    .innerJoin(users, scoredUserJoin(solves.userid))
     .innerJoin(challenges, eq(challenges.id, solves.challengeid))
     .where(isDecayKind)
     .groupBy(solves.challengeid)
@@ -398,7 +407,7 @@ export const createSolveAndGetBloodNumber = async (
       return null
     }
 
-    const priorSolveCount = await countNonBannedSolvesForChallenge(
+    const priorSolveCount = await countScoredSolvesForChallenge(
       tx,
       params.challengeId
     )
@@ -592,7 +601,7 @@ export const getChallengeSolves = async (
       userAvatarUrl: users.avatarUrl,
     })
     .from(solves)
-    .innerJoin(users, nonBannedUserJoin(solves.userid))
+    .innerJoin(users, scoredUserJoin(solves.userid))
     .where(
       and(
         eq(solves.challengeid, challengeId),
@@ -612,6 +621,7 @@ export const getChallengeSolvesWithPosition = async (
   limit: number,
   offset: number,
   {
+    // the admin view: hidden challenges and admin teams' solves included
     includeHidden = false,
     solveCutoff = null,
   }: { includeHidden?: boolean; solveCutoff?: number | null } = {}
@@ -632,7 +642,8 @@ export const getChallengeSolvesWithPosition = async (
     db,
     [challengeId],
     solveCutoff,
-    userId
+    userId,
+    includeHidden
   )
   const rows = await db
     .with(ranked)
@@ -771,7 +782,7 @@ export const getChallengeScoresWithPosition = async (
           ),
       })
       .from(solves)
-      .innerJoin(users, nonBannedUserJoin(solves.userid))
+      .innerJoin(users, scoredUserJoin(solves.userid))
       .where(challengeFeedFilter)
   )
 
@@ -802,7 +813,7 @@ export const getChallengeScoresWithPosition = async (
     db
       .select({ value: count() })
       .from(solves)
-      .innerJoin(users, nonBannedUserJoin(solves.userid))
+      .innerJoin(users, scoredUserJoin(solves.userid))
       .where(challengeFeedFilter)
       .then(takeUnique),
   ])
@@ -881,7 +892,7 @@ export const getChallengeScoresGraph = async (
           ),
       })
       .from(scoreEvents)
-      .innerJoin(users, nonBannedUserJoin(scoreEvents.userid))
+      .innerJoin(users, scoredUserJoin(scoreEvents.userid))
       .where(
         and(
           eq(scoreEvents.challengeid, challengeId),
@@ -968,7 +979,7 @@ export const getUserChallengeSolves = async (
           ),
       })
       .from(solves)
-      .innerJoin(users, nonBannedUserJoin(solves.userid))
+      .innerJoin(users, scoredUserJoin(solves.userid))
       .innerJoin(
         userChallenges,
         eq(userChallenges.challengeId, solves.challengeid)
@@ -990,6 +1001,7 @@ export const getUserChallengeSolves = async (
       challenges,
       and(eq(challenges.id, solves.challengeid), challengeIsPublicSql)
     )
+    // a team always sees its own solves, admin or not
     .innerJoin(users, nonBannedUserJoin(solves.userid))
     .leftJoin(ranked, eq(ranked.solveId, solves.id))
     .where(
@@ -1012,7 +1024,7 @@ const preparedLeaderboardSolves = preparedPerDb(db =>
       ) ORDER BY ${solves.createdat})`,
     })
     .from(solves)
-    .innerJoin(users, nonBannedUserJoin(solves.userid))
+    .innerJoin(users, scoredUserJoin(solves.userid))
     .innerJoin(challenges, eq(challenges.id, solves.challengeid))
     .where(
       and(
@@ -1038,7 +1050,7 @@ const preparedLeaderboardUserInfo = preparedPerDb(db =>
     .where(
       and(
         inJsonbArrayPlaceholder(users.id, sql.placeholder('userIds')),
-        userIsNotBanned
+        userIsScored
       )
     )
     .prepare('rctf_leaderboard_user_info')
@@ -1121,7 +1133,7 @@ const preparedDynamicScores = preparedPerDb(db => {
           eq(latestTick.eventAt, scoreEvents.eventAt)
         )
       )
-      .innerJoin(users, nonBannedUserJoin(scoreEvents.userid))
+      .innerJoin(users, scoredUserJoin(scoreEvents.userid))
       .where(
         and(
           eq(scoreEvents.source, 'feed'),
@@ -1149,7 +1161,7 @@ const preparedDynamicScores = preparedPerDb(db => {
       ))`,
     })
     .from(solves)
-    .innerJoin(users, nonBannedUserJoin(solves.userid))
+    .innerJoin(users, scoredUserJoin(solves.userid))
     .innerJoin(
       challenges,
       and(eq(challenges.id, solves.challengeid), challengeIsPublicSql)
@@ -1227,7 +1239,7 @@ const getLatestDynamicPointDeltasForChallenge = async (
     })
     .from(scoreEvents)
     .innerJoin(latestTick, eq(latestTick.eventAt, scoreEvents.eventAt))
-    .innerJoin(users, nonBannedUserJoin(scoreEvents.userid))
+    .innerJoin(users, scoredUserJoin(scoreEvents.userid))
     .where(
       and(
         eq(scoreEvents.challengeid, challengeId),
@@ -1396,7 +1408,9 @@ export const submitFlag = async (
   if (!frozen && shouldNotifyBloodbot(bloodNumber)) {
     getUser(db, params.userId)
       .then(user => {
-        return sendBloodMessage(user!, challenge.data, bloodNumber)
+        // admin solves don't count, so they never take a blood
+        if (!user || isAdminUser(user)) return
+        return sendBloodMessage(user, challenge.data, bloodNumber)
       })
       .catch(err => {
         log.error(

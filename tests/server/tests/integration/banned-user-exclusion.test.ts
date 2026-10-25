@@ -12,7 +12,7 @@ import {
 import { beforeAll, describe, expect, test } from 'bun:test'
 import { eq } from 'drizzle-orm'
 import {
-  countNonBannedSolvesForChallenge,
+  countScoredSolvesForChallenge,
   getChallengeSolves,
   getDynamicScoresForUsers,
   getLeaderboardChallengeData,
@@ -149,10 +149,10 @@ describe('banned user exclusion (regression)', () => {
       }
     })
 
-    test('countNonBannedSolvesForChallenge counts only active solvers', async () => {
+    test('countScoredSolvesForChallenge counts only active solvers', async () => {
       const s = await setupScenario('decay')
       try {
-        const count = await countNonBannedSolvesForChallenge(
+        const count = await countScoredSolvesForChallenge(
           getDb(),
           s.challengeId
         )

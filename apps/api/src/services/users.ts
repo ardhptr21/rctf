@@ -45,7 +45,7 @@ import { preparedPerDb } from '../lib/prepared'
 import { createToken, TokenKind } from '../lib/tokens'
 import { forceLeaderboardUpdate, requestChallengeRecompute } from '../workers'
 import { isDecayKind } from './challenge-queries'
-import { getCompetitionTiming } from './settings'
+import { getCompetitionTiming, isAdminUser } from './settings'
 import {
   emitBanScoreEvents,
   emitUserDeletionScoreEvents,
@@ -750,6 +750,7 @@ export const setUserPerms = async (
   id: string,
   perms: number
 ): Promise<User | undefined> => {
+  const before = await getUser(db, id)
   const updated = await db
     .update(users)
     .set({ perms })
@@ -759,6 +760,17 @@ export const setUserPerms = async (
 
   if (updated) {
     await invalidateUserCache(redis, id)
+
+    // admin teams are left out of scoring, so gaining or losing admin
+    // permissions changes decay points and the standings like a ban does
+    if (before && isAdminUser(before) !== isAdminUser(updated)) {
+      publishChallengeRecomputes(
+        redis,
+        await getAffectedDecayChallengeIds(db, id),
+        'ban'
+      )
+      forceLeaderboardUpdate(redis)
+    }
   }
 
   return updated

@@ -3,7 +3,10 @@ import type { DatabaseClient } from '@rctf/db'
 import { challenges, scoreEvents, users } from '@rctf/db'
 import { and, asc, eq, gte, inArray, lte, sql } from 'drizzle-orm'
 import { inJsonbArray } from '../lib/db-bulk'
-import { challengeIsPublicSql } from '../services/challenge-queries'
+import {
+  challengeIsPublicSql,
+  userIsScored,
+} from '../services/challenge-queries'
 import {
   getResolvedSettings,
   getScoreboardFreezeCutoff,
@@ -643,7 +646,7 @@ export const getGraphForEntries = async (
 }
 
 export const userIsRankedSql = sql`${users.globalRank} IS NOT NULL`
-export const userIsPublicRankedSql = sql`${userIsRankedSql} AND ${users.banned} = false`
+export const userIsPublicRankedSql = sql`${userIsRankedSql} AND ${userIsScored}`
 export const leaderboardOrderSql = sql`${users.globalRank} ASC`
 
 export const getGraph = async (
