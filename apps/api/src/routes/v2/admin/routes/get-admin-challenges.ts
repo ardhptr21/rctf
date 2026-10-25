@@ -15,6 +15,7 @@ adminGroup.route(GetAdminChallengesRouteV2, async ({ res, ctx }) => {
       flags: item.data.flags ?? [],
       sortWeight: item.data.sortWeight ?? null,
       tags: item.data.tags ?? null,
+      hints: item.data.hints ?? null,
       instancerConfig: item.data.instancerConfig ?? null,
       adminBotConfig: item.data.adminBotConfig ?? null,
       hidden: item.data.hidden ?? false,

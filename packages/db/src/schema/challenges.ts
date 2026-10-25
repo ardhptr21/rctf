@@ -78,6 +78,8 @@ export interface ChallengeData {
   tiebreakEligible: boolean
   sortWeight?: number
   tags?: string[]
+  // Markdown hints shown to players, in order
+  hints?: string[]
   instancerConfig?: InstancerConfig
   adminBotConfig?: AdminBotConfig
   hidden?: boolean

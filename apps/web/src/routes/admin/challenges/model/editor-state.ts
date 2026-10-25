@@ -48,6 +48,7 @@ export interface EditorForm {
   tiebreakEligible: boolean
   sortWeight: number
   tags: string[]
+  hints: string[]
   files: { name: string; url: string; size: number | null }[]
   instancerConfig: InstancerConfig | null
   adminBotConfig: AdminBotConfig
@@ -93,6 +94,7 @@ export function defaultForm(): EditorForm {
     tiebreakEligible: true,
     sortWeight: 0,
     tags: [],
+    hints: [],
     files: [],
     instancerConfig: null,
     adminBotConfig: { enabled: false, code: '' },
@@ -149,6 +151,7 @@ function seedForm(source: AdminChallenge | AdminChallengeDetail): EditorForm {
     tiebreakEligible: source.tiebreakEligible,
     sortWeight: source.sortWeight ?? 0,
     tags: source.tags ? [...source.tags] : [],
+    hints: source.hints ? [...source.hints] : [],
     files: source.files ? [...source.files] : [],
     instancerConfig: source.instancerConfig ?? null,
     adminBotConfig: adminBotConfigFromServer(source.adminBotConfig),

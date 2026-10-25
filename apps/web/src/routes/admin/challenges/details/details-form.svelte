@@ -10,6 +10,7 @@
     IconCloud,
     IconFile,
     IconGear,
+    IconLightbulb,
     IconPlus,
     IconRobot,
     IconTrash,
@@ -35,10 +36,12 @@
   import { SchemaForm, type JsonSchema } from '../schema-form'
   import AdminChallengesDetailsAdminbot from './adminbot.svelte'
   import AdminChallengesDetailsAttachments from './attachments.svelte'
+  import AdminChallengesDetailsHints from './hints.svelte'
   import FieldSelect from './field-select.svelte'
   import FormScroll from './form-scroll.svelte'
   import {
     detailsTabInvalid,
+    hintsTabInvalid,
     inputToReleaseTime,
     releaseTimeToInput,
     scoringKindLocked,
@@ -149,6 +152,13 @@
       icon: IconFile,
       invalid:
         detailsTabInvalid(errors) || scoringTabInvalid(errors) || !flagsValid,
+    },
+    {
+      value: 'hints',
+      label: 'Hints',
+      icon: IconLightbulb,
+      count: form.hints.length || undefined,
+      invalid: hintsTabInvalid(errors),
     },
     { value: 'instancer', label: 'Instancer', icon: IconCloud },
     ...(form.instancerConfig
@@ -676,6 +686,13 @@
               />
             </Section>
           </FormScroll>
+        {:else if value === 'hints'}
+          <AdminChallengesDetailsHints
+            hints={form.hints}
+            {disabled}
+            error={errors.hints}
+            onChange={hints => onFieldChange('hints', hints)}
+          />
         {:else if value === 'instancer'}
           {#key challengeId}
             <AdminChallengesDetailsInstancer

@@ -37,6 +37,13 @@ export const GoodChallengesV2 = response('goodChallengesV2', {
       tags: z
         .nullable(z.array(z.string()))
         .check(z.describe('Challenge tags shown to players.')),
+      hints: example(z.array(z.string()), [
+        'Look closely at the response headers.',
+      ]).check(
+        z.describe(
+          'Hints in Markdown, in order; empty when the challenge has none.'
+        )
+      ),
       instancerLifetime: z
         .nullable(z.number())
         .check(

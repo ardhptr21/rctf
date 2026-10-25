@@ -5,12 +5,14 @@
     IconFile,
     IconFlagBanner,
     IconGlobeHemisphereWest,
+    IconLightbulb,
     IconTrophy,
   } from '$lib/icons'
   import EmptyState from '$lib/ui/empty-state.svelte'
   import Tabs from '$lib/ui/tabs.svelte'
   import type { Component } from 'svelte'
   import ChallengeDetailsHeader from './details-header.svelte'
+  import ChallengeDetailsHints from './hints.svelte'
   import ChallengeDetailsOverview from './overview.svelte'
   import ChallengeDetailsPodiumDynamic from './podium-dynamic.svelte'
   import ChallengeDetailsPodium from './podium.svelte'
@@ -44,6 +46,14 @@
     const items: TabItem[] = [
       { value: 'details', label: 'Details', icon: IconFile },
     ]
+    if (challenge.hints.length > 0) {
+      items.push({
+        value: 'hints',
+        label: 'Hints',
+        count: challenge.hints.length,
+        icon: IconLightbulb,
+      })
+    }
     if (challenge.hasFlag) {
       items.push({
         value: 'solves',
@@ -79,6 +89,13 @@
               <details-viewport data-fade-scope>
                 <details-scroll data-fade-source tabindex="-1">
                   <ChallengeDetailsOverview {challenge} {onSolve} />
+                </details-scroll>
+                <EdgeFades />
+              </details-viewport>
+            {:else if value === 'hints'}
+              <details-viewport data-fade-scope>
+                <details-scroll data-fade-source tabindex="-1">
+                  <ChallengeDetailsHints {challenge} />
                 </details-scroll>
                 <EdgeFades />
               </details-viewport>

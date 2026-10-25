@@ -3,7 +3,9 @@ import {
   buildSavePayload,
   detailsTabInvalid,
   formErrors,
+  hintsTabInvalid,
   inputToReleaseTime,
+  MAX_HINT_LENGTH,
   releaseTimeToInput,
   scoringKindLocked,
   scoringTabInvalid,
@@ -155,5 +157,30 @@ describe('buildSavePayload', () => {
     expect(
       buildSavePayload(decayForm({ sortWeight: 5 }), 'id').data.sortWeight
     ).toBe(5)
+  })
+})
+
+describe('hints', () => {
+  test('drops empty hints from the save payload, keeping the order', () => {
+    const payload = buildSavePayload(
+      decayForm({ hints: ['first', '   ', 'second', ''] }),
+      'id'
+    )
+    expect(payload.data.hints).toEqual(['first', 'second'])
+  })
+
+  test('sends an empty list when there are no hints', () => {
+    expect(buildSavePayload(decayForm(), 'id').data.hints).toEqual([])
+  })
+
+  test('flags a hint over the length limit', () => {
+    const ok = formErrors(decayForm({ hints: ['x'.repeat(MAX_HINT_LENGTH)] }))
+    expect(hintsTabInvalid(ok)).toBe(false)
+
+    const tooLong = formErrors(
+      decayForm({ hints: ['fine', 'x'.repeat(MAX_HINT_LENGTH + 1)] })
+    )
+    expect(tooLong.hints).toContain('Hint 2')
+    expect(hintsTabInvalid(tooLong)).toBe(true)
   })
 })

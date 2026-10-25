@@ -21,6 +21,7 @@ function makeChallenge(
     solves: 0,
     sortWeight: null,
     tags: null,
+    hints: [],
     instancerLifetime: null,
     instancerExtendable: false,
     instancerStoppable: false,

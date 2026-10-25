@@ -36,6 +36,11 @@ export const AdminChallengeSchemaV2 = z.object({
   tags: example(z.nullish(z.array(z.string())), ['beginner']).check(
     z.describe('Challenge tags, or `null` when unset.')
   ),
+  hints: example(z.nullish(z.array(z.string())), [
+    'Look closely at the response headers.',
+  ]).check(
+    z.describe('Hints shown to players, in Markdown, or `null` when unset.')
+  ),
   instancerConfig: z
     .nullish(InstancerConfigSchema)
     .check(

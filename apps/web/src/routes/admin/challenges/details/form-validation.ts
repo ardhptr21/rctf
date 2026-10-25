@@ -21,7 +21,13 @@ export interface FormErrors {
   description?: string
   flag?: string
   secret?: string
+  hints?: string
 }
+
+export const MAX_HINTS = 20
+export const MAX_HINT_LENGTH = 10_000
+
+const isBlankHint = (hint: string) => hint.trim() === ''
 
 export function formErrors(form: EditorForm): FormErrors {
   const errors: FormErrors = {}
@@ -38,6 +44,10 @@ export function formErrors(form: EditorForm): FormErrors {
   } else if (form.flags.every(isBlankFlagEntry)) {
     errors.flag = 'At least one flag is required'
   }
+  const longHint = form.hints.findIndex(hint => hint.length > MAX_HINT_LENGTH)
+  if (longHint !== -1) {
+    errors.hints = `Hint ${longHint + 1} is longer than ${MAX_HINT_LENGTH.toLocaleString()} characters`
+  }
   return errors
 }
 
@@ -53,6 +63,10 @@ export function detailsTabInvalid(errors: FormErrors): boolean {
     errors.description ||
     errors.flag
   )
+}
+
+export function hintsTabInvalid(errors: FormErrors): boolean {
+  return Boolean(errors.hints)
 }
 
 export function scoringTabInvalid(errors: FormErrors): boolean {
@@ -95,6 +109,8 @@ export function buildSavePayload(
       tiebreakEligible: form.tiebreakEligible,
       sortWeight: form.sortWeight || undefined,
       tags: form.tags,
+      // empty hints are dropped rather than shown to players
+      hints: form.hints.filter(hint => !isBlankHint(hint)),
       files: form.files,
       instancerConfig: form.instancerConfig,
       adminBotConfig: form.adminBotConfig.enabled

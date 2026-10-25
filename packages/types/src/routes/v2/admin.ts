@@ -556,6 +556,18 @@ export const UpdateChallengeRouteV2 = defineRoute({
         tags: example(z.optional(z.array(z.string())), ['beginner']).check(
           z.describe('Free-form tags.')
         ),
+        hints: example(
+          z.optional(
+            z
+              .array(z.string().check(z.minLength(1), z.maxLength(10_000)))
+              .check(z.maxLength(20))
+          ),
+          ['Look closely at the response headers.']
+        ).check(
+          z.describe(
+            'Hints shown to players, in Markdown and in order. At most 20, each up to 10,000 characters. Replaces the whole list.'
+          )
+        ),
         instancerConfig: z
           .nullish(PartialInstancerConfigSchema)
           .check(

@@ -30,6 +30,7 @@ challsGroup.route(GetChallengesRouteV2, async ({ res, ctx, user }) => {
         solves: item.solveCount ?? 0,
         sortWeight: item.data.sortWeight ?? null,
         tags: item.data.tags ?? null,
+        hints: item.data.hints ?? [],
         instancerLifetime: instancerEnabled
           ? (instancerConfig?.timeoutMilliseconds ?? null)
           : null,

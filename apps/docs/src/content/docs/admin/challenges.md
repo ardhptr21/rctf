@@ -18,6 +18,12 @@ See [Flag providers](/providers/flags) for all providers and their options.
 
 Dynamically scored challenges don't take flag submissions, so switching a challenge to dynamic scoring clears its entries.
 
+## Hints
+
+Add hints on the challenge's **Hints** tab. Each hint is written in [Markdown](/admin/markdown), and players see them in the same order on a **Hints** tab next to the challenge details. That tab only appears when the challenge has at least one hint. Hints are free and visible to everyone who can see the challenge.
+
+In the API, hints are the **`<red>hints</red>`** field: a list of up to 20 strings, each up to 10,000 characters. Sending the field replaces the whole list, and sending `[]` removes every hint.
+
 ## Challenge visibility
 
 Challenges support two visibility controls:

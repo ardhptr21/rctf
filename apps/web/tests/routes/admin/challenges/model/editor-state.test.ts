@@ -86,6 +86,17 @@ describe('initial state', () => {
 })
 
 describe('select', () => {
+  test('seeds hints from the challenge, defaulting to none', () => {
+    const withHints = select(
+      createEditorState(),
+      makeChallenge({ id: 'h', hints: ['one', 'two'] })
+    )
+    expect(withHints.form.hints).toEqual(['one', 'two'])
+
+    const without = select(createEditorState(), makeChallenge({ id: 'n' }))
+    expect(without.form.hints).toEqual([])
+  })
+
   test('clean SELECT from idle switches to viewing and seeds both forms', () => {
     const challenge = makeChallenge({
       id: 'a',
