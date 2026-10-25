@@ -4,6 +4,7 @@ import {
   getChallengeScoresGraph,
   getChallengeScoresWithPosition,
 } from '../../../../services/challenges'
+import { getFreezeCutoffForViewer } from '../../../../services/settings'
 import challsGroup from '../group'
 
 challsGroup.route(
@@ -19,13 +20,20 @@ challsGroup.route(
       })
     }
 
+    // live feed points after the freeze would leak the standings
+    const solveCutoff = await getFreezeCutoffForViewer(
+      ctx.var.db,
+      ctx.var.redis,
+      user
+    )
     const { challengeExists, scores, total, myPosition } =
       await getChallengeScoresWithPosition(
         ctx.var.db,
         params.id,
         user?.id ?? null,
         query.limit,
-        query.offset
+        query.offset,
+        solveCutoff
       )
 
     if (!challengeExists) {
@@ -42,7 +50,8 @@ challsGroup.route(
       ctx.var.db,
       params.id,
       graphUserIds,
-      ctx.var.redis
+      ctx.var.redis,
+      solveCutoff
     )
 
     return res.goodChallengeScoresV2({ total, myPosition, scores, graph })

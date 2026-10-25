@@ -48,7 +48,7 @@ export const getFullUser = async (
       .from(users)
       .where(eq(users.id, user.id))
       .then(takeUnique),
-    getDynamicScoresForUsers(db, [user.id]),
+    getDynamicScoresForUsers(db, [user.id], solveCutoff),
   ])
 
   const challengeIds = solves.map(item => item.solve.challengeid)

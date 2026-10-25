@@ -55,6 +55,7 @@ import { forceLeaderboardUpdate, requestChallengeRecompute } from '../workers'
 import { sendBloodMessage, shouldNotifyBloodbot } from './bloodbot'
 import {
   challengeIsPublicSql,
+  feedPointsAtSql,
   isDecayKind,
   nonBannedUserJoin,
   scoringKindOf,
@@ -724,7 +725,9 @@ export const getChallengeScoresWithPosition = async (
   challengeId: string,
   userId: string | null,
   limit: number,
-  offset: number
+  offset: number,
+  // while frozen, standings as of the cutoff; null for live
+  solveCutoff: number | null = null
 ): Promise<ChallengeScoresWithPosition> => {
   const challenge = await getChallenge(db, challengeId)
   if (!challenge) {
@@ -735,6 +738,20 @@ export const getChallengeScoresWithPosition = async (
       myPosition: null,
     }
   }
+
+  const cutoffIso =
+    solveCutoff === null ? null : new Date(solveCutoff).toISOString()
+  const challengeFeedFilter = and(
+    eq(solves.challengeid, challengeId),
+    eq(solves.source, 'feed'),
+    cutoffIso === null ? undefined : lte(solves.createdat, cutoffIso)
+  )
+  // live points keep moving after the freeze, so frozen standings rank by
+  // the points at the cutoff and break ties by when the solve appeared
+  const points =
+    cutoffIso === null ? sql`${solves.points}` : feedPointsAtSql(cutoffIso)
+  const tiebreak =
+    cutoffIso === null ? solves.pointsUpdatedAt : solves.createdat
 
   const ranked = db.$with('ranked').as(
     db
@@ -747,22 +764,15 @@ export const getChallengeScoresWithPosition = async (
         division: users.division,
         globalRank: users.globalRank,
         divisionRank: users.divisionRank,
-        points: solves.points,
+        points: sql<number>`${points}`.as('points'),
         position:
-          sql<number>`row_number() over (order by ${solves.points} desc, ${solves.pointsUpdatedAt} asc, ${solves.userid} asc)::int`.as(
+          sql<number>`row_number() over (order by ${points} desc, ${tiebreak} asc, ${solves.userid} asc)::int`.as(
             'position'
           ),
       })
       .from(solves)
       .innerJoin(users, nonBannedUserJoin(solves.userid))
-      .where(
-        and(eq(solves.challengeid, challengeId), eq(solves.source, 'feed'))
-      )
-  )
-
-  const challengeFeedFilter = and(
-    eq(solves.challengeid, challengeId),
-    eq(solves.source, 'feed')
+      .where(challengeFeedFilter)
   )
 
   const [pageRows, totalRow] = await Promise.all([
@@ -807,7 +817,8 @@ export const getChallengeScoresWithPosition = async (
   const deltas = await getLatestDynamicPointDeltasForChallenge(
     db,
     challengeId,
-    pageRows.map(r => r.userId)
+    pageRows.map(r => r.userId),
+    cutoffIso
   )
 
   return {
@@ -839,7 +850,8 @@ export const getChallengeScoresGraph = async (
   db: DatabaseClient,
   challengeId: string,
   userIds: string[],
-  redis?: TypedRedis
+  redis?: TypedRedis,
+  solveCutoff: number | null = null
 ): Promise<ChallengeGraphEntry[]> => {
   if (userIds.length === 0) {
     return []
@@ -873,7 +885,10 @@ export const getChallengeScoresGraph = async (
       .where(
         and(
           eq(scoreEvents.challengeid, challengeId),
-          inArray(scoreEvents.userid, userIds)
+          inArray(scoreEvents.userid, userIds),
+          solveCutoff === null
+            ? undefined
+            : lte(scoreEvents.eventAt, new Date(solveCutoff).toISOString())
         )
       )
   )
@@ -1050,7 +1065,7 @@ export const getLeaderboardChallengeData = async (
         solveCutoff === null ? null : new Date(solveCutoff).toISOString(),
     }),
     preparedLeaderboardUserInfo(db).execute({ userIds: userIdsJson }),
-    getDynamicScoresForUsers(db, userIds),
+    getDynamicScoresForUsers(db, userIds, solveCutoff),
   ])
 
   const solvesMap = new Map<string, LeaderboardSolve[]>()
@@ -1079,7 +1094,12 @@ const preparedDynamicScores = preparedPerDb(db => {
         eventAt: max(scoreEvents.eventAt).as('tick_at'),
       })
       .from(scoreEvents)
-      .where(eq(scoreEvents.source, 'feed'))
+      .where(
+        and(
+          eq(scoreEvents.source, 'feed'),
+          sql`${scoreEvents.eventAt} <= COALESCE(${sql.placeholder('solveCutoff')}::timestamptz, 'infinity'::timestamptz)`
+        )
+      )
       .groupBy(scoreEvents.challengeid)
   )
 
@@ -1121,7 +1141,10 @@ const preparedDynamicScores = preparedPerDb(db => {
       // this is a bit silly
       scores: sql<LeaderboardDynamicScore[]>`JSONB_AGG(JSONB_BUILD_OBJECT(
         'id', ${solves.challengeid},
-        'points', ${solves.points},
+        'points', CASE
+          WHEN ${sql.placeholder('solveCutoff')}::timestamptz IS NULL THEN ${solves.points}
+          ELSE ${feedPointsAtSql(sql`${sql.placeholder('solveCutoff')}`)}
+        END,
         'pointDelta', COALESCE(${deltas.pointDelta}, 0)
       ))`,
     })
@@ -1141,16 +1164,19 @@ const preparedDynamicScores = preparedPerDb(db => {
     .where(
       and(
         inJsonbArrayPlaceholder(solves.userid, sql.placeholder('userIds')),
-        eq(solves.source, 'feed')
+        eq(solves.source, 'feed'),
+        sql`${solves.createdat} <= COALESCE(${sql.placeholder('solveCutoff')}::timestamptz, 'infinity'::timestamptz)`
       )
     )
     .groupBy(solves.userid)
     .prepare('rctf_dynamic_scores')
 })
 
+// `solveCutoff` gives the scores as of that time, for a frozen scoreboard.
 export const getDynamicScoresForUsers = async (
   db: DatabaseClient,
-  userIds: string[]
+  userIds: string[],
+  solveCutoff: number | null = null
 ): Promise<Map<string, LeaderboardDynamicScore[]>> => {
   if (userIds.length === 0) {
     return new Map()
@@ -1158,6 +1184,8 @@ export const getDynamicScoresForUsers = async (
 
   const rows = await preparedDynamicScores(db).execute({
     userIds: JSON.stringify(userIds),
+    solveCutoff:
+      solveCutoff === null ? null : new Date(solveCutoff).toISOString(),
   })
 
   const result = new Map<string, LeaderboardDynamicScore[]>()
@@ -1170,7 +1198,9 @@ export const getDynamicScoresForUsers = async (
 const getLatestDynamicPointDeltasForChallenge = async (
   db: DatabaseClient,
   challengeId: string,
-  userIds: string[]
+  userIds: string[],
+  // the last feed tick at or before this ISO timestamp; null for the latest
+  cutoffIso: string | null = null
 ): Promise<Map<string, number>> => {
   if (userIds.length === 0) {
     return new Map()
@@ -1183,7 +1213,8 @@ const getLatestDynamicPointDeltasForChallenge = async (
       .where(
         and(
           eq(scoreEvents.challengeid, challengeId),
-          eq(scoreEvents.source, 'feed')
+          eq(scoreEvents.source, 'feed'),
+          cutoffIso === null ? undefined : lte(scoreEvents.eventAt, cutoffIso)
         )
       )
   )

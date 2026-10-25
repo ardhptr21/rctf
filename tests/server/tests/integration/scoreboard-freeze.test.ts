@@ -1,14 +1,25 @@
 import { config } from '@rctf/config'
-import { createDatabase, scoreEvents, settings, solves } from '@rctf/db'
+import {
+  challenges,
+  ChallengeScoringKind,
+  createDatabase,
+  DynamicScoringTransport,
+  scoreEvents,
+  settings,
+  solves,
+  type ChallengeData,
+} from '@rctf/db'
 import {
   BadBody,
   BadPerms,
   GoodAdminSettingsUpdate,
+  GoodChallengeScoresV2,
   GoodChallengeSolvesV2,
   GoodLeaderboardGraph,
   GoodLeaderboardChallengesV2,
   GoodLeaderboardV2,
   GoodUserDataV2,
+  GoodUserSelfDataV2,
   Permissions,
 } from '@rctf/types'
 import {
@@ -289,6 +300,44 @@ describe('scoreboard freeze', () => {
     expect(own.data.solves).toHaveLength(1)
   })
 
+  test('a team sees its pre-freeze score and place on /users/me', async () => {
+    const me = async (userId: string) =>
+      (
+        await expectResponse(
+          await request(app, '/api/v2/users/me', {
+            method: 'GET',
+            headers: await authHeaders(userId),
+          }),
+          GoodUserSelfDataV2
+        )
+      ).data
+
+    await setFreezeTime(freezeTime)
+    await cacheCurrentLeaderboard()
+
+    const earlyMe = await me(early.user.id)
+    expect(earlyMe.score).toBeGreaterThan(0)
+    expect(earlyMe.globalPlace).toBe(1)
+
+    // the late solve is after the freeze: the team still sees its own
+    // solve, but not the score or place it earned
+    // the challenge list marks solves from this list, so post-freeze solves
+    // must stay in it
+    const lateMe = await me(late.user.id)
+    expect(lateMe.solves.map((s: any) => s.id)).toEqual([
+      challenge.challenge.id,
+    ])
+    expect(lateMe.score).toBe(0)
+    expect(lateMe.globalPlace).toBeNull()
+    expect(lateMe.divisionPlace).toBeNull()
+
+    await setFreezeTime(null)
+    await cacheCurrentLeaderboard()
+    const revealed = await me(late.user.id)
+    expect(revealed.score).toBeGreaterThan(0)
+    expect(revealed.globalPlace).not.toBeNull()
+  })
+
   test('first bloods on the scoreboard respect the freeze', async () => {
     await setFreezeTime(freezeTime)
     const body = await expectResponse(
@@ -385,6 +434,164 @@ describe('scoreboard freeze', () => {
       }),
       BadPerms
     )
+  })
+})
+
+describe('scoreboard freeze with dynamic scoring', () => {
+  let rising: Awaited<ReturnType<typeof generateRealTestUser>>
+  let steady: Awaited<ReturnType<typeof generateRealTestUser>>
+  let admin: Awaited<ReturnType<typeof generateRealTestUser>>
+  const challengeId = crypto.randomUUID()
+  const now = Date.now()
+  const freezeTime = now - HOUR
+  const iso = (time: number) => new Date(time).toISOString()
+
+  // `rising` had 100 at the freeze and the feed has since moved it to 300;
+  // `steady` had 150 at the freeze and still has it
+  beforeAll(async () => {
+    const db = getDb()
+    rising = await generateRealTestUser()
+    steady = await generateRealTestUser()
+    admin = await generateRealTestUser(
+      Permissions.challsRead | Permissions.leaderboardRead
+    )
+    const data: ChallengeData = {
+      name: crypto.randomUUID(),
+      description: '',
+      category: 'dynamic',
+      author: 'test',
+      files: [],
+      flags: [],
+      tiebreakEligible: true,
+      points: { min: 0, max: 0 },
+      scoring: {
+        kind: ChallengeScoringKind.DYNAMIC,
+        source: {
+          transport: DynamicScoringTransport.WEBHOOK,
+          secret: 'freeze-secret',
+        },
+      },
+    }
+    await db.insert(challenges).values({ id: challengeId, data })
+    await db.insert(solves).values([
+      {
+        id: crypto.randomUUID(),
+        challengeid: challengeId,
+        userid: rising.user.id,
+        createdat: iso(now - 2 * HOUR),
+        source: 'feed',
+        points: 300,
+        pointsUpdatedAt: iso(now - HOUR / 2),
+      },
+      {
+        id: crypto.randomUUID(),
+        challengeid: challengeId,
+        userid: steady.user.id,
+        createdat: iso(now - 1.5 * HOUR),
+        source: 'feed',
+        points: 150,
+        pointsUpdatedAt: iso(now - 1.5 * HOUR),
+      },
+    ])
+    const feedEvent = (userid: string, pointsDelta: number, at: number) => ({
+      id: crypto.randomUUID(),
+      challengeid: challengeId,
+      userid,
+      pointsDelta,
+      eventAt: iso(at),
+      source: 'feed' as const,
+    })
+    await db
+      .insert(scoreEvents)
+      .values([
+        feedEvent(rising.user.id, 100, now - 2 * HOUR),
+        feedEvent(steady.user.id, 150, now - 1.5 * HOUR),
+        feedEvent(rising.user.id, 200, now - HOUR / 2),
+      ])
+  })
+
+  afterAll(async () => {
+    const db = getDb()
+    await db.delete(scoreEvents).where(eq(scoreEvents.challengeid, challengeId))
+    await db.delete(solves).where(eq(solves.challengeid, challengeId))
+    await db.delete(challenges).where(eq(challenges.id, challengeId))
+    await rising.cleanup()
+    await steady.cleanup()
+    await admin.cleanup()
+  })
+
+  const scoreOf = (
+    result: Awaited<ReturnType<typeof calculateLeaderboard>>,
+    userId: string
+  ) => result.users.find(user => user.id === userId)?.score
+
+  test('a frozen rebuild counts feed points from the cutoff', async () => {
+    await setFreezeTime(freezeTime)
+    const frozen = await calculateLeaderboard(getDb())
+    expect(scoreOf(frozen, rising.user.id)).toBe(100)
+    expect(scoreOf(frozen, steady.user.id)).toBe(150)
+
+    const live = await calculateLeaderboard(getDb(), undefined, {
+      ignoreFreeze: true,
+    })
+    expect(scoreOf(live, rising.user.id)).toBe(300)
+  })
+
+  test('challenge scores show the standings at the freeze', async () => {
+    await setFreezeTime(freezeTime)
+    const path = `/api/v2/challs/${challengeId}/scores?limit=10&offset=0`
+
+    const frozen = await expectResponse(
+      await request(app, path, { method: 'GET' }),
+      GoodChallengeScoresV2
+    )
+    expect(
+      frozen.data.scores.map((s: any) => [s.userId, s.points, s.pointDelta])
+    ).toEqual([
+      [steady.user.id, 150, 150],
+      [rising.user.id, 100, 0],
+    ])
+    const risingGraph = frozen.data.graph.find(
+      (g: any) => g.id === rising.user.id
+    )
+    expect(risingGraph.points.map((p: any) => p.score)).not.toContain(300)
+
+    const asAdmin = await expectResponse(
+      await request(app, path, {
+        method: 'GET',
+        headers: await authHeaders(admin.user.id),
+      }),
+      GoodChallengeScoresV2
+    )
+    expect(asAdmin.data.scores.map((s: any) => [s.userId, s.points])).toEqual([
+      [rising.user.id, 300],
+      [steady.user.id, 150],
+    ])
+  })
+
+  test('dynamic score breakdowns stop at the freeze', async () => {
+    await setFreezeTime(freezeTime)
+    await cacheCurrentLeaderboard()
+    const dynamicPoints = (entry: any) =>
+      entry.dynamicScores.find((s: any) => s.id === challengeId)?.points
+
+    const board = await expectResponse(
+      await request(app, '/api/v2/leaderboard/now?limit=100&offset=0', {
+        method: 'GET',
+      }),
+      GoodLeaderboardV2
+    )
+    const entry = board.data.leaderboard.find(
+      (e: any) => e.id === rising.user.id
+    )
+    expect(entry.score).toBe(100)
+    expect(dynamicPoints(entry)).toBe(100)
+
+    const profile = await expectResponse(
+      await request(app, `/api/v2/users/${rising.user.id}`, { method: 'GET' }),
+      GoodUserDataV2
+    )
+    expect(dynamicPoints(profile.data)).toBe(100)
   })
 })
 

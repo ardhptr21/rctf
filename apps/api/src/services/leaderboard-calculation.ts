@@ -16,6 +16,7 @@ import { cursorAfter, type RowCursor } from '../lib/db-filters'
 import { scoreProvider } from '../providers/instances/score'
 import {
   challengeIsPublicSql,
+  feedPointsAtSql,
   nonBannedUserJoin,
   scoringKindOf,
 } from './challenge-queries'
@@ -214,6 +215,15 @@ const getSolveCount = async (
       .then(takeUnique)
   )?.count ?? 0
 
+// While frozen, feed solves count with the points they had at the cutoff;
+// solves.points has kept following the live feed since then.
+const solvePointsSql = (solveCutoff: number | null) =>
+  solveCutoff === null
+    ? solves.points
+    : sql<number>`CASE WHEN ${solves.source} = 'feed' THEN ${feedPointsAtSql(
+        new Date(solveCutoff).toISOString()
+      )} ELSE ${solves.points} END`
+
 const getSolvesAfterCursor = (
   db: DatabaseClient,
   cursor: RowCursor | null,
@@ -225,7 +235,7 @@ const getSolvesAfterCursor = (
       challengeid: solves.challengeid,
       userid: solves.userid,
       createdat: solves.createdat,
-      points: solves.points,
+      points: solvePointsSql(solveCutoff),
       pointsUpdatedAt: solves.pointsUpdatedAt,
     })
     .from(solves)
