@@ -1,5 +1,10 @@
-import { createDownloadScheduler, type DownloadFile } from '$lib/utils/download'
-import { describe, expect, test } from 'bun:test'
+import {
+  base64ToBytes,
+  createDownloadScheduler,
+  downloadBase64File,
+  type DownloadFile,
+} from '$lib/utils/download'
+import { afterEach, describe, expect, test } from 'bun:test'
 
 const SPACING = 300
 
@@ -146,5 +151,57 @@ describe('createDownloadScheduler', () => {
     expect(navigated).toEqual([])
     expect(scheduler.busy).toBe(false)
     expect(clock.pending).toBe(0)
+  })
+})
+
+describe('downloadBase64File', () => {
+  const globals = globalThis as Record<string, unknown>
+  const saved = {
+    document: globals.document,
+    window: globals.window,
+    createObjectURL: URL.createObjectURL,
+    revokeObjectURL: URL.revokeObjectURL,
+  }
+
+  afterEach(() => {
+    globals.document = saved.document
+    globals.window = saved.window
+    URL.createObjectURL = saved.createObjectURL
+    URL.revokeObjectURL = saved.revokeObjectURL
+  })
+
+  test('decodes the data and saves it under the given name', async () => {
+    const blobs: Blob[] = []
+    const anchor = { href: '', download: '', clicked: false, click() {} }
+    anchor.click = () => {
+      anchor.clicked = true
+    }
+    globals.document = { createElement: () => anchor }
+    globals.window = { setTimeout: (fn: () => void) => fn() }
+    URL.createObjectURL = (blob: Blob) => {
+      blobs.push(blob)
+      return 'blob:export'
+    }
+    let revoked = ''
+    URL.revokeObjectURL = (url: string) => {
+      revoked = url
+    }
+
+    downloadBase64File('submissions.xlsx', btoa('PK\x03\x04'), 'application/x')
+
+    expect(anchor).toMatchObject({
+      href: 'blob:export',
+      download: 'submissions.xlsx',
+      clicked: true,
+    })
+    expect(blobs[0]!.type).toBe('application/x')
+    expect([...new Uint8Array(await blobs[0]!.arrayBuffer())]).toEqual([
+      0x50, 0x4b, 0x03, 0x04,
+    ])
+    expect(revoked).toBe('blob:export')
+  })
+
+  test('base64ToBytes decodes binary data', () => {
+    expect([...base64ToBytes(btoa('\x00\xff'))]).toEqual([0, 255])
   })
 })

@@ -58,6 +58,12 @@ export type Submission = {
   userCountryCode: string | null
   userStatusText: string | null
   userBanned: boolean
+  // the Discord player who submitted; null for team-token submissions and
+  // ones made before players were recorded
+  playerId: string | null
+  playerName: string | null
+  playerUsername: string | null
+  playerAvatarUrl: string | null
   ip: string
   result: SubmissionResult
   cheatedFromId: string | null

@@ -49,6 +49,23 @@ export const GoodAdminSubmissions = response('goodAdminSubmissions', {
         userBanned: example(z.boolean(), false).check(
           z.describe('Whether the team is banned.')
         ),
+        playerId: example(z.nullable(z.string()), 'player-1a2b3c').check(
+          z.describe(
+            'The Discord player who submitted, or `null` for submissions made with a team token or before players were recorded.'
+          )
+        ),
+        playerName: example(z.nullable(z.string()), 'Nelly').check(
+          z.describe(
+            'Display name of the player, or `null` when unknown or the player was deleted.'
+          )
+        ),
+        playerUsername: example(z.nullable(z.string()), 'nelly').check(
+          z.describe('Discord username of the player, or `null`.')
+        ),
+        playerAvatarUrl: example(
+          z.nullable(z.string()),
+          'https://cdn.discordapp.com/avatars/80351110224678912/abc.png'
+        ).check(z.describe('Discord avatar URL of the player, or `null`.')),
         ip: example(z.string(), '203.0.113.7').check(
           z.describe('Source IP of the submission.')
         ),

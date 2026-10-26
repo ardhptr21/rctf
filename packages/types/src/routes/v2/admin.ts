@@ -10,6 +10,7 @@ import {
   BadBody,
   BadChallenge,
   BadEndpoint,
+  BadExportTooLarge,
   BadExternalAuthRequest,
   BadInstancerConfig,
   BadInstancerError,
@@ -39,6 +40,7 @@ import {
   GoodAdminSettings,
   GoodAdminSettingsUpdate,
   GoodAdminSubmissions,
+  GoodAdminSubmissionsExport,
   GoodAdminUserDeleteV2,
   GoodAdminUsersV2,
   GoodAdminUserUpdateV2,
@@ -185,7 +187,11 @@ const AdminSubmissionsQuery = z.object({
   teamSearch: example(
     z.optional(z.string().check(z.minLength(1)).check(z.maxLength(100))),
     'otter'
-  ).check(z.describe('Free-text search over team name.')),
+  ).check(
+    z.describe(
+      'Free-text search over team name and the Discord name of the submitting player.'
+    )
+  ),
 })
 
 const AdminSubmissionsFilterBody = z
@@ -265,6 +271,19 @@ export const FilterAdminSubmissionsRouteV2 = defineRoute({
   body: AdminSubmissionsFilterBody,
   goodResponses: [GoodAdminSubmissions],
   badResponses: [BadBody, BadPerms, BadToken],
+  authRequired: true,
+  permissions: Permissions.usersWrite | Permissions.challsRead,
+})
+
+// The whole filtered list as an Excel file: the same filters and sort as the
+// list, without paging.
+export const ExportAdminSubmissionsRouteV2 = defineRoute({
+  path: '/v2/admin/submissions/export',
+  method: 'POST',
+  query: z.omit(AdminSubmissionsQuery, { limit: true, offset: true }),
+  body: AdminSubmissionsFilterBody,
+  goodResponses: [GoodAdminSubmissionsExport],
+  badResponses: [BadBody, BadExportTooLarge, BadPerms, BadToken],
   authRequired: true,
   permissions: Permissions.usersWrite | Permissions.challsRead,
 })

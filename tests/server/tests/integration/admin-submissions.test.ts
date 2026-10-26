@@ -5,6 +5,7 @@ import {
   BadFlag,
   BadPerms,
   GoodAdminSubmissions,
+  GoodAdminSubmissionsExport,
   GoodFlag,
   Permissions,
   SubmissionKind,
@@ -13,8 +14,10 @@ import {
 } from '@rctf/types'
 import { beforeAll, beforeEach, describe, expect, test } from 'bun:test'
 import { eq } from 'drizzle-orm'
+import ExcelJS from 'exceljs'
 import type { Hono } from 'hono'
 import { getFlagsForTeam } from '../../../../apps/api/src/providers/flags'
+import { getSubmissionsForExport } from '../../../../apps/api/src/services/submissions'
 import { getApp, request } from '../../app'
 import {
   clearDatabase,
@@ -375,5 +378,175 @@ describe('admin submissions', () => {
     expect(body.data.reason).toBe(
       'body:createdAfter: must be before createdBefore'
     )
+  })
+})
+
+const exportSubmissions = (
+  token: string,
+  body: Record<string, unknown>,
+  query = ''
+) =>
+  request(app, `/api/v2/admin/submissions/export${query}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(body),
+  })
+
+const readExport = async (res: Response) => {
+  const body = await expectResponse(res, GoodAdminSubmissionsExport)
+  const workbook = new ExcelJS.Workbook()
+  await workbook.xlsx.load(
+    Buffer.from(body.data.data, 'base64') as unknown as ArrayBuffer
+  )
+  return { fileName: body.data.fileName, workbook }
+}
+
+const sheetColumn = (sheet: ExcelJS.Worksheet, column: number) =>
+  sheet
+    .getColumn(column)
+    .values.slice(2)
+    .map(value => (value instanceof Date ? value.toISOString() : value))
+
+describe('admin submissions export', () => {
+  // two named challenges and three submissions to them by two teams
+  const seed = async () => {
+    const db = getDb()
+    const alpha = await generateRealTestUser()
+    const beta = await generateRealTestUser()
+    await db
+      .update(users)
+      .set({ name: 'Alpha Team' })
+      .where(eq(users.id, alpha.user.id))
+    await db
+      .update(users)
+      .set({ name: 'Beta Team' })
+      .where(eq(users.id, beta.user.id))
+
+    const named = async (category: string, name: string) => {
+      const { challenge } = await generateChallenge()
+      const { id, flag: _flag, ...data } = challenge
+      await db
+        .update(challenges)
+        .set({ data: { ...data, category, name } })
+        .where(eq(challenges.id, id))
+      return id
+    }
+    const webId = await named('web', 'Login')
+    const cryptoId = await named('crypto', 'RSA')
+
+    const log = (
+      challengeId: string,
+      userId: string,
+      result: SubmissionResult,
+      createdAt: string
+    ) =>
+      db.insert(submissions).values({
+        id: crypto.randomUUID(),
+        kind: SubmissionKind.FLAG,
+        challengeId,
+        userId,
+        ip: '10.0.0.1',
+        result,
+        details: { submittedFlag: `flag{${createdAt}}` },
+        createdAt,
+      })
+    await log(
+      webId,
+      alpha.user.id,
+      SubmissionResult.INCORRECT,
+      '2026-05-05T10:00:00.000Z'
+    )
+    await log(
+      webId,
+      beta.user.id,
+      SubmissionResult.CORRECT,
+      '2026-05-05T11:00:00.000Z'
+    )
+    await log(
+      cryptoId,
+      alpha.user.id,
+      SubmissionResult.CORRECT,
+      '2026-05-05T12:00:00.000Z'
+    )
+    return { webId, cryptoId }
+  }
+
+  test('writes a summary and one sheet per challenge', async () => {
+    const { token } = await adminAuth()
+    await seed()
+
+    const { fileName, workbook } = await readExport(
+      await exportSubmissions(token, {})
+    )
+
+    expect(fileName).toMatch(/-submissions-\d{4}-\d{2}-\d{2}\.xlsx$/)
+    expect(workbook.worksheets.map(sheet => sheet.name)).toEqual([
+      'Summary',
+      'crypto - RSA',
+      'web - Login',
+    ])
+    const web = workbook.getWorksheet('web - Login')!
+    // newest first by default
+    expect(sheetColumn(web, 1)).toEqual([
+      '2026-05-05T11:00:00.000Z',
+      '2026-05-05T10:00:00.000Z',
+    ])
+    expect(sheetColumn(web, 2)).toEqual(['Beta Team', 'Alpha Team'])
+    expect(workbook.getWorksheet('Summary')!.getCell('B5').value).toBe('None')
+  })
+
+  test('follows the filters and sort', async () => {
+    const { token } = await adminAuth()
+    const { webId } = await seed()
+
+    const { workbook } = await readExport(
+      await exportSubmissions(
+        token,
+        { challenge: { include: [webId] } },
+        '?sortBy=createdAt&sortOrder=asc'
+      )
+    )
+    expect(workbook.worksheets.map(sheet => sheet.name)).toEqual([
+      'Summary',
+      'web - Login',
+    ])
+    expect(sheetColumn(workbook.getWorksheet('web - Login')!, 2)).toEqual([
+      'Alpha Team',
+      'Beta Team',
+    ])
+    const summary = workbook.getWorksheet('Summary')!
+    expect(summary.getCell('B4').value).toBe('By time, ascending')
+    expect(summary.getCell('B5').value).toBe('Challenge is web/Login')
+
+    const correct = await readExport(
+      await exportSubmissions(token, {
+        result: { include: [SubmissionResult.CORRECT] },
+      })
+    )
+    const sheets = correct.workbook.worksheets.slice(1)
+    expect(sheets.map(sheet => sheet.rowCount - 1)).toEqual([1, 1])
+    expect(sheets.flatMap(sheet => sheetColumn(sheet, 9))).toEqual([
+      'Correct',
+      'Correct',
+    ])
+  })
+
+  test('requires admin permissions', async () => {
+    const { token } = await adminAuth(Permissions.challsRead)
+
+    await expectResponse(await exportSubmissions(token, {}), BadPerms)
+  })
+
+  test('refuses exports over the row limit', async () => {
+    await seed()
+
+    const found = await getSubmissionsForExport(getDb(), {}, 2)
+    expect(found).toEqual({ tooMany: true, total: 3 })
+    const fits = await getSubmissionsForExport(getDb(), {}, 3)
+    expect(fits.tooMany).toBe(false)
+    if (!fits.tooMany) expect(fits.submissions).toHaveLength(3)
   })
 })

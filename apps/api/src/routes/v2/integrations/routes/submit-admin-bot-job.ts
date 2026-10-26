@@ -59,6 +59,7 @@ integrationsGroup.route(
         kind: SubmissionKind.ADMIN_BOT,
         challengeId: params.id,
         userId: user.id,
+        playerId: ctx.var.player?.id,
         ip: ctx.var.ip,
         result,
         details: details ?? adminBotDetails(),
@@ -191,6 +192,7 @@ integrationsGroup.route(
     const job = await createJob(ctx.var.db, {
       challengeId: params.id,
       userId: user.id,
+      playerId: ctx.var.player?.id,
       configRevision: adminBotConfig.revision,
       flags: await getFlagsForTeam(challenge.data.flags, {
         db: ctx.var.db,

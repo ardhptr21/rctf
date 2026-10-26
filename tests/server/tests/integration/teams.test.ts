@@ -7,6 +7,7 @@ import {
   BadDiscordCode,
   BadDiscordGuild,
   BadEndpoint,
+  BadFlag,
   BadNoTeam,
   BadNotCaptain,
   BadPlayerBanned,
@@ -28,6 +29,7 @@ import {
   GoodUserSelfDataV2,
   GoodChallengesV2,
   GoodAdminPlayers,
+  GoodAdminSubmissions,
   GoodAdminPlayerUpdate,
   PageAccess,
   Permissions,
@@ -820,6 +822,58 @@ describe('player bans', () => {
       const again = await login(discordId)
       expect(await playerId(again.token)).toBe(id)
     } finally {
+      await admin.cleanup()
+    }
+  })
+})
+
+describe('submission players', () => {
+  test('admin submissions show which player submitted', async () => {
+    const admin = await generateRealTestUser(
+      Permissions.usersWrite | Permissions.challsRead
+    )
+    const { challenge, cleanup } = await generateChallenge()
+    try {
+      const adminToken = await generateAuthToken(admin.user.id)
+      const { token, discordId } = await login()
+      const team = await createTeam(token)
+      const id = await playerId(token)
+      const submit = async (authToken: string) =>
+        expectResponse(
+          await post(`/api/v1/challs/${challenge.id}/submit`, authToken, {
+            flag: 'flag{wrong}',
+          }),
+          BadFlag
+        )
+
+      await submit(token)
+      // a team token has no player behind it
+      await submit(await generateAuthToken(team.id))
+
+      const list = async (extra = '') =>
+        (
+          await expectResponse(
+            await get(
+              `/api/v2/admin/submissions?limit=10&offset=0&challengeSearch=${challenge.name}${extra}`,
+              adminToken
+            ),
+            GoodAdminSubmissions
+          )
+        ).data.submissions as any[]
+
+      const rows = await list()
+      expect(rows).toHaveLength(2)
+      expect(rows.find(row => row.playerId === id)).toMatchObject({
+        playerName: `Player ${discordId.slice(-4)}`,
+        playerUsername: `user${discordId.slice(-4)}`,
+      })
+      expect(rows.filter(row => row.playerId === null)).toHaveLength(1)
+
+      // the team search also matches the player
+      const byPlayer = await list(`&teamSearch=user${discordId.slice(-4)}`)
+      expect(byPlayer.map(row => row.playerId)).toEqual([id])
+    } finally {
+      await cleanup()
       await admin.cleanup()
     }
   })

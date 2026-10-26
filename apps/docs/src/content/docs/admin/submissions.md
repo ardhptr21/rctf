@@ -42,6 +42,17 @@ Deleting a solve triggers an automatic leaderboard recalculation, and the team's
 
 Each solve records the submitter's IP address. The submissions table also records flag attempts and admin bot submissions, with filters for time, challenge, team, IP, submission type, and result. Use it to investigate activity such as several teams submitting the same flag from the same address.
 
+The **Player** column shows which team member submitted, by their Discord display name (hover for their username). It is empty for submissions made with a team token and for ones recorded before players were tracked, and shows "Deleted player" once that account has been deleted. The team search also matches player names.
+
+## Exporting
+
+**Export** in the Submissions toolbar downloads an Excel file of every submission that matches the current filters, search and sort. It includes all matching rows, not only the loaded pages.
+
+- The **Summary** sheet lists the CTF, the export time (UTC), the sort, and the applied filters. It also has a table of submissions, correct, cheated and incorrect counts, and distinct teams for each challenge. Each challenge name links to its sheet.
+- **One sheet per challenge**, ordered by category and then name, has these columns: time (UTC), team, division, whether the team is banned, player, Discord username, IP, kind, result, submitted flag, AI links, proof file name and SHA-256, and the team a cheated flag belonged to.
+
+One export holds up to 50,000 submissions. Above that the export is refused, so narrow the filters, for example to a time range, and export in parts.
+
 ## First bloods
 
 The first three solves, ordered by timestamp, are first, second, and third blood. A configured [blood bot](/integrations/bloodbot) announces them automatically.

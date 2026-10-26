@@ -387,6 +387,7 @@ export const createSolveAndGetBloodNumber = async (
   params: {
     challengeId: string
     userId: string
+    playerId?: string | undefined
     submissionIp?: string | null
     submittedFlag?: string
     matchedFlag?: MatchedFlagEntry
@@ -426,6 +427,7 @@ export const createSolveAndGetBloodNumber = async (
       kind: SubmissionKind.FLAG,
       challengeId: params.challengeId,
       userId: params.userId,
+      playerId: params.playerId ?? null,
       ip: params.submissionIp ?? 'unknown',
       result: params.cheated
         ? SubmissionResult.CHEATED
@@ -1271,6 +1273,8 @@ export const submitFlag = async (
     submissionIp: string | undefined
     // AI links and solver proof, kept with every attempt
     evidence?: { aiLinks: string[]; proofFile?: FileField | undefined }
+    // the signed-in player, kept with the attempt for the audit log
+    playerId?: string | undefined
   }
 ): Promise<ReturnType<SubmitResponseHelpers[keyof SubmitResponseHelpers]>> => {
   // NOTE(es3n1n): Directly querying from the database to bypass any stale cache entries
@@ -1341,6 +1345,7 @@ export const submitFlag = async (
       kind: SubmissionKind.FLAG,
       challengeId: params.challengeId,
       userId: params.userId,
+      playerId: params.playerId,
       ip: params.submissionIp,
       result: SubmissionResult.INCORRECT,
       details: {
@@ -1384,6 +1389,7 @@ export const submitFlag = async (
     bloodNumber = await createSolveAndGetBloodNumber(db, {
       challengeId: params.challengeId,
       userId: params.userId,
+      playerId: params.playerId,
       submissionIp: params.submissionIp,
       submittedFlag: params.flag,
       matchedFlag: matched,
@@ -1398,6 +1404,7 @@ export const submitFlag = async (
         kind: SubmissionKind.FLAG,
         challengeId: params.challengeId,
         userId: params.userId,
+        playerId: params.playerId,
         ip: params.submissionIp,
         result: SubmissionResult.ALREADY_SOLVED,
         details: { submittedFlag: params.flag, ...evidenceDetails },

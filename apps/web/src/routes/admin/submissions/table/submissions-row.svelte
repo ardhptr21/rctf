@@ -92,6 +92,29 @@
     {/if}
   </row-cell>
 
+  <row-cell
+    data-col="player"
+    title={submission.playerUsername
+      ? `@${submission.playerUsername}`
+      : submission.playerId
+        ? 'Deleted player'
+        : 'Submitted with a team token'}
+  >
+    {#if submission.playerId}
+      <avatar-slot>
+        <Avatar
+          src={submission.playerAvatarUrl}
+          name={submission.playerName ?? '?'}
+        />
+      </avatar-slot>
+      <player-name data-deleted={!submission.playerName || undefined}>
+        {submission.playerName ?? 'Deleted player'}
+      </player-name>
+    {:else}
+      <muted>-</muted>
+    {/if}
+  </row-cell>
+
   <row-cell data-col="ip">
     {#if isRealIp(submission.ip)}
       <a
@@ -129,7 +152,7 @@
     display: grid;
     grid-template-columns:
       2.75rem 16rem 14rem minmax(11rem, 1fr)
-      11rem 9rem 10rem;
+      12rem 11rem 9rem 10rem;
     inline-size: 100%;
     block-size: 3rem;
     cursor: pointer;
@@ -201,6 +224,22 @@
       &:hover [data-part='name'] {
         text-decoration: underline;
       }
+    }
+
+    &[data-col='player'] player-name {
+      min-inline-size: 0;
+      overflow: hidden;
+      color: var(--foreground-l1);
+      text-overflow: ellipsis;
+
+      &[data-deleted] {
+        color: var(--foreground-l4);
+        font-style: italic;
+      }
+    }
+
+    muted {
+      color: var(--foreground-l4);
     }
 
     &[data-col='team'] a {

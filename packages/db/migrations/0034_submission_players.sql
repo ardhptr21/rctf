@@ -1,0 +1,1 @@
+ALTER TABLE "submission_logs" ADD COLUMN "player_id" text;

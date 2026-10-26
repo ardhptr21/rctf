@@ -37,6 +37,7 @@ aside: true
 | [Resend verification](/api/admin/verification-resend/) | `<route>POST /api/v2/admin/user-verifications/:id/resend</route>` |
 | [List submissions](/api/admin/submissions/) | `<route>GET /api/v2/admin/submissions</route>` |
 | [Filter submissions](/api/admin/submission-filter/) | `<route>POST /api/v2/admin/submissions</route>` |
+| [Export submissions](/api/admin/submission-export/) | `<route>POST /api/v2/admin/submissions/export</route>` |
 | [Read settings](/api/admin/settings/) | `<route>GET /api/v2/admin/settings</route>` |
 | [Update settings](/api/admin/settings-update/) | `<route>PUT /api/v2/admin/settings</route>` |
 | [Live leaderboard](/api/admin/live-leaderboard/) | `<route>GET /api/v2/admin/leaderboard/live</route>` |

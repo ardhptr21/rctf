@@ -1,5 +1,5 @@
 import type { DatabaseClient, SubmissionDetails } from '@rctf/db'
-import { challenges, submissions, users } from '@rctf/db'
+import { challenges, players, submissions, users } from '@rctf/db'
 import type {
   FilterAdminSubmissionsRouteV2,
   GetAdminSubmissionsRouteV2,
@@ -23,6 +23,8 @@ export const createSubmission = async (
     kind: SubmissionKind
     challengeId: string
     userId: string
+    // the signed-in player, when the request came from one
+    playerId?: string | undefined
     ip: string | undefined
     result: SubmissionResult
     details?: SubmissionDetails
@@ -34,6 +36,7 @@ export const createSubmission = async (
     kind: params.kind,
     challengeId: params.challengeId,
     userId: params.userId,
+    playerId: params.playerId ?? null,
     ip: params.ip ?? 'unknown',
     result: params.result,
     details: params.details ?? {},
@@ -45,6 +48,12 @@ export const createSubmission = async (
 type AdminSubmissionsQuery = RouteQuery<typeof GetAdminSubmissionsRouteV2> &
   Partial<RouteBody<typeof FilterAdminSubmissionsRouteV2>>
 
+// the filters and sort, without paging; shared by the list and the export
+export type AdminSubmissionsFilters = Omit<
+  AdminSubmissionsQuery,
+  'limit' | 'offset'
+>
+
 const challengeCategoryExpr = sql<string>`${challenges.data} ->> 'category'`
 const teamBannedExpr = sql<boolean>`coalesce(${users.banned}, false)`
 const cheatedFromIdExpr = sql<
@@ -53,8 +62,13 @@ const cheatedFromIdExpr = sql<
 
 const likePattern = (value: string) => `%${value.trim().toLowerCase()}%`
 
+// a deleted player keeps their id on old submissions but has no name
+const playerNameExpr = sql<
+  string | null
+>`coalesce(${players.displayName}, ${players.discordUsername})`
+
 const buildSubmissionsFilters = (
-  params: AdminSubmissionsQuery
+  params: AdminSubmissionsFilters
 ): SQL | undefined => {
   const challengeSearch = params.challengeSearch?.trim()
   const teamSearch = params.teamSearch?.trim()
@@ -66,8 +80,13 @@ const buildSubmissionsFilters = (
           or lower(${challengeCategoryExpr}) like ${likePattern(challengeSearch)}
         )`
       : undefined,
+    // matches the team or the player who submitted
     teamSearch
-      ? sql`lower(${users.name}::text) like ${likePattern(teamSearch)}`
+      ? sql`(
+          lower(${users.name}::text) like ${likePattern(teamSearch)}
+          or lower(coalesce(${playerNameExpr}, '')) like ${likePattern(teamSearch)}
+          or lower(coalesce(${players.discordUsername}, '')) like ${likePattern(teamSearch)}
+        )`
       : undefined,
     ...setFilter(sql`${submissions.challengeId}`, params.challenge),
     ...setFilter(sql`${submissions.userId}`, params.team),
@@ -88,7 +107,7 @@ const buildSubmissionsFilters = (
   )
 }
 
-const buildSubmissionsOrderBy = (params: AdminSubmissionsQuery): SQL[] => {
+const buildSubmissionsOrderBy = (params: AdminSubmissionsFilters): SQL[] => {
   const sortBy = params.sortBy ?? SubmissionSortBy.CREATED_AT
   const dir = params.sortOrder === SubmissionSortOrder.ASC ? asc : desc
 
@@ -122,6 +141,10 @@ export type AdminSubmissionInfo = {
   userCountryCode: string | null
   userStatusText: string | null
   userBanned: boolean
+  playerId: string | null
+  playerName: string | null
+  playerUsername: string | null
+  playerAvatarUrl: string | null
   ip: string
   result: SubmissionResult
   cheatedFromId: string | null
@@ -131,15 +154,15 @@ export type AdminSubmissionInfo = {
   createdAt: string
 }
 
-export const getSubmissions = async (
-  db: DatabaseClient,
-  params: AdminSubmissionsQuery
-): Promise<{ total: number; submissions: AdminSubmissionInfo[] }> => {
-  const filters = buildSubmissionsFilters(params)
-  const orderBy = buildSubmissionsOrderBy(params)
-  const cheatedFromUsers = alias(users, 'cheated_from_users')
+const cheatedFromUsers = alias(users, 'cheated_from_users')
 
-  const baseQuery = db
+// Every matching submission with its challenge, team, player and the team a
+// cheated flag belonged to, unsorted and unpaged.
+const submissionsQuery = (
+  db: DatabaseClient,
+  params: AdminSubmissionsFilters
+) =>
+  db
     .select({
       id: submissions.id,
       kind: submissions.kind,
@@ -153,6 +176,10 @@ export const getSubmissions = async (
       userCountryCode: users.countryCode,
       userStatusText: users.statusText,
       userBanned: teamBannedExpr,
+      playerId: submissions.playerId,
+      playerName: playerNameExpr,
+      playerUsername: players.discordUsername,
+      playerAvatarUrl: players.avatarUrl,
       ip: submissions.ip,
       result: submissions.result,
       cheatedFromId: cheatedFromIdExpr,
@@ -164,19 +191,52 @@ export const getSubmissions = async (
     .from(submissions)
     .leftJoin(challenges, eq(challenges.id, submissions.challengeId))
     .leftJoin(users, eq(users.id, submissions.userId))
+    .leftJoin(players, eq(players.id, submissions.playerId))
     .leftJoin(cheatedFromUsers, eq(cheatedFromUsers.id, cheatedFromIdExpr))
-    .where(filters)
+    .where(buildSubmissionsFilters(params))
     .$dynamic()
 
+export const getSubmissions = async (
+  db: DatabaseClient,
+  params: AdminSubmissionsQuery
+): Promise<{ total: number; submissions: AdminSubmissionInfo[] }> => {
+  const baseQuery = submissionsQuery(db, params)
   const [countResult, rows] = await Promise.all([
     db.select({ count: count() }).from(baseQuery.as('s')),
     baseQuery
-      .orderBy(...orderBy)
+      .orderBy(...buildSubmissionsOrderBy(params))
       .limit(params.limit)
       .offset(params.offset),
   ])
 
   return { total: countResult[0]?.count ?? 0, submissions: rows }
+}
+
+export const MAX_EXPORT_ROWS = 50_000
+
+export type SubmissionsExportRows =
+  | { tooMany: false; submissions: AdminSubmissionInfo[] }
+  | { tooMany: true; total: number }
+
+// Every submission matching the filters, in the chosen sort, for an export.
+// More than `maxRows` is refused rather than cut off silently.
+export const getSubmissionsForExport = async (
+  db: DatabaseClient,
+  params: AdminSubmissionsFilters,
+  maxRows = MAX_EXPORT_ROWS
+): Promise<SubmissionsExportRows> => {
+  const baseQuery = submissionsQuery(db, params)
+  // one extra row tells an export at the limit from one over it
+  const rows = await baseQuery
+    .orderBy(...buildSubmissionsOrderBy(params))
+    .limit(maxRows + 1)
+  if (rows.length <= maxRows) {
+    return { tooMany: false, submissions: rows }
+  }
+  const total = await db
+    .select({ count: count() })
+    .from(submissionsQuery(db, params).as('s'))
+  return { tooMany: true, total: total[0]?.count ?? rows.length }
 }
 
 function isBannedStatus(status: SubmissionTeamStatus) {

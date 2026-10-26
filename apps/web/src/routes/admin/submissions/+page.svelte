@@ -1,5 +1,10 @@
 <script lang="ts">
-  import { Permissions, SubmissionSortBy } from '@rctf/types'
+  import {
+    ExportAdminSubmissionsRouteV2,
+    GoodAdminSubmissionsExport,
+    Permissions,
+    SubmissionSortBy,
+  } from '@rctf/types'
   import { page } from '$app/state'
   import type { MultiFilter } from '$lib/filters/core'
   import FilterBar from '$lib/filters/filter-bar.svelte'
@@ -9,7 +14,8 @@
     uniqueTeamOptions,
     type ValueFilterFamily,
   } from '$lib/filters/ui'
-  import { IconTableFilled } from '$lib/icons'
+  import { apiRequest, showApiError } from '$lib/api'
+  import { IconDownload, IconTableFilled } from '$lib/icons'
   import {
     useAdminChallenges,
     useAdminSubmissionsInfinite,
@@ -18,10 +24,13 @@
   } from '$lib/query/admin'
   import { useClientConfig } from '$lib/query/config'
   import { useCurrentUser } from '$lib/query/user'
+  import Button from '$lib/ui/button.svelte'
   import Card from '$lib/ui/card.svelte'
   import EmptyState from '$lib/ui/empty-state.svelte'
   import Spinner from '$lib/ui/spinner.svelte'
+  import { createAsyncAction } from '$lib/utils/async-action.svelte'
   import { compareCategories, getCategoryConfig } from '$lib/utils/categories'
+  import { downloadBase64File } from '$lib/utils/download'
   import { hasPermissions } from '$lib/utils/permissions'
   import { nextSort } from '../admin-table-logic'
   import AdminTable from '../admin-table.svelte'
@@ -58,6 +67,32 @@
 
   const ctfName = $derived(configQuery.data?.ctfName)
   const ctfStartTime = $derived(configQuery.data?.startTime)
+
+  const exportAction = createAsyncAction()
+
+  // the whole filtered list, in the current sort, as an Excel file
+  function exportSubmissions() {
+    exportAction.run(
+      async () => {
+        const { limit: _limit, ...params } = buildSubmissionsBody(
+          filters,
+          sort,
+          ctfStartTime
+        )
+        const response = await apiRequest(ExportAdminSubmissionsRouteV2, params)
+        if (response.kind !== GoodAdminSubmissionsExport.kind) {
+          showApiError(response)
+          return
+        }
+        downloadBase64File(
+          response.data.fileName,
+          response.data.data,
+          'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+      },
+      { errorMessage: 'Failed to export submissions' }
+    )
+  }
 
   let filters = $state<SubmissionFilters>(createSubmissionFilters())
   let sort = $state<SubmissionSort>(initialSubmissionSort())
@@ -217,7 +252,7 @@
         bind:expandedId
         expandable
         rowId={submission => submission.id}
-        minTableWidth={1180}
+        minTableWidth={1372}
       >
         {#snippet toolbar()}
           <submissions-toolbar>
@@ -230,6 +265,18 @@
               onClearAll={() => clearSubmissionFilters(filters)}
               fetching={submissionsQuery.isFetching}
             />
+            <export-slot>
+              <Button
+                size="sm"
+                variant="secondary"
+                disabled={exportAction.pending}
+                onclick={exportSubmissions}
+              >
+                {#if exportAction.pending}<Spinner />{:else}<IconDownload
+                  />{/if}
+                Export
+              </Button>
+            </export-slot>
           </submissions-toolbar>
         {/snippet}
 
@@ -275,6 +322,12 @@
     gap: var(--space-xs);
     padding: var(--space-2xs);
     border-block-end: 2px solid var(--border);
+  }
+
+  export-slot {
+    display: flex;
+    flex-shrink: 0;
+    margin-inline-start: auto;
   }
 
   submissions-reveal {

@@ -158,6 +158,7 @@ export const createJob = async (
   params: {
     challengeId: string
     userId: string
+    playerId?: string | undefined
     configRevision: string
     flags: TeamFlag[]
     inputs: Record<string, string>
@@ -192,6 +193,7 @@ export const createJob = async (
         kind: SubmissionKind.ADMIN_BOT,
         challengeId: params.challengeId,
         userId: params.userId,
+        playerId: params.playerId ?? null,
         ip: params.submissionIp ?? 'unknown',
         result: SubmissionResult.QUEUED,
         details: {

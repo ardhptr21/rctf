@@ -10,10 +10,12 @@
 
   let { sort, onSort }: Props = $props()
 
-  const columns: { column: SubmissionSortBy; label: string }[] = [
+  // a column without a sort key is a plain label
+  const columns: { column: SubmissionSortBy | null; label: string }[] = [
     { column: SubmissionSortBy.CREATED_AT, label: 'Time' },
     { column: SubmissionSortBy.CHALLENGE, label: 'Challenge' },
     { column: SubmissionSortBy.TEAM, label: 'Team' },
+    { column: null, label: 'Player' },
     { column: SubmissionSortBy.IP, label: 'IP' },
     { column: SubmissionSortBy.KIND, label: 'Kind' },
     { column: SubmissionSortBy.RESULT, label: 'Result' },
@@ -22,17 +24,21 @@
 
 <submission-header>
   <header-cell data-col="expander"></header-cell>
-  {#each columns as { column, label } (column)}
+  {#each columns as { column, label } (label)}
     <header-cell>
-      <button
-        type="button"
-        data-active={sort.by === column || undefined}
-        data-order={sort.by === column ? sort.order : undefined}
-        onclick={() => onSort(column)}
-      >
-        <span>{label}</span>
-        <IconCaretDown aria-hidden="true" />
-      </button>
+      {#if column === null}
+        <span data-static>{label}</span>
+      {:else}
+        <button
+          type="button"
+          data-active={sort.by === column || undefined}
+          data-order={sort.by === column ? sort.order : undefined}
+          onclick={() => onSort(column)}
+        >
+          <span>{label}</span>
+          <IconCaretDown aria-hidden="true" />
+        </button>
+      {/if}
     </header-cell>
   {/each}
 </submission-header>
@@ -42,7 +48,7 @@
     display: grid;
     grid-template-columns:
       2.75rem 16rem 14rem minmax(11rem, 1fr)
-      11rem 9rem 10rem;
+      12rem 11rem 9rem 10rem;
     inline-size: 100%;
     block-size: 100%;
     user-select: none;
@@ -56,6 +62,11 @@
     display: flex;
     min-inline-size: 0;
     align-items: center;
+  }
+
+  [data-static] {
+    padding: var(--space-2xs);
+    white-space: nowrap;
   }
 
   button {

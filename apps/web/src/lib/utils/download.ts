@@ -97,6 +97,27 @@ export function downloadBlob(fileName: string, blob: Blob): void {
   window.setTimeout(() => URL.revokeObjectURL(url), 0)
 }
 
+export function base64ToBytes(data: string): Uint8Array {
+  const binary = atob(data)
+  const bytes = new Uint8Array(binary.length)
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i)
+  }
+  return bytes
+}
+
+// Saves a file the API returned base64-encoded.
+export function downloadBase64File(
+  fileName: string,
+  data: string,
+  mimeType: string
+): void {
+  downloadBlob(
+    fileName,
+    new Blob([base64ToBytes(data) as BlobPart], { type: mimeType })
+  )
+}
+
 export function downloadTextFile(
   fileName: string,
   contents: string,

@@ -34,6 +34,9 @@ export const submissions = pgTable(
     kind: submissionKindEnum().notNull(),
     challengeId: text('challenge_id').notNull(),
     userId: text('user_id').notNull(),
+    // the Discord player who submitted, when signed in as one; older rows
+    // and team-token submissions have none
+    playerId: text('player_id'),
     ip: text().notNull(),
     result: submissionResultEnum().notNull(),
     details: jsonb()

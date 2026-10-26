@@ -8,6 +8,7 @@
   import Button from '$lib/ui/button.svelte'
   import Dialog from '$lib/ui/dialog.svelte'
   import Spinner from '$lib/ui/spinner.svelte'
+  import { base64ToBytes, downloadBlob } from '$lib/utils/download'
   import { highlight, type HighlightedLine } from '$lib/utils/syntax-highlight'
   import {
     detectCodeLanguage,
@@ -16,7 +17,6 @@
   } from '$lib/utils/syntax-language'
   import { formatFileSize } from '../../challenges/details/submit-evidence'
   import {
-    base64ToBytes,
     decodeText,
     detectPreviewKind,
     MAX_TEXT_PREVIEW_CHARS,
@@ -125,15 +125,10 @@
   function download() {
     if (!loaded) return
     // octet-stream so the browser saves the file instead of opening it
-    const url = URL.createObjectURL(
+    downloadBlob(
+      loaded.name,
       new Blob([loaded.bytes as BlobPart], { type: 'application/octet-stream' })
     )
-    const link = document.createElement('a')
-    link.href = url
-    link.download = loaded.name
-    link.rel = 'noopener'
-    link.click()
-    setTimeout(() => URL.revokeObjectURL(url), 1000)
   }
 </script>
 

@@ -1,5 +1,5 @@
+import { base64ToBytes } from '$lib/utils/download'
 import {
-  base64ToBytes,
   detectPreviewKind,
   previewMimeType,
 } from '$routes/admin/submissions/proof-preview'
