@@ -14,7 +14,7 @@ rCTF checks every flag submission for signs of cheating and collects what it fin
 | **Duplicate proof** | High | Two teams uploaded the same solver proof file for the same challenge. |
 | **Duplicate AI link** | Medium | Two teams gave the same AI conversation link for the same challenge. |
 | **Shared IP** | Medium | Two teams submitted from the same IP address within the shared-IP window. |
-| **Unlisted AI link** | Medium | A team gave an AI link that matches none of the allowed AI link patterns, set under **Admin → Settings → Submissions**. |
+| **Unlisted AI link** | High | A team gave an AI link that matches none of the allowed AI link patterns, set under **Admin → Settings → Submissions**. |
 | **Solved without download** | Medium | A team solved a challenge that has attachments without ever downloading one from the challenge page. |
 
 The last two concern one team, so their cases have a single team. **Solved without download** relies on the challenge page reporting each download, so a team that fetched the file another way (a direct link shared by a teammate, or a script) is flagged too: treat it as a reason to look closer, not as proof.

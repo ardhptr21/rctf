@@ -587,8 +587,12 @@ describe('single-team detectors', () => {
     )
     await scan(attempt(team, { aiLinks: [allowed, unlisted, 'no ai'] }))
     const kase = await caseFor(team, null)
-    expect(kase?.signals.map(s => [s.kind, s.evidence])).toEqual([
-      [IntegritySignalKind.UNLISTED_AI_LINK, { link: unlisted }],
+    expect(kase?.signals.map(s => [s.kind, s.severity, s.evidence])).toEqual([
+      [
+        IntegritySignalKind.UNLISTED_AI_LINK,
+        IntegritySeverity.HIGH,
+        { link: unlisted },
+      ],
     ])
   })
 

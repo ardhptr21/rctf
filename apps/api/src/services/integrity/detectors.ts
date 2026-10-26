@@ -187,7 +187,7 @@ const unlistedAiLink: Detector = async (_db, attempt, { aiLinkPatterns }) => {
     .filter(link => !matchesAiLinkPatterns(link, aiLinkPatterns))
     .map(link => ({
       kind: IntegritySignalKind.UNLISTED_AI_LINK,
-      severity: IntegritySeverity.MEDIUM,
+      severity: IntegritySeverity.HIGH,
       teamId: attempt.teamId,
       otherTeamId: null,
       challengeId: attempt.challengeId,
