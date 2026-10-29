@@ -62,6 +62,28 @@ These actions work at any time, including after rosters lock when the CTF starts
 
 The admin panel lets you browse all registered teams with their scores, paginate through them, and search by name.
 
+## Importing teams
+
+To create many teams at once, for example from a registration list, click **Import** on the **Teams** page and choose a CSV file:
+
+```csv
+name,division
+Null Pointer Pirates,college
+Heap Hoppers,
+```
+
+- **The header row** needs a `name` column. A `division` column is optional, and a blank division means the default one. Other columns are ignored, so a spreadsheet export with extra columns works as is. **Template** downloads a starting file.
+- **The preview** lists every team the file would create. It also lists any problem by line: an invalid name (2–64 printable characters), a name used twice in the file, a name an existing team already has (ignoring case), or an unknown division. A file holds at most 1,000 teams.
+- **Nothing is created until the whole file is valid.** Fix the problems, choose the file again, then **Import**. All the teams are created together, or none are.
+- **Download join codes** then saves a CSV with each team's name, division and join code. Send each team its code so its players can join after signing in. Imported teams start without players.
+
+## Join codes
+
+Players join a team with its join code. To get the codes later:
+
+- **Copy join code** in a team's row copies that team's code. It's greyed out for teams registered by email, since those have no code.
+- **Export join codes** on the **Teams** page downloads a CSV of every team matching the current search, status and division filters: name, division, whether it's banned, and join code. It covers all pages, not just the rows loaded, in the list's sort order. One export holds up to 10,000 teams.
+
 ## Team tokens
 
 Each team authenticates with a shared team token. Admins can generate a new login token for any non-privileged team. Useful for getting teams back in when they've lost access to their account.

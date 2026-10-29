@@ -458,6 +458,11 @@ export type AdminUserInfo = {
   createdAt: string
 }
 
+export type AdminUserListInfo = AdminUserInfo & {
+  // null for teams registered by email, which players can't join
+  joinToken: string | null
+}
+
 export type AdminUserSolveInfo = {
   challengeId: string
   challengeName: string
@@ -504,7 +509,9 @@ export const adminTeamStatusExpression = sql<AdminTeamStatus>`
 type AdminUsersQuery = RouteQuery<typeof GetAdminUsersRouteV2> &
   Partial<RouteBody<typeof FilterAdminUsersRouteV2>>
 
-const buildUsersFilters = (params: AdminUsersQuery): SQL | undefined => {
+type AdminUsersFilters = Omit<AdminUsersQuery, 'limit' | 'offset'>
+
+const buildUsersFilters = (params: AdminUsersFilters): SQL | undefined => {
   const search = params.search?.trim()
   return and(
     search ? adminUserSearchFilter(search) : undefined,
@@ -513,7 +520,7 @@ const buildUsersFilters = (params: AdminUsersQuery): SQL | undefined => {
   )
 }
 
-const buildUsersOrderBy = (params: AdminUsersQuery): SQL[] => {
+const buildUsersOrderBy = (params: AdminUsersFilters): SQL[] => {
   const sortBy = params.sortBy ?? AdminTeamSortBy.CREATED_AT
   const dir = params.sortOrder === SortOrder.DESC ? desc : asc
   const search = params.search?.trim()
@@ -540,7 +547,7 @@ const buildUsersOrderBy = (params: AdminUsersQuery): SQL[] => {
 export const getAllUsersWithScores = async (
   db: DatabaseClient,
   params: AdminUsersQuery
-): Promise<{ total: number; users: AdminUserInfo[] }> => {
+): Promise<{ total: number; users: AdminUserListInfo[] }> => {
   const filters = buildUsersFilters(params)
   const orderBy = buildUsersOrderBy(params)
 
@@ -559,6 +566,7 @@ export const getAllUsersWithScores = async (
         countryCode: users.countryCode,
         statusText: users.statusText,
         createdAt: users.createdAt,
+        joinToken: users.joinToken,
         solveCount: count(solves.id),
       })
       .from(users)
@@ -571,6 +579,46 @@ export const getAllUsersWithScores = async (
   ])
 
   return { total: countResult[0]?.count ?? 0, users: users_ }
+}
+
+export const MAX_JOIN_CODE_EXPORT = 10_000
+
+export type TeamJoinCodesResult =
+  | {
+      tooMany: false
+      teams: Pick<
+        AdminUserListInfo,
+        'id' | 'name' | 'division' | 'banned' | 'joinToken'
+      >[]
+    }
+  | { tooMany: true; total: number }
+
+// Every team matching the admin list's filters and sort, with its join
+// code, unpaged.
+export const getTeamJoinCodes = async (
+  db: DatabaseClient,
+  params: AdminUsersFilters,
+  maxTeams = MAX_JOIN_CODE_EXPORT
+): Promise<TeamJoinCodesResult> => {
+  const filters = buildUsersFilters(params)
+  const teams = await db
+    .select({
+      id: users.id,
+      name: users.name,
+      division: users.division,
+      banned: users.banned,
+      joinToken: users.joinToken,
+    })
+    .from(users)
+    // only for sorting by solves
+    .leftJoin(solves, eq(users.id, solves.userid))
+    .where(filters)
+    .groupBy(users.id)
+    .orderBy(...buildUsersOrderBy(params))
+    .limit(maxTeams + 1)
+  if (teams.length <= maxTeams) return { tooMany: false, teams }
+  const [row] = await db.select({ count: count() }).from(users).where(filters)
+  return { tooMany: true, total: row?.count ?? 0 }
 }
 
 export const getAdminUserWithSolves = async (

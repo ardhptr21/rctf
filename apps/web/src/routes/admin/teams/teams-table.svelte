@@ -3,8 +3,15 @@
   import type { MultiFilter } from '$lib/filters/core'
   import FilterBar from '$lib/filters/filter-bar.svelte'
   import type { ValueFilterFamily } from '$lib/filters/ui'
-  import { IconCaretDown, IconSearch } from '$lib/icons'
+  import {
+    IconCaretDown,
+    IconDownload,
+    IconSearch,
+    IconUpload,
+  } from '$lib/icons'
   import Avatar from '$lib/ui/avatar.svelte'
+  import Button from '$lib/ui/button.svelte'
+  import Spinner from '$lib/ui/spinner.svelte'
   import { formatCtfOffset, formatLocalTime } from '$lib/utils/time'
   import { nextSort, type SortState } from '../admin-table-logic'
   import AdminTable from '../admin-table.svelte'
@@ -46,10 +53,14 @@
     onCopyEmail: (email: string) => void
     onManage: (id: string) => void
     onCopyToken: (team: TeamRef) => void
+    onCopyJoinCode: (team: TeamRef & { joinToken: string }) => void
     onBan: (team: BanRef) => void
     onDelete: (team: TeamRef) => void
     onResend: (verification: TeamRef) => void
     onVerify: (verification: TeamRef) => void
+    onImport: () => void
+    exportingJoinCodes: boolean
+    onExportJoinCodes: () => void
   }
 
   let {
@@ -76,10 +87,14 @@
     onCopyEmail,
     onManage,
     onCopyToken,
+    onCopyJoinCode,
     onBan,
     onDelete,
     onResend,
     onVerify,
+    onImport,
+    exportingJoinCodes,
+    onExportJoinCodes,
   }: Props = $props()
 
   const columns: { col: AdminTeamSortBy; label: string }[] = [
@@ -153,6 +168,21 @@
       {onClearAll}
       {fetching}
     />
+    <import-slot>
+      <Button
+        size="sm"
+        variant="secondary"
+        disabled={exportingJoinCodes}
+        onclick={onExportJoinCodes}
+      >
+        {#if exportingJoinCodes}<Spinner />{:else}<IconDownload />{/if}
+        Export join codes
+      </Button>
+      <Button size="sm" variant="secondary" onclick={onImport}>
+        <IconUpload />
+        Import
+      </Button>
+    </import-slot>
   </teams-toolbar>
 {/snippet}
 
@@ -278,6 +308,7 @@
         {resendingId}
         {onManage}
         {onCopyToken}
+        {onCopyJoinCode}
         {onBan}
         {onDelete}
         {onResend}
@@ -342,6 +373,13 @@
     gap: var(--space-2xs);
     padding: var(--space-2xs);
     border-block-end: 2px solid var(--border);
+  }
+
+  import-slot {
+    display: flex;
+    flex-shrink: 0;
+    gap: var(--space-2xs);
+    margin-inline-start: auto;
   }
 
   search-field {

@@ -40,7 +40,7 @@ const fail = (error: TeamError): { ok: false; error: TeamError } => ({
   error,
 })
 
-const generateJoinToken = (): string =>
+export const generateJoinToken = (): string =>
   Buffer.from(crypto.getRandomValues(new Uint8Array(24))).toString('base64url')
 
 const toSummary = (team: Pick<User, 'id' | 'name' | 'division'>) => ({

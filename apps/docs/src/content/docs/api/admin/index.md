@@ -20,6 +20,8 @@ aside: true
 | [Query uploads](/api/admin/upload-query/) | `<route>POST /api/[v2,v1]/admin/upload/query</route>` |
 | [List teams](/api/admin/teams/) | `<route>GET /api/v2/admin/users</route>` |
 | [Filter teams](/api/admin/team-filter/) | `<route>POST /api/v2/admin/users</route>` |
+| [Import teams](/api/admin/team-import/) | `<route>POST /api/v2/admin/users/import</route>` |
+| [Export team join codes](/api/admin/team-join-codes/) | `<route>POST /api/v2/admin/users/join-codes</route>` |
 | [Team detail](/api/admin/team-detail/) | `<route>GET /api/v2/admin/users/:id</route>` |
 | [Update team](/api/admin/team-update/) | `<route>PUT /api/v2/admin/users/:id</route>` |
 | [Delete team](/api/admin/team-delete/) | `<route>DELETE /api/v2/admin/users/:id</route>` |

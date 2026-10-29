@@ -4,6 +4,8 @@
     CompleteAdminUserVerificationRouteV2,
     CreateUserTokenRouteV2,
     DeleteAdminUserRouteV2,
+    ExportAdminTeamJoinCodesRouteV2,
+    GoodAdminTeamJoinCodes,
     GoodAdminUserDeleteV2,
     GoodAdminUserUpdateV2,
     GoodAdminUserVerificationCompleteV2,
@@ -36,6 +38,7 @@
   import Spinner from '$lib/ui/spinner.svelte'
   import { createAsyncAction } from '$lib/utils/async-action.svelte'
   import { copyText } from '$lib/utils/clipboard'
+  import { downloadTextFile } from '$lib/utils/download'
   import { hasPermissions } from '$lib/utils/permissions'
   import type { SortState } from '../admin-table-logic'
   import { createConfirmState } from '../confirm-state.svelte'
@@ -52,6 +55,8 @@
     type TeamRow,
     type TeamStatusValue,
   } from './teams-model'
+  import ImportDialog from './import-dialog.svelte'
+  import { joinCodesCsv, joinCodesFileName } from './teams-import'
   import TeamsTable from './teams-table.svelte'
 
   type TeamRef = { id: string; name: string }
@@ -170,6 +175,44 @@
   const completeAction = createAsyncAction<string>()
   const resendAction = createAsyncAction<string>()
   const confirmState = createConfirmState()
+
+  let importOpen = $state(false)
+  const exportAction = createAsyncAction()
+
+  async function copyJoinCode(team: TeamRef & { joinToken: string }) {
+    await copyText(team.joinToken, `Join code copied for ${team.name}.`)
+  }
+
+  // every team matching the filters, not just the loaded pages
+  function exportJoinCodes() {
+    exportAction.run(
+      async () => {
+        const { limit: _limit, ...params } = teamQueryParams(
+          filters,
+          debouncedSearch,
+          sort
+        )
+        const response = await apiRequest(
+          ExportAdminTeamJoinCodesRouteV2,
+          params
+        )
+        if (response.kind !== GoodAdminTeamJoinCodes.kind) {
+          showApiError(response)
+          return
+        }
+        const { teams } = response.data
+        downloadTextFile(
+          joinCodesFileName(clientConfig?.ctfName ?? ''),
+          joinCodesCsv(teams, divisions),
+          'text/csv'
+        )
+        toast.success(
+          `Exported join codes for ${teams.length} team${teams.length === 1 ? '' : 's'}.`
+        )
+      },
+      { errorMessage: 'Failed to export join codes' }
+    )
+  }
 
   async function copyEmail(email: string) {
     await copyText(email, 'Email copied.')
@@ -378,10 +421,23 @@
         onDelete={requestDelete}
         onResend={resendVerification}
         onVerify={verifyTeam}
+        onImport={() => (importOpen = true)}
+        onCopyJoinCode={copyJoinCode}
+        exportingJoinCodes={exportAction.pending}
+        onExportJoinCodes={exportJoinCodes}
       />
     </teams-reveal>
   {/if}
 </teams-page>
+
+<ImportDialog
+  open={importOpen}
+  ctfName={clientConfig?.ctfName ?? ''}
+  {divisions}
+  onClose={() => (importOpen = false)}
+  onImported={() =>
+    queryClient.invalidateQueries({ queryKey: ['admin', 'users'] })}
+/>
 
 <ConfirmDialog
   open={confirmState.current !== null}

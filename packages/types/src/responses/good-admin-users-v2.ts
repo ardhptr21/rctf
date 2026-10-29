@@ -42,6 +42,11 @@ export const GoodAdminUsersV2 = response('goodAdminUsersV2', {
         createdAt: example(z.string(), '2024-03-09T00:00:00.000Z').check(
           z.describe('Account creation time as an ISO 8601 string.')
         ),
+        joinToken: example(z.nullable(z.string()), '<join-token>').check(
+          z.describe(
+            'Code players use to join the team, or `null` for teams registered by email.'
+          )
+        ),
       })
     ),
   }),

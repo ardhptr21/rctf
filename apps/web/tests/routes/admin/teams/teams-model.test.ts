@@ -32,6 +32,7 @@ function team(overrides: Partial<AdminTeam> = {}): AdminTeam {
     countryCode: overrides.countryCode ?? null,
     statusText: overrides.statusText ?? null,
     createdAt: overrides.createdAt ?? '2024-03-09T00:00:00.000Z',
+    joinToken: overrides.joinToken ?? null,
   }
 }
 

@@ -11,6 +11,7 @@ import {
   BadChallenge,
   BadEndpoint,
   BadExportTooLarge,
+  BadTeamsImport,
   BadExternalAuthRequest,
   BadInstancerConfig,
   BadInstancerError,
@@ -41,6 +42,9 @@ import {
   GoodAdminSettingsUpdate,
   GoodAdminSubmissions,
   GoodAdminSubmissionsExport,
+  GoodAdminTeamJoinCodes,
+  GoodAdminTeamsImport,
+  GoodAdminTeamsImportPreview,
   GoodAdminUserDeleteV2,
   GoodAdminUsersV2,
   GoodAdminUserUpdateV2,
@@ -286,6 +290,44 @@ export const ExportAdminSubmissionsRouteV2 = defineRoute({
   badResponses: [BadBody, BadExportTooLarge, BadPerms, BadToken],
   authRequired: true,
   permissions: Permissions.usersWrite | Permissions.challsRead,
+})
+
+// Creates teams from a CSV file: checked first with `confirm: false`, then
+// created all at once with `confirm: true`.
+export const ImportAdminTeamsRouteV2 = defineRoute({
+  path: '/v2/admin/users/import',
+  method: 'POST',
+  body: z.object({
+    csv: z
+      .string()
+      .check(z.maxLength(512 * 1024))
+      .check(
+        z.describe(
+          'The CSV file: a header row with a `name` column and an optional `division` column, then one team per row. At most 1000 teams.'
+        )
+      ),
+    confirm: example(z.boolean(), false).check(
+      z.describe(
+        'Create the teams. Without it, only check the file and return a preview.'
+      )
+    ),
+  }),
+  goodResponses: [GoodAdminTeamsImportPreview, GoodAdminTeamsImport],
+  badResponses: [BadBody, BadTeamsImport, BadPerms, BadToken],
+  authRequired: true,
+  permissions: Permissions.usersWrite,
+})
+
+// Join codes of every team matching the list's filters, unpaged.
+export const ExportAdminTeamJoinCodesRouteV2 = defineRoute({
+  path: '/v2/admin/users/join-codes',
+  method: 'POST',
+  query: z.omit(AdminUsersQuery, { limit: true, offset: true }),
+  body: AdminUsersFilterBody,
+  goodResponses: [GoodAdminTeamJoinCodes],
+  badResponses: [BadBody, BadExportTooLarge, BadPerms, BadToken],
+  authRequired: true,
+  permissions: Permissions.usersWrite,
 })
 
 const AdminUserParams = z.object({

@@ -2,6 +2,7 @@
   import {
     IconAwardFilled,
     IconCheck,
+    IconCopy,
     IconGavel,
     IconKey,
     IconPaperPlaneTilt,
@@ -25,6 +26,7 @@
     resendingId: string | null
     onManage: (id: string) => void
     onCopyToken: (team: TeamRef) => void
+    onCopyJoinCode: (team: TeamRef & { joinToken: string }) => void
     onBan: (team: BanRef) => void
     onDelete: (team: TeamRef) => void
     onResend: (verification: TeamRef) => void
@@ -41,6 +43,7 @@
     resendingId,
     onManage,
     onCopyToken,
+    onCopyJoinCode,
     onBan,
     onDelete,
     onResend,
@@ -51,6 +54,23 @@
     row.kind === 'registered' && deriveTeamStatus(row.team) === 'admin'
   )
 </script>
+
+{#snippet copyJoinCode(team: TeamRef & { joinToken: string | null })}
+  {@render action({
+    label: team.joinToken ? 'Copy join code' : 'No join code',
+    icon: IconCopy,
+    disabled: !team.joinToken,
+    onclick: () => {
+      if (team.joinToken) {
+        onCopyJoinCode({
+          id: team.id,
+          name: team.name,
+          joinToken: team.joinToken,
+        })
+      }
+    },
+  })}
+{/snippet}
 
 {#snippet action(opts: {
   label: string
@@ -81,6 +101,7 @@
   {#if row.kind === 'registered'}
     {@const team = row.team}
     {#if isAdmin}
+      {@render copyJoinCode(team)}
       <admin-badge data-tip="Admin account">
         <IconAwardFilled aria-hidden="true" />
       </admin-badge>
@@ -92,6 +113,7 @@
           onclick: () => onManage(team.id),
         })}
       {/if}
+      {@render copyJoinCode(team)}
       {@render action({
         label: 'Copy login token',
         icon: IconKey,
