@@ -416,6 +416,7 @@
         resendingId={resendAction.key}
         onCopyEmail={copyEmail}
         onManage={manage}
+        canCopyToken={!clientConfig?.discord}
         onCopyToken={requestCopyToken}
         onBan={requestBan}
         onDelete={requestDelete}

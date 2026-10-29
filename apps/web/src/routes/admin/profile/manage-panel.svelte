@@ -414,27 +414,34 @@
 
     <Section title="Actions">
       <manage-actions>
-        <Button variant="secondary" disabled={busy} onclick={requestCopyToken}>
-          {#if action.key === 'token'}
-            <Spinner />
-          {:else}
-            <IconKey />
-          {/if}
-          Copy login token
-        </Button>
+        <!-- team tokens can't log in once Discord login is set up -->
+        {#if !clientConfig.discord}
+          <Button
+            variant="secondary"
+            disabled={busy}
+            onclick={requestCopyToken}
+          >
+            {#if action.key === 'token'}
+              <Spinner />
+            {:else}
+              <IconKey />
+            {/if}
+            Copy login token
+          </Button>
 
-        <Button
-          variant="secondary"
-          disabled={busy}
-          onclick={requestCopyLoginUrl}
-        >
-          {#if action.key === 'url'}
-            <Spinner />
-          {:else}
-            <IconCopy />
-          {/if}
-          Copy login URL
-        </Button>
+          <Button
+            variant="secondary"
+            disabled={busy}
+            onclick={requestCopyLoginUrl}
+          >
+            {#if action.key === 'url'}
+              <Spinner />
+            {:else}
+              <IconCopy />
+            {/if}
+            Copy login URL
+          </Button>
+        {/if}
 
         <Button variant="secondary" disabled={busy} onclick={viewSubmissions}>
           <IconFunnel />

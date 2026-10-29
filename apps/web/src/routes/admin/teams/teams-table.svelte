@@ -52,6 +52,8 @@
     resendingId: string | null
     onCopyEmail: (email: string) => void
     onManage: (id: string) => void
+    // team tokens only work while Discord login is off
+    canCopyToken: boolean
     onCopyToken: (team: TeamRef) => void
     onCopyJoinCode: (team: TeamRef & { joinToken: string }) => void
     onBan: (team: BanRef) => void
@@ -86,6 +88,7 @@
     resendingId,
     onCopyEmail,
     onManage,
+    canCopyToken,
     onCopyToken,
     onCopyJoinCode,
     onBan,
@@ -307,6 +310,7 @@
         {completingId}
         {resendingId}
         {onManage}
+        {canCopyToken}
         {onCopyToken}
         {onCopyJoinCode}
         {onBan}

@@ -86,7 +86,9 @@ Players join a team with its join code. To get the codes later:
 
 ## Team tokens
 
-Each team authenticates with a shared team token. Admins can generate a new login token for any non-privileged team. Useful for getting teams back in when they've lost access to their account.
+Without Discord login, each team authenticates with a shared team token. Admins can generate a new login token for any non-privileged team, useful for getting teams back in when they've lost access to their account.
+
+With [Discord login](/configuration#discord-login) set up, players sign in with Discord and team tokens can't be used to log in. **Copy login token** and **Copy login URL** are hidden, and the [create team token](/api/admin/team-token/) route answers `badEndpoint`. Give players their team's [join code](#join-codes) instead.
 
 ## Divisions
 

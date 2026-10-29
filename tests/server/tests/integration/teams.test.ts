@@ -266,6 +266,21 @@ describe('Discord login', () => {
     )
   })
 
+  test('admins cannot create team login tokens in Discord mode', async () => {
+    const admin = await generateRealTestUser(Permissions.usersWrite)
+    const team = await generateRealTestUser()
+    try {
+      const adminToken = await generateAuthToken(admin.user.id)
+      await expectResponse(
+        await post(`/api/v2/admin/users/${team.user.id}/token`, adminToken),
+        BadEndpoint
+      )
+    } finally {
+      await team.cleanup()
+      await admin.cleanup()
+    }
+  })
+
   test('disables legacy registration in Discord mode', async () => {
     await expectResponse(
       await post('/api/v2/auth/register', null, {

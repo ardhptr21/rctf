@@ -22,7 +22,7 @@ order: 14
 
 This route creates a fresh team token. It helps organizers recover access for a team that has lost its original credential.
 
-The returned token is a credential. This route does not issue tokens for admin users.
+The returned token is a credential. This route does not issue tokens for admin users. It is unavailable when Discord login is configured, since team tokens can't be used to log in then, and answers `badEndpoint`.
 
 ::request-body{def="CreateUserTokenRouteV2" source="params" title="Path parameters"}
 

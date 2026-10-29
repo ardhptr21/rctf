@@ -25,6 +25,7 @@
     completingId: string | null
     resendingId: string | null
     onManage: (id: string) => void
+    canCopyToken: boolean
     onCopyToken: (team: TeamRef) => void
     onCopyJoinCode: (team: TeamRef & { joinToken: string }) => void
     onBan: (team: BanRef) => void
@@ -42,6 +43,7 @@
     completingId,
     resendingId,
     onManage,
+    canCopyToken,
     onCopyToken,
     onCopyJoinCode,
     onBan,
@@ -114,12 +116,14 @@
         })}
       {/if}
       {@render copyJoinCode(team)}
-      {@render action({
-        label: 'Copy login token',
-        icon: IconKey,
-        loading: copyingId === team.id,
-        onclick: () => onCopyToken({ id: team.id, name: team.name }),
-      })}
+      {#if canCopyToken}
+        {@render action({
+          label: 'Copy login token',
+          icon: IconKey,
+          loading: copyingId === team.id,
+          onclick: () => onCopyToken({ id: team.id, name: team.name }),
+        })}
+      {/if}
       {@render action({
         label: team.banned ? 'Unban team' : 'Ban team',
         icon: IconGavel,

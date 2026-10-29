@@ -699,6 +699,8 @@ export const CreateUserTokenRouteV2 = defineRoute({
     id: z.string().check(z.describe('Team ID.')),
   }),
   permissions: Permissions.usersWrite,
+  // team tokens can't be used to log in once Discord login is set up
+  legacyAuth: true,
 })
 
 export const DeleteChallengeSolveRouteV2 = defineRoute({
