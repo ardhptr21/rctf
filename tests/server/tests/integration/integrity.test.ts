@@ -78,6 +78,7 @@ const defaults: IntegritySettings = {
     duplicateAiLink: true,
     solvedWithoutDownload: true,
     unlistedAiLink: true,
+    mixedAiSource: false,
   },
   sharedIpWindowHours: 24,
   ipAllowlist: [],
@@ -596,10 +597,11 @@ describe('single-team detectors', () => {
     ])
   })
 
-  test('settings saved before these detectors existed keep them on', () => {
+  test('settings saved before these detectors existed get their defaults', () => {
     const {
       solvedWithoutDownload: _a,
       unlistedAiLink: _b,
+      mixedAiSource: _c,
       ...older
     } = defaults.detectors
     const resolved = resolveSettings({
@@ -608,5 +610,107 @@ describe('single-team detectors', () => {
     expect(resolved.integrity.detectors.solvedWithoutDownload).toBe(true)
     expect(resolved.integrity.detectors.unlistedAiLink).toBe(true)
     expect(resolved.integrity.detectors.sharedIp).toBe(true)
+    // the one detector that starts off
+    expect(resolved.integrity.detectors.mixedAiSource).toBe(false)
+  })
+})
+
+describe('mixed AI source detector', () => {
+  // only this detector, so nothing else lands in the team's case
+  const onlyMixedAiSource = () =>
+    useSettings({
+      detectors: {
+        flagSharing: false,
+        sharedIp: false,
+        duplicateProof: false,
+        duplicateAiLink: false,
+        solvedWithoutDownload: false,
+        unlistedAiLink: false,
+        mixedAiSource: true,
+      },
+    })
+
+  // logs a submission with these links, then scans it, as a submission does
+  let minute = 0
+  const submitLinks = async (team: string, aiLinks: string[]) => {
+    await logSubmission(team, {
+      details: { aiLinks },
+      at: Date.now() - 1000 * HOUR + ++minute * 60_000,
+    })
+    await scan(attempt(team, { aiLinks }))
+  }
+
+  const signalsFor = async (team: string) =>
+    (await caseFor(team, null))?.signals.map(s => [
+      s.kind,
+      s.severity,
+      s.evidence,
+    ]) ?? []
+
+  test('flags the site that differs from the usual one', async () => {
+    await onlyMixedAiSource()
+    const team = await newTeam()
+    for (let i = 0; i < 4; i++) {
+      await submitLinks(team, [`https://chatgpt.com/share/${i}`])
+    }
+    expect(await signalsFor(team)).toEqual([])
+
+    await submitLinks(team, ['https://chat.deepseek.com/s/odd'])
+    // scanning again records nothing new
+    await scan(attempt(team, { aiLinks: ['https://chatgpt.com/share/0'] }))
+
+    expect(await signalsFor(team)).toEqual([
+      [
+        IntegritySignalKind.MIXED_AI_SOURCE,
+        IntegritySeverity.MEDIUM,
+        {
+          source: 'deepseek.com',
+          usualSource: 'chatgpt.com',
+          sourceCount: 1,
+          usualCount: 4,
+          link: 'https://chat.deepseek.com/s/odd',
+        },
+      ],
+    ])
+    const kase = await caseFor(team, null)
+    expect(kase?.signals[0]?.challenge?.id ?? null).toBe(challengeId)
+  })
+
+  test('a tie goes to the site used first', async () => {
+    await onlyMixedAiSource()
+    const team = await newTeam()
+    await submitLinks(team, ['https://claude.ai/share/a'])
+    await submitLinks(team, ['https://gemini.google.com/share/b'])
+
+    expect(
+      (await signalsFor(team)).map(([, , evidence]) => evidence)
+    ).toMatchObject([{ source: 'gemini.google.com', usualSource: 'claude.ai' }])
+  })
+
+  test('aliases, repeats, "no ai" and other teams do not count', async () => {
+    await onlyMixedAiSource()
+    const [team, other] = [await newTeam(), await newTeam()]
+    await submitLinks(other, ['https://chat.deepseek.com/s/theirs'])
+    await submitLinks(team, [
+      'https://chatgpt.com/share/a',
+      'https://www.ChatGPT.com/share/b',
+    ])
+    await submitLinks(team, ['https://chat.openai.com/share/c', 'no ai'])
+    await submitLinks(team, ['no ai'])
+
+    expect(await signalsFor(team)).toEqual([])
+  })
+
+  test('is off by default', async () => {
+    await useSettings()
+    const team = await newTeam()
+    await submitLinks(team, ['https://chatgpt.com/share/a'])
+    await submitLinks(team, ['https://chat.deepseek.com/s/b'])
+
+    expect(
+      (await signalsFor(team)).filter(
+        ([kind]) => kind === IntegritySignalKind.MIXED_AI_SOURCE
+      )
+    ).toEqual([])
   })
 })

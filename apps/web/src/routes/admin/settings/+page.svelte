@@ -81,6 +81,10 @@
       key: 'solvedWithoutDownload',
       label: 'Solves without downloading the attachments',
     },
+    {
+      key: 'mixedAiSource',
+      label: 'AI links from a different site than the team usually uses',
+    },
   ] as const
 
   let form = $state<SettingsFormState | null>(null)
@@ -544,13 +548,24 @@
         {@render groupHeader('Submissions', resetSubmissionEvidence)}
         <group-body>
           <Checkbox
-            checked={settingsForm.submissionEvidence.required}
+            checked={settingsForm.submissionEvidence.requireAiLinks}
             onchange={e => {
-              settingsForm.submissionEvidence.required = e.currentTarget.checked
+              settingsForm.submissionEvidence.requireAiLinks =
+                e.currentTarget.checked
               markGroup('submissionEvidence')
             }}
           >
-            Require AI links and solver proof on flag submissions
+            Require AI links on flag submissions
+          </Checkbox>
+          <Checkbox
+            checked={settingsForm.submissionEvidence.requireSolverProof}
+            onchange={e => {
+              settingsForm.submissionEvidence.requireSolverProof =
+                e.currentTarget.checked
+              markGroup('submissionEvidence')
+            }}
+          >
+            Require a solver proof on flag submissions
           </Checkbox>
           <Field
             label="Allowed AI link patterns (one regex per line)"

@@ -140,6 +140,8 @@ export const loadEnvConfig = (): ConfigLayer => {
       'requireSubmissionEvidence',
       getEnvBoolean('RCTF_REQUIRE_SUBMISSION_EVIDENCE'),
     ],
+    ['requireAiLinks', getEnvBoolean('RCTF_REQUIRE_AI_LINKS')],
+    ['requireSolverProof', getEnvBoolean('RCTF_REQUIRE_SOLVER_PROOF')],
     ['maxProofSize', getEnvInteger('RCTF_MAX_PROOF_SIZE')],
     ['userMembers', getEnvBoolean('RCTF_USER_MEMBERS')],
     ['homeContent', getEnvString('RCTF_HOME_CONTENT')],

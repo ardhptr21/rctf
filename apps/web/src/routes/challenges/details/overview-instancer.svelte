@@ -185,9 +185,13 @@
       // NOTE: Admins only test the instancer, so the flag is shown but not submitted
       return
     }
-    if (clientConfig?.requireSubmissionEvidence) {
-      // the flag needs AI links and a solver proof, which only the form collects
-      toast.info('Submit this flag below with your AI links and solver proof.')
+    const needs = [
+      clientConfig?.requireAiLinks && 'AI links',
+      clientConfig?.requireSolverProof && 'solver proof',
+    ].filter(Boolean)
+    if (needs.length > 0) {
+      // only the form collects AI links and the solver proof
+      toast.info(`Submit this flag below with your ${needs.join(' and ')}.`)
       return
     }
 

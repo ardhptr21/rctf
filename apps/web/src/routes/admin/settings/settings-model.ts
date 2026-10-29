@@ -29,7 +29,8 @@ export interface AdminSettingsShape {
   scoreboardFreezeTime?: number
   teamCreationEnabled?: boolean
   maxTeamSize?: number
-  requireSubmissionEvidence?: boolean
+  requireAiLinks?: boolean
+  requireSolverProof?: boolean
   aiLinkPatterns?: string[]
   integrity?: IntegritySettings
   pageAccess?: { challenges?: PageAccess; scores?: PageAccess }
@@ -62,7 +63,8 @@ interface TeamCreationGroup {
 }
 
 interface SubmissionEvidenceGroup {
-  required: boolean
+  requireAiLinks: boolean
+  requireSolverProof: boolean
   // allowed AI link patterns, one regular expression per line
   aiLinkPatternsText: string
   dirty: boolean
@@ -129,7 +131,8 @@ export interface SettingsPatch {
   scoreboardFreezeTime?: number | null
   teamCreationEnabled?: boolean | null
   maxTeamSize?: number | null
-  requireSubmissionEvidence?: boolean | null
+  requireAiLinks?: boolean | null
+  requireSolverProof?: boolean | null
   aiLinkPatterns?: string[] | null
   integrity?: IntegritySettings | null
   pageAccess?: { challenges: PageAccess; scores: PageAccess } | null
@@ -188,12 +191,17 @@ export function buildPatch(
 
   if (state.submissionEvidence.dirty) {
     // each field goes back to its own default when it matches it
-    const { required, aiLinkPatternsText } = state.submissionEvidence
+    const { requireAiLinks, requireSolverProof, aiLinkPatternsText } =
+      state.submissionEvidence
     const patterns = nonEmptyLines(aiLinkPatternsText)
-    patch.requireSubmissionEvidence =
-      required === (defaults.requireSubmissionEvidence ?? true)
+    patch.requireAiLinks =
+      requireAiLinks === (defaults.requireAiLinks ?? true)
         ? null
-        : required
+        : requireAiLinks
+    patch.requireSolverProof =
+      requireSolverProof === (defaults.requireSolverProof ?? true)
+        ? null
+        : requireSolverProof
     patch.aiLinkPatterns = sameLines(patterns, defaults.aiLinkPatterns ?? [])
       ? null
       : patterns
@@ -284,6 +292,7 @@ const FALLBACK_INTEGRITY: IntegritySettings = {
     duplicateAiLink: true,
     solvedWithoutDownload: true,
     unlistedAiLink: true,
+    mixedAiSource: false,
   },
   sharedIpWindowHours: 24,
   ipAllowlist: [],
@@ -439,10 +448,10 @@ export function initialFormState(
       dirty: false,
     },
     submissionEvidence: {
-      required:
-        overrides.requireSubmissionEvidence ??
-        defaults.requireSubmissionEvidence ??
-        true,
+      requireAiLinks:
+        overrides.requireAiLinks ?? defaults.requireAiLinks ?? true,
+      requireSolverProof:
+        overrides.requireSolverProof ?? defaults.requireSolverProof ?? true,
       aiLinkPatternsText: (
         overrides.aiLinkPatterns ??
         defaults.aiLinkPatterns ??
@@ -511,8 +520,10 @@ export function groupMatchesDefaults(
       return form.teamSize.value === (defaults.maxTeamSize ?? null)
     case 'submissionEvidence':
       return (
-        form.submissionEvidence.required ===
-          (defaults.requireSubmissionEvidence ?? true) &&
+        form.submissionEvidence.requireAiLinks ===
+          (defaults.requireAiLinks ?? true) &&
+        form.submissionEvidence.requireSolverProof ===
+          (defaults.requireSolverProof ?? true) &&
         sameLines(
           nonEmptyLines(form.submissionEvidence.aiLinkPatternsText),
           defaults.aiLinkPatterns ?? []

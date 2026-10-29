@@ -17,6 +17,7 @@ const KIND_LABEL: Record<IntegritySignalKind, string> = {
   [IntegritySignalKind.DUPLICATE_AI_LINK]: 'Duplicate AI link',
   [IntegritySignalKind.SOLVED_WITHOUT_DOWNLOAD]: 'Solved without downloading',
   [IntegritySignalKind.UNLISTED_AI_LINK]: 'Unlisted AI link',
+  [IntegritySignalKind.MIXED_AI_SOURCE]: 'Mixed AI source',
 }
 
 type AlertOptions = {

@@ -44,11 +44,30 @@ export async function getSettings(
     .from(settings)
     .where(eq(settings.id, VALUE_ID))
     .then(takeUnique)
-  const data = row?.data ?? {}
+  const data = splitEvidenceSetting(row?.data ?? {})
   return data.sponsors
     ? { ...data, sponsors: data.sponsors.map(normalizeSponsorIcons) }
     : data
 }
+
+// Settings saved before AI links and the solver proof could be required
+// separately have one setting for both; it becomes the two, and is written
+// back that way on the next save.
+const splitEvidenceSetting = (data: EditableSettings): EditableSettings => {
+  if (data.requireSubmissionEvidence === undefined) return data
+  const { requireSubmissionEvidence: both, ...rest } = data
+  return {
+    ...rest,
+    requireAiLinks: rest.requireAiLinks ?? both,
+    requireSolverProof: rest.requireSolverProof ?? both,
+  }
+}
+
+const configRequiresAiLinks = (): boolean =>
+  config.requireAiLinks ?? config.requireSubmissionEvidence
+
+const configRequiresSolverProof = (): boolean =>
+  config.requireSolverProof ?? config.requireSubmissionEvidence
 
 export function patchSettings(
   current: EditableSettings,
@@ -124,7 +143,8 @@ export function getConfigDefaults(): EditableSettings {
     scoreboardFreezeTime: config.scoreboardFreezeTime,
     teamCreationEnabled: config.teamCreationEnabled,
     maxTeamSize: config.maxTeamSize,
-    requireSubmissionEvidence: config.requireSubmissionEvidence,
+    requireAiLinks: configRequiresAiLinks(),
+    requireSolverProof: configRequiresSolverProof(),
     aiLinkPatterns: config.aiLinkPatterns,
     integrity: integrityDefaults(),
     pageAccess: config.pageAccess,
@@ -147,8 +167,9 @@ export function resolveSettings(overrides: EditableSettings) {
     teamCreationEnabled:
       overrides.teamCreationEnabled ?? config.teamCreationEnabled,
     maxTeamSize: overrides.maxTeamSize ?? config.maxTeamSize,
-    requireSubmissionEvidence:
-      overrides.requireSubmissionEvidence ?? config.requireSubmissionEvidence,
+    requireAiLinks: overrides.requireAiLinks ?? configRequiresAiLinks(),
+    requireSolverProof:
+      overrides.requireSolverProof ?? configRequiresSolverProof(),
     aiLinkPatterns: overrides.aiLinkPatterns ?? config.aiLinkPatterns,
     // the admin form always saves the whole object, so it replaces the
     // config defaults as a unit

@@ -78,6 +78,18 @@ describe('describeEvidence', () => {
         })
       )
     ).toBe('AI link outside the allowed patterns: https://example.com/chat')
+    expect(
+      describeEvidence(
+        signal(IntegritySignalKind.MIXED_AI_SOURCE, {
+          source: 'deepseek.com',
+          usualSource: 'chatgpt.com',
+          sourceCount: 1,
+          usualCount: 4,
+        })
+      )
+    ).toBe(
+      "Used deepseek.com in 1 submission; the team's usual source is chatgpt.com (4)"
+    )
   })
 
   test('copes with missing evidence fields', () => {

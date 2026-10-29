@@ -1,6 +1,9 @@
 import { NO_AI, validateAiLinks } from '@rctf/types'
 
 export type EvidenceInput = {
+  // which of the two the CTF asks for; the other isn't checked
+  requireAiLinks: boolean
+  requireSolverProof: boolean
   links: string[]
   noAi: boolean
   proof: File | null
@@ -26,15 +29,19 @@ export function collectAiLinks(links: readonly string[], noAi: boolean) {
 export function validateEvidence(input: EvidenceInput): EvidenceErrors {
   const errors: EvidenceErrors = {}
 
-  const aiLinksError = validateAiLinks(collectAiLinks(input.links, input.noAi))
+  const aiLinksError = input.requireAiLinks
+    ? validateAiLinks(collectAiLinks(input.links, input.noAi))
+    : null
   if (aiLinksError) {
     errors.aiLinks = aiLinksError
   }
 
-  if (!input.proof || input.proof.size === 0) {
-    errors.proof = 'Upload your solve script or a screenshot of the flag.'
-  } else if (input.proof.size > input.maxProofSize) {
-    errors.proof = `The file is larger than ${formatFileSize(input.maxProofSize)}.`
+  if (input.requireSolverProof) {
+    if (!input.proof || input.proof.size === 0) {
+      errors.proof = 'Upload your solve script or a screenshot of the flag.'
+    } else if (input.proof.size > input.maxProofSize) {
+      errors.proof = `The file is larger than ${formatFileSize(input.maxProofSize)}.`
+    }
   }
 
   return errors

@@ -56,10 +56,11 @@ export const GoodClientConfigV2 = response('goodClientConfigV2', {
         'Scoreboard freeze time as a Unix timestamp in milliseconds, or `null` when unset. The freeze stays on after `endTime` until it is cleared.'
       )
     ),
-    requireSubmissionEvidence: example(z.boolean(), true).check(
-      z.describe(
-        'Whether flag submissions must include AI links and a solver proof file.'
-      )
+    requireAiLinks: example(z.boolean(), true).check(
+      z.describe('Whether flag submissions must include AI links.')
+    ),
+    requireSolverProof: example(z.boolean(), true).check(
+      z.describe('Whether flag submissions must include a solver proof file.')
     ),
     maxProofSize: example(z.int(), 5242880).check(
       z.describe('Maximum solver proof file size in bytes.')

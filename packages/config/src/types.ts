@@ -123,8 +123,12 @@ export const ServerConfigSchema = z.object({
   maxTeamSize: z._default(z.int().check(z.gte(1)), 4), // admin teams are unlimited
   teamCreationEnabled: z._default(z.boolean(), true), // players may create teams
 
-  // Flag submissions must include AI links and a solver proof file
+  // Flag submissions must include AI links and a solver proof file. Each
+  // requirement can be set on its own; unset, it follows the older
+  // requireSubmissionEvidence, which covers both
   requireSubmissionEvidence: z._default(z.boolean(), true),
+  requireAiLinks: z.optional(z.boolean()),
+  requireSolverProof: z.optional(z.boolean()),
   maxProofSize: z._default(z.int().check(z.gte(1)), 5 * 1024 * 1024),
   // allowed AI link sites, as regular expressions; cheat detection records
   // links matching none of them
@@ -151,6 +155,7 @@ export const ServerConfigSchema = z.object({
           duplicateAiLink: z._default(z.boolean(), true),
           solvedWithoutDownload: z._default(z.boolean(), true),
           unlistedAiLink: z._default(z.boolean(), true),
+          mixedAiSource: z._default(z.boolean(), false),
         }),
         {}
       ),

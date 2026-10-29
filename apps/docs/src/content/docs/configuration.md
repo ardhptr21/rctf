@@ -72,7 +72,9 @@ The following environment variables are supported. They override values from con
 | `<yellow>RCTF_DISCORD_REQUIRED_GUILD_ID</yellow>` | `string{:ts}` | Discord server players must belong to |
 | `<yellow>RCTF_MAX_TEAM_SIZE</yellow>`         | `integer{:ts}` | Maximum Discord players per team           |
 | `<yellow>RCTF_TEAM_CREATION_ENABLED</yellow>` | `boolean{:ts}` | Whether players can create new teams       |
-| `<yellow>RCTF_REQUIRE_SUBMISSION_EVIDENCE</yellow>` | `boolean{:ts}` | Whether flag submissions need AI links and a solver proof |
+| `<yellow>RCTF_REQUIRE_SUBMISSION_EVIDENCE</yellow>` | `boolean{:ts}` | Whether flag submissions need AI links and a solver proof, unless set separately below |
+| `<yellow>RCTF_REQUIRE_AI_LINKS</yellow>` | `boolean{:ts}` | Whether flag submissions need AI links |
+| `<yellow>RCTF_REQUIRE_SOLVER_PROOF</yellow>` | `boolean{:ts}` | Whether flag submissions need a solver proof |
 | `<yellow>RCTF_MAX_PROOF_SIZE</yellow>`        | `integer{:ts}` | Maximum solver proof size in bytes         |
 
 ### UI and meta
@@ -212,7 +214,8 @@ See [Page access](/admin/#page-access) for what each level means. Both values ca
 ### Submission evidence
 
 ```yaml
-requireSubmissionEvidence: true
+requireAiLinks: true
+requireSolverProof: false # AI links only
 maxProofSize: 5242880 # 5 MB
 aiLinkPatterns:
   - '^https://chatgpt\.com/share/'
@@ -221,7 +224,9 @@ aiLinkPatterns:
 
 | Field | Type | Default | Description |
 | --- | --- | --- | --- |
-| `<red>requireSubmissionEvidence</red>` | `boolean{:ts}` | `true{:ts}` | Whether every flag submission needs AI links and a solver proof file. Can also be changed at runtime from the admin settings |
+| `<red>requireAiLinks</red>` | `boolean{:ts}` | `requireSubmissionEvidence{:ts}` | Whether every flag submission needs AI links. Can also be changed at runtime from the admin settings |
+| `<red>requireSolverProof</red>` | `boolean{:ts}` | `requireSubmissionEvidence{:ts}` | Whether every flag submission needs a solver proof file. Can also be changed at runtime from the admin settings |
+| `<red>requireSubmissionEvidence</red>` | `boolean{:ts}` | `true{:ts}` | The older setting for both requirements at once. Used for whichever of the two above isn't set |
 | `<red>maxProofSize</red>` | `number{:ts}` | `5242880{:ts}` | Maximum solver proof file size in bytes |
 | `<red>aiLinkPatterns</red>` | `string[]{:ts}` | `[]{:ts}` | Regular expressions for allowed AI links, matched regardless of case. [Cheat detection](/admin/integrity/) records links matching none of them; empty turns that check off. Submissions are never rejected for it. Can also be changed at runtime from the admin settings |
 
@@ -238,6 +243,7 @@ integrity:
     duplicateAiLink: true
     unlistedAiLink: true
     solvedWithoutDownload: true
+    mixedAiSource: false # off unless turned on
   sharedIpWindowHours: 24
   ipAllowlist:
     - 10.0.0.0/8 # the venue network

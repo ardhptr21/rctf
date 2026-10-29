@@ -845,10 +845,11 @@ const AdminSettingsUpdateBody = z.object({
           'Maximum players per team. Teams already over a lower limit keep their members but cannot take new ones.'
         )
       ),
-      requireSubmissionEvidence: example(z.nullish(z.boolean()), true).check(
-        z.describe(
-          'Whether flag submissions must include AI links and a solver proof file.'
-        )
+      requireAiLinks: example(z.nullish(z.boolean()), true).check(
+        z.describe('Whether flag submissions must include AI links.')
+      ),
+      requireSolverProof: example(z.nullish(z.boolean()), true).check(
+        z.describe('Whether flag submissions must include a solver proof file.')
       ),
       teamCreationEnabled: example(z.nullish(z.boolean()), false).check(
         z.describe(

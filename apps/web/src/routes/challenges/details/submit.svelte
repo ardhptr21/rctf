@@ -73,9 +73,8 @@
     return () => clearInterval(interval)
   })
 
-  const requireEvidence = $derived(
-    clientConfig?.requireSubmissionEvidence ?? false
-  )
+  const requireAiLinks = $derived(clientConfig?.requireAiLinks ?? false)
+  const requireSolverProof = $derived(clientConfig?.requireSolverProof ?? false)
   const maxProofSize = $derived(clientConfig?.maxProofSize ?? 5 * 1024 * 1024)
 
   let aiLinks = $state<string[]>([''])
@@ -146,22 +145,21 @@
     const flag = (form.data.flag ?? '').trim()
     if (!flag) return
 
-    if (requireEvidence) {
-      evidenceErrors = validateEvidence({
-        links: aiLinks,
-        noAi,
-        proof,
-        maxProofSize,
-      })
-      if (evidenceErrors.aiLinks || evidenceErrors.proof) return
-      form.setData({
-        flag,
-        aiLinks: collectAiLinks(aiLinks, noAi),
-        proof: proof ?? undefined,
-      })
-    } else {
-      form.setData({ flag, aiLinks: undefined, proof: undefined })
-    }
+    evidenceErrors = validateEvidence({
+      requireAiLinks,
+      requireSolverProof,
+      links: aiLinks,
+      noAi,
+      proof,
+      maxProofSize,
+    })
+    if (evidenceErrors.aiLinks || evidenceErrors.proof) return
+    // only what the CTF asks for is shown, so only that is sent
+    form.setData({
+      flag,
+      aiLinks: requireAiLinks ? collectAiLinks(aiLinks, noAi) : undefined,
+      proof: requireSolverProof ? (proof ?? undefined) : undefined,
+    })
     form.submit()
   }
 
@@ -196,112 +194,116 @@
     </Button>
   {:else}
     <form onsubmit={handleSubmit}>
-      {#if requireEvidence && submitState !== 'solved'}
+      {#if (requireAiLinks || requireSolverProof) && submitState !== 'solved'}
         <submit-evidence>
-          <fieldset>
-            <legend>AI links</legend>
-            <Checkbox
-              checked={noAi}
-              disabled={form.submitting}
-              onchange={e => {
-                noAi = e.currentTarget.checked
-                evidenceErrors = { ...evidenceErrors, aiLinks: undefined }
-              }}
-            >
-              I didn&apos;t use AI
-            </Checkbox>
-            {#if !noAi}
-              <link-list bind:this={linkList}>
-                {#each aiLinks as _, index (index)}
-                  <link-row>
-                    <Input
-                      type="url"
-                      placeholder="https://chatgpt.com/share/..."
-                      aria-label={`AI link ${index + 1}`}
-                      aria-invalid={!!evidenceErrors.aiLinks || undefined}
-                      disabled={form.submitting}
-                      bind:value={aiLinks[index]}
-                      oninput={() =>
-                        (evidenceErrors = {
-                          ...evidenceErrors,
-                          aiLinks: undefined,
-                        })}
-                    />
-                    {#if aiLinks.length > 1}
-                      <Button
-                        type="button"
-                        size="icon-sm"
-                        variant="ghost"
-                        aria-label={`Remove AI link ${index + 1}`}
-                        disabled={form.submitting}
-                        onclick={() => removeLink(index)}
-                      >
-                        <IconX />
-                      </Button>
-                    {/if}
-                  </link-row>
-                {/each}
-              </link-list>
-              {#if aiLinks.length < 10}
-                <add-link>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="secondary"
-                    disabled={form.submitting}
-                    onclick={addLink}
-                  >
-                    <IconPlus />
-                    Add link
-                  </Button>
-                </add-link>
-              {/if}
-            {/if}
-            {#if evidenceErrors.aiLinks}
-              <evidence-error role="alert"
-                >{evidenceErrors.aiLinks}</evidence-error
-              >
-            {/if}
-          </fieldset>
-
-          <fieldset>
-            <legend>Solver proof</legend>
-            <evidence-hint>
-              Your solve script, or a screenshot showing the flag. One file, up
-              to {formatFileSize(maxProofSize)}.
-            </evidence-hint>
-            <!-- the transparent input covers the whole box, so clicking or
-                 dropping a file anywhere on it works natively -->
-            <label
-              class="proof-picker"
-              data-has-file={proof ? '' : undefined}
-              data-invalid={evidenceErrors.proof ? '' : undefined}
-              data-disabled={form.submitting || undefined}
-            >
-              <input
-                bind:this={proofInput}
-                type="file"
-                aria-label="Solver proof file"
+          {#if requireAiLinks}
+            <fieldset>
+              <legend>AI links</legend>
+              <Checkbox
+                checked={noAi}
                 disabled={form.submitting}
-                onchange={handleProofChange}
-              />
-              <IconFile aria-hidden="true" />
-              <picker-text>
-                <strong>{proof ? proof.name : 'Choose a file'}</strong>
-                <span
-                  >{proof
-                    ? formatFileSize(proof.size)
-                    : 'Click to browse, or drop a file here'}</span
-                >
-              </picker-text>
-              <picker-action>{proof ? 'Change' : 'Browse'}</picker-action>
-            </label>
-            {#if evidenceErrors.proof}
-              <evidence-error role="alert"
-                >{evidenceErrors.proof}</evidence-error
+                onchange={e => {
+                  noAi = e.currentTarget.checked
+                  evidenceErrors = { ...evidenceErrors, aiLinks: undefined }
+                }}
               >
-            {/if}
-          </fieldset>
+                I didn&apos;t use AI
+              </Checkbox>
+              {#if !noAi}
+                <link-list bind:this={linkList}>
+                  {#each aiLinks as _, index (index)}
+                    <link-row>
+                      <Input
+                        type="url"
+                        placeholder="https://chatgpt.com/share/..."
+                        aria-label={`AI link ${index + 1}`}
+                        aria-invalid={!!evidenceErrors.aiLinks || undefined}
+                        disabled={form.submitting}
+                        bind:value={aiLinks[index]}
+                        oninput={() =>
+                          (evidenceErrors = {
+                            ...evidenceErrors,
+                            aiLinks: undefined,
+                          })}
+                      />
+                      {#if aiLinks.length > 1}
+                        <Button
+                          type="button"
+                          size="icon-sm"
+                          variant="ghost"
+                          aria-label={`Remove AI link ${index + 1}`}
+                          disabled={form.submitting}
+                          onclick={() => removeLink(index)}
+                        >
+                          <IconX />
+                        </Button>
+                      {/if}
+                    </link-row>
+                  {/each}
+                </link-list>
+                {#if aiLinks.length < 10}
+                  <add-link>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="secondary"
+                      disabled={form.submitting}
+                      onclick={addLink}
+                    >
+                      <IconPlus />
+                      Add link
+                    </Button>
+                  </add-link>
+                {/if}
+              {/if}
+              {#if evidenceErrors.aiLinks}
+                <evidence-error role="alert"
+                  >{evidenceErrors.aiLinks}</evidence-error
+                >
+              {/if}
+            </fieldset>
+          {/if}
+
+          {#if requireSolverProof}
+            <fieldset>
+              <legend>Solver proof</legend>
+              <evidence-hint>
+                Your solve script, or a screenshot showing the flag. One file,
+                up to {formatFileSize(maxProofSize)}.
+              </evidence-hint>
+              <!-- the transparent input covers the whole box, so clicking or
+                 dropping a file anywhere on it works natively -->
+              <label
+                class="proof-picker"
+                data-has-file={proof ? '' : undefined}
+                data-invalid={evidenceErrors.proof ? '' : undefined}
+                data-disabled={form.submitting || undefined}
+              >
+                <input
+                  bind:this={proofInput}
+                  type="file"
+                  aria-label="Solver proof file"
+                  disabled={form.submitting}
+                  onchange={handleProofChange}
+                />
+                <IconFile aria-hidden="true" />
+                <picker-text>
+                  <strong>{proof ? proof.name : 'Choose a file'}</strong>
+                  <span
+                    >{proof
+                      ? formatFileSize(proof.size)
+                      : 'Click to browse, or drop a file here'}</span
+                  >
+                </picker-text>
+                <picker-action>{proof ? 'Change' : 'Browse'}</picker-action>
+              </label>
+              {#if evidenceErrors.proof}
+                <evidence-error role="alert"
+                  >{evidenceErrors.proof}</evidence-error
+                >
+              {/if}
+            </fieldset>
+          {/if}
         </submit-evidence>
       {/if}
 

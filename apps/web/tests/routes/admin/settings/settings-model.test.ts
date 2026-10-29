@@ -30,7 +30,8 @@ function cleanState(): SettingsFormState {
     teamCreation: { enabled: true, dirty: false },
     teamSize: { value: null, dirty: false },
     submissionEvidence: {
-      required: true,
+      requireAiLinks: true,
+      requireSolverProof: true,
       aiLinkPatternsText: '',
       dirty: false,
     },
@@ -42,6 +43,7 @@ function cleanState(): SettingsFormState {
         duplicateAiLink: true,
         solvedWithoutDownload: true,
         unlistedAiLink: true,
+        mixedAiSource: false,
       },
       windowHours: 24,
       allowlistText: '',
@@ -649,6 +651,7 @@ describe('cheat detection group', () => {
       duplicateAiLink: true,
       solvedWithoutDownload: true,
       unlistedAiLink: true,
+      mixedAiSource: false,
     },
     sharedIpWindowHours: 24,
     ipAllowlist: [],
@@ -693,7 +696,11 @@ describe('cheat detection group', () => {
 })
 
 describe('submissions group', () => {
-  const defaults = { requireSubmissionEvidence: true, aiLinkPatterns: [] }
+  const defaults = {
+    requireAiLinks: true,
+    requireSolverProof: true,
+    aiLinkPatterns: [],
+  }
 
   it('sends AI link patterns, one per non-empty line', () => {
     const state = cleanState()
@@ -701,7 +708,8 @@ describe('submissions group', () => {
       '^https://chatgpt\\.com/share/\n\n^https://chat\\.deepseek\\.com/'
     state.submissionEvidence.dirty = true
     expect(buildPatch(state, defaults)).toEqual({
-      requireSubmissionEvidence: null,
+      requireAiLinks: null,
+      requireSolverProof: null,
       aiLinkPatterns: [
         '^https://chatgpt\\.com/share/',
         '^https://chat\\.deepseek\\.com/',
@@ -711,10 +719,11 @@ describe('submissions group', () => {
 
   it('clears each field that matches its default', () => {
     const state = cleanState()
-    state.submissionEvidence.required = false
+    state.submissionEvidence.requireSolverProof = false
     state.submissionEvidence.dirty = true
     expect(buildPatch(state, defaults)).toEqual({
-      requireSubmissionEvidence: false,
+      requireAiLinks: null,
+      requireSolverProof: false,
       aiLinkPatterns: null,
     })
   })

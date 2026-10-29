@@ -6,6 +6,7 @@ export enum IntegritySignalKind {
   DUPLICATE_AI_LINK = 'duplicateAiLink',
   SOLVED_WITHOUT_DOWNLOAD = 'solvedWithoutDownload',
   UNLISTED_AI_LINK = 'unlistedAiLink',
+  MIXED_AI_SOURCE = 'mixedAiSource',
 }
 
 export enum IntegritySeverity {

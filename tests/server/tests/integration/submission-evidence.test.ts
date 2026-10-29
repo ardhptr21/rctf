@@ -30,6 +30,7 @@ import {
 import { and, desc, eq } from 'drizzle-orm'
 import type { Hono } from 'hono'
 import {
+  getResolvedSettings,
   invalidateResolvedSettingsCache,
   updateSettings,
 } from '../../../../apps/api/src/services/settings'
@@ -50,10 +51,14 @@ let team: Awaited<ReturnType<typeof generateRealTestUser>>
 let admin: Awaited<ReturnType<typeof generateRealTestUser>>
 const cleanups: Array<() => Promise<void>> = []
 
-const setRequired = async (requireSubmissionEvidence: boolean) => {
+// both requirements, or each on its own
+const setRequired = async (
+  aiLinks: boolean,
+  solverProof: boolean = aiLinks
+) => {
   await updateSettings(
     getDb(),
-    { requireSubmissionEvidence },
+    { requireAiLinks: aiLinks, requireSolverProof: solverProof },
     await createRedis()
   )
 }
@@ -290,8 +295,62 @@ describe('flag submission evidence', () => {
     await setRequired(true)
     await expectResponse(await submitV1(), BadProofRequired)
 
+    await setRequired(true, false)
+    await expectResponse(await submitV1(), BadAiLinks)
+
     await setRequired(false)
     await expectResponse(await submitV1(), GoodFlag)
+  })
+
+  test('AI links can be required without a proof', async () => {
+    await setRequired(true, false)
+    const challenge = await newChallenge()
+    await expectResponse(
+      await submitV2(challenge.id, { flag: challenge.flag }),
+      BadAiLinks
+    )
+    await expectResponse(
+      await submitV2(challenge.id, {
+        flag: challenge.flag,
+        aiLinks: ['no ai'],
+      }),
+      GoodFlag
+    )
+  })
+
+  test('a proof can be required without AI links', async () => {
+    await setRequired(false, true)
+    const challenge = await newChallenge()
+    await expectResponse(
+      await submitV2(challenge.id, { flag: challenge.flag }),
+      BadProofRequired
+    )
+    await expectResponse(
+      await submitV2(challenge.id, {
+        flag: challenge.flag,
+        proof: proofFile(),
+      }),
+      GoodFlag
+    )
+  })
+
+  test('the older single setting still covers both', async () => {
+    // saved before the two could be set separately
+    await getDb()
+      .insert(settings)
+      .values({ id: 'value-0', data: { requireSubmissionEvidence: false } })
+    await invalidateResolvedSettingsCache(await createRedis())
+    const resolved = await getResolvedSettings(getDb(), await createRedis())
+    expect(resolved.requireAiLinks).toBe(false)
+    expect(resolved.requireSolverProof).toBe(false)
+
+    // changing one keeps the other as it was, and drops the old key
+    const saved = await updateSettings(
+      getDb(),
+      { requireAiLinks: true },
+      await createRedis()
+    )
+    expect(saved).toEqual({ requireAiLinks: true, requireSolverProof: false })
   })
 
   test('evidence is optional when the requirement is off', async () => {

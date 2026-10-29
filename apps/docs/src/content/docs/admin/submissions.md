@@ -24,7 +24,7 @@ Every preview also has a **Download** button.
 
 Proof files are stored privately in the database and deduplicated by content, so a team re-submitting the same script stores it once. They are never served through the public uploads path.
 
-Turn the requirement off in **Admin → Settings → Submissions**, or set `<red>requireSubmissionEvidence</red>: false` in the config, for example for a practice round. While it is off, the fields are hidden and flags can be submitted alone.
+The two requirements are separate: under **Admin → Settings → Submissions**, tick **Require AI links**, **Require a solver proof**, both, or neither, for example neither for a practice round. In the config, set `<red>requireAiLinks</red>` and `<red>requireSolverProof</red>`. The submit form shows only the fields that are required, and a flag can be submitted alone when neither is. Settings saved before the split, and the older `<red>requireSubmissionEvidence</red>` config key, still apply to both.
 
 ## Viewing solves
 

@@ -34,6 +34,7 @@ export const KIND_LABEL: Record<IntegritySignalKind, string> = {
   [IntegritySignalKind.DUPLICATE_AI_LINK]: 'Duplicate AI link',
   [IntegritySignalKind.SOLVED_WITHOUT_DOWNLOAD]: 'Solved without download',
   [IntegritySignalKind.UNLISTED_AI_LINK]: 'Unlisted AI link',
+  [IntegritySignalKind.MIXED_AI_SOURCE]: 'Mixed AI source',
 }
 
 export const SEVERITY_LABEL: Record<IntegritySeverity, string> = {
@@ -75,6 +76,10 @@ export function describeEvidence(signal: IntegritySignal): string {
     }
     case IntegritySignalKind.UNLISTED_AI_LINK:
       return `AI link outside the allowed patterns: ${text(evidence.link)}`
+    case IntegritySignalKind.MIXED_AI_SOURCE: {
+      const count = Number(evidence.sourceCount) || 0
+      return `Used ${text(evidence.source)} in ${count} submission${count === 1 ? '' : 's'}; the team's usual source is ${text(evidence.usualSource)} (${Number(evidence.usualCount) || 0})`
+    }
   }
 }
 

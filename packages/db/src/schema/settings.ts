@@ -18,6 +18,10 @@ export interface EditableSettings {
   scoreboardFreezeTime?: number
   teamCreationEnabled?: boolean
   maxTeamSize?: number
+  requireAiLinks?: boolean
+  requireSolverProof?: boolean
+  // the older single setting for both; getSettings turns it into the two
+  // above, so nothing else reads it
   requireSubmissionEvidence?: boolean
   aiLinkPatterns?: string[]
   integrity?: IntegritySettings

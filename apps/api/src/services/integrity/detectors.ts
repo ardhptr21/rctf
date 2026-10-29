@@ -14,7 +14,7 @@ import {
 } from '@rctf/types'
 import { and, eq, gte, ne, sql, type SQL } from 'drizzle-orm'
 import { scoredUserJoin } from '../challenge-queries'
-import { matchesAiLinkPatterns } from './ai-link-patterns'
+import { aiLinkSource, matchesAiLinkPatterns } from './ai-link-patterns'
 import { isAllowlistedIp } from './ip-allowlist'
 
 // One flag submission, as the detectors see it.
@@ -226,6 +226,79 @@ const solvedWithoutDownload: Detector = async (db, attempt) => {
   ]
 }
 
+// A team's AI links from a site other than the one it usually uses. The
+// usual site is the one in most of the team's submissions (the first used
+// wins a tie); every other site is recorded once.
+const mixedAiSource: Detector = async (db, attempt) => {
+  if (!realAiLinks(attempt).some(link => aiLinkSource(link) !== null)) {
+    return []
+  }
+  // the attempt is logged before it is scanned, so it is counted here
+  const rows = await db
+    .select({
+      challengeId: submissions.challengeId,
+      links: sql<unknown>`${submissions.details} -> 'aiLinks'`,
+    })
+    .from(submissions)
+    .where(
+      and(
+        eq(submissions.userId, attempt.teamId),
+        sql`jsonb_typeof(${submissions.details} -> 'aiLinks') = 'array'`
+      )
+    )
+    .orderBy(submissions.createdAt, submissions.id)
+
+  // insertion order is first use, which breaks ties
+  const sources = new Map<
+    string,
+    { count: number; challengeId: string; link: string }
+  >()
+  for (const row of rows) {
+    const links = Array.isArray(row.links)
+      ? row.links.filter((link): link is string => typeof link === 'string')
+      : []
+    const seen = new Set<string>()
+    for (const link of links) {
+      const source = aiLinkSource(link)
+      if (source === null || seen.has(source)) continue
+      seen.add(source)
+      const entry = sources.get(source)
+      if (entry) entry.count++
+      else {
+        sources.set(source, {
+          count: 1,
+          challengeId: row.challengeId,
+          link: link.trim(),
+        })
+      }
+    }
+  }
+  if (sources.size < 2) return []
+
+  let usual: [string, { count: number }] | null = null
+  for (const entry of sources) {
+    if (!usual || entry[1].count > usual[1].count) usual = entry
+  }
+  const [usualSource, { count: usualCount }] = usual!
+  return [...sources]
+    .filter(([source]) => source !== usualSource)
+    .map(([source, entry]) => ({
+      kind: IntegritySignalKind.MIXED_AI_SOURCE,
+      severity: IntegritySeverity.MEDIUM,
+      teamId: attempt.teamId,
+      otherTeamId: null,
+      challengeId: entry.challengeId,
+      evidence: {
+        source,
+        usualSource,
+        sourceCount: entry.count,
+        usualCount,
+        link: entry.link,
+      },
+      fingerprint: source,
+    }))
+}
+
 const DETECTORS: Record<keyof IntegritySettings['detectors'], Detector> = {
   flagSharing,
   sharedIp,
@@ -233,6 +306,7 @@ const DETECTORS: Record<keyof IntegritySettings['detectors'], Detector> = {
   duplicateAiLink,
   unlistedAiLink,
   solvedWithoutDownload,
+  mixedAiSource,
 }
 
 // Runs the detectors switched on in the cheat detection settings.

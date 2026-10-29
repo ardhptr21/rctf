@@ -6,7 +6,10 @@ import {
   parseIpRule,
 } from '@rctf/types'
 import { describe, expect, test } from 'bun:test'
-import { matchesAiLinkPatterns } from '../../../../apps/api/src/services/integrity/ai-link-patterns'
+import {
+  aiLinkSource,
+  matchesAiLinkPatterns,
+} from '../../../../apps/api/src/services/integrity/ai-link-patterns'
 import { isAllowlistedIp } from '../../../../apps/api/src/services/integrity/ip-allowlist'
 import {
   caseScore,
@@ -128,5 +131,29 @@ describe('AI link patterns', () => {
     expect(isAiLinkPattern('')).toBe(false)
     expect(isAiLinkPattern('^https://([a-z')).toBe(false)
     expect(isAiLinkPattern('x'.repeat(501))).toBe(false)
+  })
+})
+
+describe('aiLinkSource', () => {
+  test('is the site, with www. dropped and aliases merged', () => {
+    expect(aiLinkSource('https://chatgpt.com/share/abc')).toBe('chatgpt.com')
+    expect(aiLinkSource(' https://WWW.ChatGPT.com/share/abc ')).toBe(
+      'chatgpt.com'
+    )
+    expect(aiLinkSource('https://chat.openai.com/share/abc')).toBe(
+      'chatgpt.com'
+    )
+    expect(aiLinkSource('https://chat.deepseek.com/s/abc')).toBe('deepseek.com')
+    expect(aiLinkSource('https://bard.google.com/share/abc')).toBe(
+      'gemini.google.com'
+    )
+    expect(aiLinkSource('https://claude.ai/share/abc')).toBe('claude.ai')
+  })
+
+  test('is null for "no ai" and anything that is not a web link', () => {
+    expect(aiLinkSource('no ai')).toBeNull()
+    expect(aiLinkSource('')).toBeNull()
+    expect(aiLinkSource('chatgpt')).toBeNull()
+    expect(aiLinkSource('javascript:alert(1)')).toBeNull()
   })
 })

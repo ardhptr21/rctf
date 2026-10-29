@@ -13,7 +13,7 @@ challsGroup.route(
       return res.badTeamBanned()
     }
 
-    const { requireSubmissionEvidence } = await getResolvedSettings(
+    const { requireAiLinks, requireSolverProof } = await getResolvedSettings(
       ctx.var.db,
       ctx.var.redis
     )
@@ -21,13 +21,11 @@ challsGroup.route(
     if (body.proof && body.proof.size > config.maxProofSize) {
       return res.badProofFileSize({ maxSize: config.maxProofSize })
     }
-    if (requireSubmissionEvidence) {
-      if (!body.aiLinks || body.aiLinks.length === 0) {
-        return res.badAiLinks()
-      }
-      if (!body.proof || body.proof.size === 0) {
-        return res.badProofRequired()
-      }
+    if (requireAiLinks && (!body.aiLinks || body.aiLinks.length === 0)) {
+      return res.badAiLinks()
+    }
+    if (requireSolverProof && (!body.proof || body.proof.size === 0)) {
+      return res.badProofRequired()
     }
 
     return await submitFlag(res, ctx.var.db, ctx.var.redis, ctx.var.logger, {

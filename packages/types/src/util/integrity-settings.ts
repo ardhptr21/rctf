@@ -64,6 +64,14 @@ export const IntegritySettingsSchema = z.object({
             'Record AI links that match none of the allowed AI link patterns (`aiLinkPatterns`).'
           )
         ),
+      // off unless turned on, unlike the other detectors
+      mixedAiSource: z
+        ._default(z.boolean(), false)
+        .check(
+          z.describe(
+            "Record AI links from a different site than the team's usual one."
+          )
+        ),
     })
     .check(z.describe('Which detectors run on flag submissions.')),
   sharedIpWindowHours: example(

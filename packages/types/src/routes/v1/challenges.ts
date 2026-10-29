@@ -3,6 +3,7 @@ import { AccessControlledPage, Permissions } from '../../enums'
 import { defineRoute } from '../../internal'
 import {
   BadAlreadySolvedChallenge,
+  BadAiLinks,
   BadProofRequired,
   BadBody,
   BadChallenge,
@@ -51,6 +52,7 @@ export const SubmitFlagRoute = defineRoute({
     BadUnknownUser,
     BadToken,
     BadProofRequired,
+    BadAiLinks,
   ],
   authRequired: true,
   params: z.object({

@@ -31,10 +31,11 @@ export const AdminSettingsSchema = z.object({
       'Maximum players per team. Teams with admin permissions are unlimited.'
     )
   ),
-  requireSubmissionEvidence: example(z.optional(z.boolean()), true).check(
-    z.describe(
-      'Whether flag submissions must include AI links and a solver proof file.'
-    )
+  requireAiLinks: example(z.optional(z.boolean()), true).check(
+    z.describe('Whether flag submissions must include AI links.')
+  ),
+  requireSolverProof: example(z.optional(z.boolean()), true).check(
+    z.describe('Whether flag submissions must include a solver proof file.')
   ),
   teamCreationEnabled: example(z.optional(z.boolean()), true).check(
     z.describe('Whether players can create new teams.')
