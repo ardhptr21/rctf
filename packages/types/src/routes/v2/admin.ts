@@ -1,5 +1,6 @@
 import { ALL_REGIONS } from '@rctf/util'
 import { z } from 'zod/mini'
+import { InstanceHistoryStatus } from '../../enums/instance-history'
 import { PageAccess } from '../../enums/page-access'
 import { Permissions } from '../../enums/permissions'
 import { defineRoute } from '../../internal'
@@ -42,6 +43,7 @@ import {
   GoodAdminSettingsUpdate,
   GoodAdminSubmissions,
   GoodAdminSubmissionsExport,
+  GoodAdminInstances,
   GoodAdminTeamJoinCodes,
   GoodAdminTeamsImport,
   GoodAdminTeamsImportPreview,
@@ -328,6 +330,45 @@ export const ExportAdminTeamJoinCodesRouteV2 = defineRoute({
   badResponses: [BadBody, BadExportTooLarge, BadPerms, BadToken],
   authRequired: true,
   permissions: Permissions.usersWrite,
+})
+
+// Instance history: one entry per instance a team started, newest first.
+export const FilterAdminInstancesRouteV2 = defineRoute({
+  path: '/v2/admin/instances',
+  method: 'POST',
+  query: z.object({
+    limit: z
+      .pipe(z.coerce.number(), z.int())
+      .check(z.gte(1))
+      .check(z.lte(100))
+      .check(z.describe('Integer `1`-`100`. Page size.')),
+    offset: z
+      .pipe(z.coerce.number(), z.int())
+      .check(z.gte(0))
+      .check(z.describe('Integer `>= 0`. Page offset.')),
+    search: example(
+      z.optional(z.string().check(z.minLength(1)).check(z.maxLength(100))),
+      'otter'
+    ).check(z.describe('Search on the team name and player name.')),
+  }),
+  body: z.object({
+    team: z
+      .nullish(searchFilter(z.string()))
+      .check(z.describe('Include/exclude filter on team ID.')),
+    challenge: z
+      .nullish(searchFilter(z.string()))
+      .check(z.describe('Include/exclude filter on challenge ID.')),
+    category: z
+      .nullish(searchFilter(z.string()))
+      .check(z.describe('Include/exclude filter on category.')),
+    status: z
+      .nullish(searchFilter(z.enum(InstanceHistoryStatus)))
+      .check(z.describe('Include/exclude filter on status.')),
+  }),
+  goodResponses: [GoodAdminInstances],
+  badResponses: [BadBody, BadPerms, BadToken],
+  authRequired: true,
+  permissions: Permissions.usersWrite | Permissions.challsRead,
 })
 
 const AdminUserParams = z.object({

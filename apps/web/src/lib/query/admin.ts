@@ -1,4 +1,5 @@
 import {
+  FilterAdminInstancesRouteV2,
   FilterAdminSubmissionsRouteV2,
   FilterAdminUsersRouteV2,
   GetAdminBotStatusRouteV2,
@@ -17,6 +18,7 @@ import {
   GoodAdminChallengeV2,
   GoodAdminExternalAuthClients,
   GoodAdminIntegrityCase,
+  GoodAdminInstances,
   GoodAdminIntegrityCases,
   GoodAdminPlayers,
   GoodAdminSettings,
@@ -43,6 +45,7 @@ import {
 import { unwrapData } from '$lib/query/core'
 import {
   queryKeys,
+  type AdminInstancesQueryParams,
   type AdminIntegrityCasesQueryParams,
   type AdminPlayersQueryParams,
   type AdminSubmissionsQueryParams,
@@ -164,6 +167,33 @@ export function useAdminPlayersInfinite(
       enabled: enabled(),
       initialPageParam: 0,
       getNextPageParam: lastPage => nextPageOffset(lastPage, lastPage.players),
+      placeholderData: keepPreviousData,
+    }
+  })
+}
+
+export function useAdminInstancesInfinite(
+  params: () => AdminInstancesQueryParams,
+  enabled: () => boolean = () => true
+) {
+  return createInfiniteQuery(() => {
+    const query = params()
+    return {
+      queryKey: queryKeys.adminInstances(query),
+      queryFn: async ({ pageParam }) => {
+        const response = await apiRequest(FilterAdminInstancesRouteV2, {
+          ...query,
+          offset: pageParam,
+        })
+        return {
+          ...unwrapData(response, GoodAdminInstances),
+          offset: pageParam,
+        }
+      },
+      enabled: enabled(),
+      initialPageParam: 0,
+      getNextPageParam: lastPage =>
+        nextPageOffset(lastPage, lastPage.instances),
       placeholderData: keepPreviousData,
     }
   })

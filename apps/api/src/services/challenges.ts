@@ -69,6 +69,7 @@ import {
   getScoreboardFreezeCutoff,
   isAdminUser,
 } from './settings'
+import { stopInstanceAfterSolve } from './instance-lifecycle'
 import { scanAttempt } from './integrity'
 import { storeSubmissionProof } from './submission-proofs'
 import { createSubmission } from './submissions'
@@ -1446,6 +1447,17 @@ export const submitFlag = async (
   }
 
   scan({ solved: true, cheatedFrom })
+  // a solved challenge's instance isn't needed any more
+  getUser(db, params.userId)
+    .then(user =>
+      user ? stopInstanceAfterSolve(db, log, { user, challenge }) : undefined
+    )
+    .catch(err =>
+      log.error(
+        { err, challengeId: params.challengeId, userId: params.userId },
+        'stopping instance after solve failed'
+      )
+    )
   requestChallengeRecompute(redis, params.challengeId, 'flag')
   forceLeaderboardUpdate(redis)
   return res.goodFlag()

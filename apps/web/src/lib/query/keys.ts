@@ -1,4 +1,5 @@
 import type {
+  FilterAdminInstancesRouteV2,
   FilterAdminSubmissionsRouteV2,
   FilterAdminUsersRouteV2,
   IntegrityCaseStatus,
@@ -26,6 +27,12 @@ export type AdminPlayersQueryParams = {
   statuses?: string | undefined
 }
 
+export type AdminInstancesQueryParams = Omit<
+  RouteQuery<typeof FilterAdminInstancesRouteV2>,
+  'offset'
+> &
+  RouteBody<typeof FilterAdminInstancesRouteV2>
+
 export type AdminIntegrityCasesQueryParams = {
   status: IntegrityCaseStatus
   limit: number
@@ -51,6 +58,8 @@ export const queryKeys = {
   adminUserVerifications: ['admin', 'user-verifications'] as const,
   adminPlayers: (params: AdminPlayersQueryParams) =>
     ['admin', 'players', 'list', params] as const,
+  adminInstances: (params: AdminInstancesQueryParams) =>
+    ['admin', 'instances', 'list', params] as const,
   adminIntegrityCases: (params: AdminIntegrityCasesQueryParams) =>
     ['admin', 'integrity', 'list', params] as const,
   adminIntegrityCase: (id: string) => ['admin', 'integrity', id] as const,

@@ -49,5 +49,5 @@ Challenge deletion is irreversible and removes all solve records for that challe
 
 Challenges can optionally include extra configuration blocks:
 
-- **`<red>instancerConfig</red>`** holds the configuration for per-team instances. When set, it is validated against the instancer provider's schema. See [Instancer](/integrations/instancer) for details.
+- **`<red>instancerConfig</red>`** holds the configuration for per-team instances. When set, it is validated against the instancer provider's schema. See [Instancer](/integrations/instancer) for details. A team's instance is stopped automatically once the team solves the challenge, and the [instance history](/admin/instances/) records it as Solved.
 - **`<red>adminBotConfig</red>`** holds the trusted TypeScript handler for admin bot visits. The handler defines its inputs, validation, timeout, and browser behavior. See [Admin bot](/integrations/admin-bot) for the API.

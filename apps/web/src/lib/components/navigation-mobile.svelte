@@ -8,6 +8,7 @@
   import wordmarkLight from '$lib/assets/wordmark-light.svg'
   import ThemeToggle from '$lib/components/theme-toggle.svelte'
   import {
+    IconCloud,
     IconCopy,
     IconFingerprint,
     IconFlagBannerFold,
@@ -136,6 +137,13 @@
         activePath: '/admin/submissions',
         label: 'Submissions',
         icon: IconTableFilled,
+        show: isAdmin && canReadChallenges && canManageUsers,
+      },
+      {
+        href: '/admin/instances',
+        activePath: '/admin/instances',
+        label: 'Instances',
+        icon: IconCloud,
         show: isAdmin && canReadChallenges && canManageUsers,
       },
       {

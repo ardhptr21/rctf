@@ -9,6 +9,7 @@
   import NavigationMobile from '$lib/components/navigation-mobile.svelte'
   import ThemeToggle from '$lib/components/theme-toggle.svelte'
   import {
+    IconCloud,
     IconCopy,
     IconFingerprint,
     IconFlagBannerFold,
@@ -106,6 +107,13 @@
         label: 'Submissions',
         icon: IconTableFilled,
         href: '/admin/submissions',
+        show: canReadChallenges && canManageUsers,
+      },
+      {
+        value: 'admin-instances',
+        label: 'Instances',
+        icon: IconCloud,
+        href: '/admin/instances',
         show: canReadChallenges && canManageUsers,
       },
       {

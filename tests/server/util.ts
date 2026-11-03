@@ -3,6 +3,7 @@ import {
   challenges,
   createDatabase,
   externalAuthClients,
+  instanceHistory,
   integrityCases,
   pendingUserVerifications,
   solves,
@@ -23,6 +24,7 @@ export const clearDatabase = async () => {
   const db = getDb()
   // signals go with their cases
   await db.delete(integrityCases)
+  await db.delete(instanceHistory)
   await db.delete(pendingUserVerifications)
   await db.delete(submissions)
   await db.delete(solves)

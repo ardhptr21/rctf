@@ -30,6 +30,7 @@
   import ProfileSolves from '../../../profile/solves/solves.svelte'
   import ConfirmDialog from '../confirm-dialog.svelte'
   import ManagePanel from '../manage-panel.svelte'
+  import TeamInstances from '../team-instances.svelte'
 
   const userId = $derived(page.params.id ?? '')
   const userQuery = useUserById(() => userId)
@@ -62,6 +63,7 @@
     { value: 'settings', label: 'Manage' },
     { value: 'challenges', label: 'Challenges' },
     { value: 'analytics', label: 'Analytics' },
+    { value: 'instances', label: 'Instances' },
   ]
 
   const status = $derived(
@@ -163,6 +165,8 @@
             {challenges}
             splitDynamicScore={user.dynamicScores.length > 0}
           />
+        {:else if tab === 'instances'}
+          <TeamInstances teamId={userId} />
         {/if}
       {/if}
     {/snippet}
