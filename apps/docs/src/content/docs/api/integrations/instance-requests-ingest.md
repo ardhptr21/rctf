@@ -34,7 +34,7 @@ order: 20
 
 Receives batches of the instancer's Traefik JSON access log, sent by a log shipper such as Vector. See [Request logs](/integrations/instancer/request-logs/). It needs `Authorization: Bearer <instanceRequestLogs.token>`, and doesn't exist while no token is configured.
 
-Each entry is matched to the instance it reached, by its hostname and its time, and stored. Entries for no recorded instance are counted as unmatched: unknown hosts, admin teams' instances, or times outside an instance's lifetime. Lines that aren't HTTP access log entries are counted as invalid. Other Traefik fields are ignored.
+Each entry is matched to the instance it reached, by its hostname and its time, and stored. Entries that didn't reach a recorded instance are counted as unmatched: unknown hosts, admin teams' instances, times outside an instance's lifetime, or requests Traefik answered itself because no route matched (they have no `RouterName`). Lines that aren't HTTP access log entries are counted as invalid. Other Traefik fields are ignored.
 
 ::request-body{def="IngestInstanceRequestsRouteV2" title="Request body"}
 

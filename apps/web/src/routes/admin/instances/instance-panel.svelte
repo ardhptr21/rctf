@@ -400,7 +400,7 @@
       color: var(--foreground-success);
     }
     &[data-tone='info'] strong {
-      color: var(--foreground-blue-l1);
+      color: var(--foreground-sky-l1);
     }
     &[data-tone='warning'] strong {
       color: var(--foreground-yellow-l1);
@@ -556,7 +556,7 @@
       color: var(--foreground-success);
     }
     &[data-tone='info'] {
-      color: var(--foreground-blue-l1);
+      color: var(--foreground-sky-l1);
     }
     &[data-tone='warning'] {
       color: var(--foreground-yellow-l1);
@@ -577,12 +577,8 @@
       background: var(--background-success);
     }
     &[data-tone='info'] {
-      color: var(--foreground-blue-l1);
-      background: color-mix(
-        in srgb,
-        var(--foreground-blue-l1) 14%,
-        transparent
-      );
+      color: var(--foreground-sky-l1);
+      background: color-mix(in srgb, var(--foreground-sky-l1) 14%, transparent);
     }
     &[data-tone='muted'] {
       color: var(--foreground-l2);

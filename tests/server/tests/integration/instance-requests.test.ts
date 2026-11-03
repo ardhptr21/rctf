@@ -151,12 +151,18 @@ describe('instance request ingest', () => {
         // the port and case don't matter
         accessLog('WEB-1.inst.example.com:443', { RequestPath: '/login' }),
         accessLog('unknown.inst.example.com'),
+        // answered by Traefik itself: no router matched, so it never
+        // reached the instance
+        accessLog('web-1.inst.example.com', {
+          RouterName: undefined,
+          DownstreamStatus: 404,
+        }),
         { level: 'info', msg: 'Configuration loaded' },
       ]),
       GoodInstanceRequestsIngest
     )
 
-    expect(body.data).toEqual({ stored: 2, unmatched: 1, invalid: 1 })
+    expect(body.data).toEqual({ stored: 2, unmatched: 2, invalid: 1 })
     const [entry] = await getDb()
       .select()
       .from(instanceHistory)

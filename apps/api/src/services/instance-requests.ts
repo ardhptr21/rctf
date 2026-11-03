@@ -138,12 +138,20 @@ export const ingestInstanceRequests = async (
   entries: readonly Record<string, unknown>[],
   maxPerInstance = config.instanceRequestLogs?.maxPerInstance ?? 2000
 ): Promise<IngestResult> => {
-  const parsed = entries.map(parseTraefikAccessLog)
-  const requests = parsed.filter(
-    (request): request is ParsedRequest => request !== null
+  const parsed = entries.map(entry => ({
+    request: parseTraefikAccessLog(entry),
+    // Traefik answers requests no router matched (a wrong port or scheme)
+    // itself; those never reached an instance
+    routed: text(entry.RouterName) !== null,
+  }))
+  const valid = parsed.filter(entry => entry.request !== null)
+  const invalid = parsed.length - valid.length
+  const requests = valid.flatMap(entry =>
+    entry.routed && entry.request ? [entry.request] : []
   )
-  const invalid = parsed.length - requests.length
-  if (requests.length === 0) return { stored: 0, unmatched: 0, invalid }
+  if (requests.length === 0) {
+    return { stored: 0, unmatched: valid.length, invalid }
+  }
 
   const candidates = await candidatesFor(db, [
     ...new Set(requests.map(request => request.host)),
@@ -155,7 +163,7 @@ export const ingestInstanceRequests = async (
     )
     return instance ? [{ ...request, instanceId: instance.id }] : []
   })
-  const unmatched = requests.length - rows.length
+  const unmatched = valid.length - rows.length
   if (rows.length === 0) return { stored: 0, unmatched, invalid }
 
   const perInstance = new Map<
