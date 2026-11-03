@@ -215,7 +215,7 @@
                     <link-row>
                       <Input
                         type="url"
-                        placeholder="https://chatgpt.com/share/..."
+                        placeholder="https://..."
                         aria-label={`AI link ${index + 1}`}
                         aria-invalid={!!evidenceErrors.aiLinks || undefined}
                         disabled={form.submitting}
