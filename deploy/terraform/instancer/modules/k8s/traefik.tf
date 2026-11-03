@@ -65,6 +65,27 @@ resource "helm_release" "traefik" {
                     enabled = true
                 }
             }
+
+            # one JSON line per HTTP request on stdout, which Vector sends to
+            # rCTF as the instances' request logs; of the headers, only
+            # User-Agent is kept
+            logs = {
+                access = {
+                    enabled = true
+                    format = "json"
+                    fields = {
+                        general = {
+                            defaultmode = "keep"
+                        }
+                        headers = {
+                            defaultmode = "drop"
+                            names = {
+                                "User-Agent" = "keep"
+                            }
+                        }
+                    }
+                }
+            }
         })
     ]
 

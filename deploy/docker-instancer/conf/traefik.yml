@@ -13,3 +13,13 @@ entryPoints:
     address: ":443"
   tcp:
     address: ":1337"
+# One JSON line per HTTP request on stdout, which Vector sends to rCTF as
+# the instances' request logs. Of the headers, only User-Agent is kept.
+accessLog:
+  format: json
+  fields:
+    defaultMode: keep
+    headers:
+      defaultMode: drop
+      names:
+        User-Agent: keep

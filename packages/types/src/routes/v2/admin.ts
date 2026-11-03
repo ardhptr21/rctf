@@ -43,6 +43,9 @@ import {
   GoodAdminSettingsUpdate,
   GoodAdminSubmissions,
   GoodAdminSubmissionsExport,
+  BadUnknownInstance,
+  GoodAdminInstance,
+  GoodAdminInstanceRequests,
   GoodAdminInstances,
   GoodAdminTeamJoinCodes,
   GoodAdminTeamsImport,
@@ -367,6 +370,57 @@ export const FilterAdminInstancesRouteV2 = defineRoute({
   }),
   goodResponses: [GoodAdminInstances],
   badResponses: [BadBody, BadPerms, BadToken],
+  authRequired: true,
+  permissions: Permissions.usersWrite | Permissions.challsRead,
+})
+
+const AdminInstanceParams = z.object({
+  id: z.string().check(z.describe('Instance history entry ID.')),
+})
+
+// One instance from the history, with a summary of its HTTP requests.
+export const GetAdminInstanceRouteV2 = defineRoute({
+  path: '/v2/admin/instances/:id',
+  method: 'GET',
+  params: AdminInstanceParams,
+  goodResponses: [GoodAdminInstance],
+  badResponses: [BadUnknownInstance, BadPerms, BadToken],
+  authRequired: true,
+  permissions: Permissions.usersWrite | Permissions.challsRead,
+})
+
+// The HTTP requests that reached an instance, newest first.
+export const GetAdminInstanceRequestsRouteV2 = defineRoute({
+  path: '/v2/admin/instances/:id/requests',
+  method: 'GET',
+  params: AdminInstanceParams,
+  query: z.object({
+    limit: z
+      .pipe(z.coerce.number(), z.int())
+      .check(z.gte(1))
+      .check(z.lte(200))
+      .check(z.describe('Integer `1`-`200`. Page size.')),
+    offset: z
+      .pipe(z.coerce.number(), z.int())
+      .check(z.gte(0))
+      .check(z.describe('Integer `>= 0`. Page offset.')),
+    clientIp: example(
+      z.optional(z.string().check(z.maxLength(64))),
+      '203.0.113.42'
+    ).check(z.describe('Only requests from this IP.')),
+    statusClass: example(
+      z.optional(
+        z.pipe(z.coerce.number(), z.int()).check(z.gte(1)).check(z.lte(5))
+      ),
+      4
+    ).check(z.describe('Only this status class, for example `4` for 4xx.')),
+    path: example(
+      z.optional(z.string().check(z.minLength(1)).check(z.maxLength(200))),
+      '/admin'
+    ).check(z.describe('Only paths containing this text.')),
+  }),
+  goodResponses: [GoodAdminInstanceRequests],
+  badResponses: [BadBody, BadUnknownInstance, BadPerms, BadToken],
   authRequired: true,
   permissions: Permissions.usersWrite | Permissions.challsRead,
 })

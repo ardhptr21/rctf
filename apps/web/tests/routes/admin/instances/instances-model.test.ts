@@ -1,10 +1,15 @@
-import { InstanceHistoryStatus } from '@rctf/types'
+import { ExposeKind, InstanceHistoryStatus } from '@rctf/types'
 import { describe, expect, it } from 'bun:test'
 import {
+  formatBytes,
+  formatDurationMs,
   formatLifetime,
+  hasHttpEndpoint,
   instanceQueryParams,
   PAGE_SIZE,
+  statusClassTone,
   statusTone,
+  type AdminInstance,
 } from '$routes/admin/instances/instances-model'
 
 describe('formatLifetime', () => {
@@ -55,5 +60,33 @@ describe('instanceQueryParams', () => {
       category: { include: ['web'] },
       team: { include: ['team-1'] },
     })
+  })
+})
+
+describe('request helpers', () => {
+  it('colours a response by its status class', () => {
+    expect(statusClassTone(204)).toBe('success')
+    expect(statusClassTone(301)).toBe('info')
+    expect(statusClassTone(404)).toBe('warning')
+    expect(statusClassTone(502)).toBe('danger')
+  })
+
+  it('formats sizes and times', () => {
+    expect(formatBytes(512)).toBe('512 B')
+    expect(formatBytes(2048)).toBe('2.0 KB')
+    expect(formatDurationMs(12)).toBe('12 ms')
+    expect(formatDurationMs(1500)).toBe('1.50 s')
+  })
+
+  it('knows which instances can have request logs', () => {
+    const withKinds = (...kinds: ExposeKind[]) =>
+      ({
+        endpoints: kinds.map(kind => ({ kind, host: 'h', port: 1 })),
+      }) as AdminInstance
+    expect(hasHttpEndpoint(withKinds(ExposeKind.HTTPS))).toBe(true)
+    expect(hasHttpEndpoint(withKinds(ExposeKind.TCP_SSL))).toBe(false)
+    expect(
+      hasHttpEndpoint(withKinds(ExposeKind.TCP_SSL, ExposeKind.HTTP))
+    ).toBe(true)
   })
 })

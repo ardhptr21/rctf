@@ -12,6 +12,7 @@
   import { hasPermissions } from '$lib/utils/permissions'
   import { formatCtfOffset, formatLocalTime } from '$lib/utils/time'
   import AdminTable from '../admin-table.svelte'
+  import InstancePanel from './instance-panel.svelte'
   import {
     endpointLabel,
     formatLifetime,
@@ -48,6 +49,16 @@
 
   // a team's profile links here with ?team=<id>
   const teamId = $derived(page.url.searchParams.get('team'))
+
+  // the open instance lives in the URL, so it can be linked to
+  const openInstanceId = $derived(page.url.searchParams.get('instance'))
+
+  function openInstance(id: string | null) {
+    const url = new URL(page.url)
+    if (id) url.searchParams.set('instance', id)
+    else url.searchParams.delete('instance')
+    goto(url, { replaceState: true, noScroll: true, keepFocus: true })
+  }
 
   function clearTeam() {
     const url = new URL(page.url)
@@ -182,6 +193,7 @@
     <th-cell>Ended</th-cell>
     <th-cell>Lifetime</th-cell>
     <th-cell>Extends</th-cell>
+    <th-cell>Requests</th-cell>
     <th-cell>Endpoint</th-cell>
     <th-cell>IP</th-cell>
   </instances-head>
@@ -190,7 +202,18 @@
 {#snippet row(instance: AdminInstance, index: number)}
   {@const startedAt = Date.parse(instance.startedAt)}
   {@const offset = formatCtfOffset(startedAt, clientConfig?.startTime)}
-  <instances-row data-even={index % 2 === 0 || undefined}>
+  <instances-row
+    role="button"
+    tabindex="0"
+    data-even={index % 2 === 0 || undefined}
+    onclick={() => openInstance(instance.id)}
+    onkeydown={(event: KeyboardEvent) => {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault()
+        openInstance(instance.id)
+      }
+    }}
+  >
     <cell title={`UTC ${new Date(startedAt).toISOString()}`}>
       <stacked>
         <span>{formatLocalTime(startedAt)}</span>
@@ -199,7 +222,10 @@
     </cell>
     <cell>
       <stacked>
-        <a href="/admin/profile/{instance.team.id}">{instance.team.name}</a>
+        <a
+          href="/admin/profile/{instance.team.id}"
+          onclick={event => event.stopPropagation()}>{instance.team.name}</a
+        >
         {#if instance.player}
           <muted title={instance.player.username ?? undefined}
             >{instance.player.name ?? 'Deleted player'}</muted
@@ -211,6 +237,7 @@
       <a
         class="challenge"
         href="/challenges?challenge={instance.challenge.id}"
+        onclick={event => event.stopPropagation()}
         data-category-color={getCategoryConfig(instance.challenge.category)
           .color}
       >
@@ -239,6 +266,7 @@
       ></cell
     >
     <cell><span>{instance.extendCount}</span></cell>
+    <cell><span>{instance.requestCount}</span></cell>
     <cell>
       {#if instance.endpoints.length > 0}
         <code title={instance.endpoints.map(endpointLabel).join('\n')}
@@ -289,7 +317,7 @@
         {rows}
         rowHeight={ROW_HEIGHT}
         headerHeight={42}
-        minTableWidth={1340}
+        minTableWidth={1430}
         {fingerprint}
         hasNextPage={instancesQuery.hasNextPage ?? false}
         isFetchingNextPage={instancesQuery.isFetchingNextPage}
@@ -303,6 +331,8 @@
     </page-reveal>
   {/if}
 </instances-page>
+
+<InstancePanel instanceId={openInstanceId} onClose={() => openInstance(null)} />
 
 <style>
   instances-page {
@@ -491,7 +521,7 @@
     display: grid;
     grid-template-columns:
       10rem minmax(12rem, 1.2fr) minmax(12rem, 1.2fr) 7rem 9rem 6.5rem
-      4.5rem minmax(14rem, 1.4fr) 9rem;
+      4.5rem 5.5rem minmax(14rem, 1.4fr) 9rem;
     inline-size: 100%;
   }
 
@@ -512,6 +542,12 @@
   instances-row {
     min-block-size: 3rem;
     background: var(--background-l1);
+    cursor: pointer;
+
+    &:focus-visible {
+      outline: 2px solid var(--ring);
+      outline-offset: -2px;
+    }
 
     &[data-even] {
       background: color-mix(

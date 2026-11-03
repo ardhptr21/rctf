@@ -33,6 +33,12 @@ export type AdminInstancesQueryParams = Omit<
 > &
   RouteBody<typeof FilterAdminInstancesRouteV2>
 
+export type AdminInstanceRequestsQueryParams = {
+  clientIp?: string | undefined
+  statusClass?: number | undefined
+  path?: string | undefined
+}
+
 export type AdminIntegrityCasesQueryParams = {
   status: IntegrityCaseStatus
   limit: number
@@ -60,6 +66,11 @@ export const queryKeys = {
     ['admin', 'players', 'list', params] as const,
   adminInstances: (params: AdminInstancesQueryParams) =>
     ['admin', 'instances', 'list', params] as const,
+  adminInstance: (id: string) => ['admin', 'instances', id] as const,
+  adminInstanceRequests: (
+    id: string,
+    params: AdminInstanceRequestsQueryParams
+  ) => ['admin', 'instances', id, 'requests', params] as const,
   adminIntegrityCases: (params: AdminIntegrityCasesQueryParams) =>
     ['admin', 'integrity', 'list', params] as const,
   adminIntegrityCase: (id: string) => ['admin', 'integrity', id] as const,

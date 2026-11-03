@@ -1,5 +1,7 @@
 import {
   FilterAdminInstancesRouteV2,
+  GetAdminInstanceRequestsRouteV2,
+  GetAdminInstanceRouteV2,
   FilterAdminSubmissionsRouteV2,
   FilterAdminUsersRouteV2,
   GetAdminBotStatusRouteV2,
@@ -18,6 +20,8 @@ import {
   GoodAdminChallengeV2,
   GoodAdminExternalAuthClients,
   GoodAdminIntegrityCase,
+  GoodAdminInstance,
+  GoodAdminInstanceRequests,
   GoodAdminInstances,
   GoodAdminIntegrityCases,
   GoodAdminPlayers,
@@ -45,6 +49,7 @@ import {
 import { unwrapData } from '$lib/query/core'
 import {
   queryKeys,
+  type AdminInstanceRequestsQueryParams,
   type AdminInstancesQueryParams,
   type AdminIntegrityCasesQueryParams,
   type AdminPlayersQueryParams,
@@ -194,6 +199,52 @@ export function useAdminInstancesInfinite(
       initialPageParam: 0,
       getNextPageParam: lastPage =>
         nextPageOffset(lastPage, lastPage.instances),
+      placeholderData: keepPreviousData,
+    }
+  })
+}
+
+export function useAdminInstance(id: () => string | null) {
+  return createQuery(() => {
+    const instanceId = id()
+    return {
+      queryKey: queryKeys.adminInstance(instanceId ?? ''),
+      queryFn: async () =>
+        unwrapData(
+          await apiRequest(GetAdminInstanceRouteV2, { id: instanceId! }),
+          GoodAdminInstance
+        ),
+      enabled: instanceId !== null,
+    }
+  })
+}
+
+const INSTANCE_REQUESTS_PAGE_SIZE = 100
+
+export function useAdminInstanceRequestsInfinite(
+  id: () => string | null,
+  params: () => AdminInstanceRequestsQueryParams
+) {
+  return createInfiniteQuery(() => {
+    const instanceId = id()
+    const query = params()
+    return {
+      queryKey: queryKeys.adminInstanceRequests(instanceId ?? '', query),
+      queryFn: async ({ pageParam }) => {
+        const response = await apiRequest(GetAdminInstanceRequestsRouteV2, {
+          id: instanceId!,
+          ...query,
+          limit: INSTANCE_REQUESTS_PAGE_SIZE,
+          offset: pageParam,
+        })
+        return {
+          ...unwrapData(response, GoodAdminInstanceRequests),
+          offset: pageParam,
+        }
+      },
+      enabled: instanceId !== null,
+      initialPageParam: 0,
+      getNextPageParam: lastPage => nextPageOffset(lastPage, lastPage.requests),
       placeholderData: keepPreviousData,
     }
   })

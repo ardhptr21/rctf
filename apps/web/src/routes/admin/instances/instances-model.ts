@@ -1,6 +1,9 @@
 import {
+  ExposeKind,
   InstanceHistoryStatus,
   type FilterAdminInstancesRouteV2,
+  type GetAdminInstanceRequestsRouteV2,
+  type GetAdminInstanceRouteV2,
   type RouteResponseData,
 } from '@rctf/types'
 import type { AdminInstancesQueryParams } from '$lib/query/keys'
@@ -10,6 +13,12 @@ export type AdminInstancesPage = RouteResponseData<
   typeof FilterAdminInstancesRouteV2
 >
 export type AdminInstance = AdminInstancesPage['instances'][number]
+export type AdminInstanceDetail = RouteResponseData<
+  typeof GetAdminInstanceRouteV2
+>
+export type InstanceRequest = RouteResponseData<
+  typeof GetAdminInstanceRequestsRouteV2
+>['requests'][number]
 
 export const PAGE_SIZE = 50
 export const ROW_HEIGHT = 52
@@ -108,4 +117,43 @@ export function instanceQueryParams(
       : {}),
     ...(filters.teamId !== null ? { team: { include: [filters.teamId] } } : {}),
   }
+}
+
+export type StatusClassTone = 'success' | 'info' | 'warning' | 'danger'
+
+export function statusClassTone(status: number): StatusClassTone {
+  if (status >= 500) return 'danger'
+  if (status >= 400) return 'warning'
+  if (status >= 300) return 'info'
+  return 'success'
+}
+
+export const STATUS_CLASS_FILTERS: readonly {
+  value: number | null
+  label: string
+}[] = [
+  { value: null, label: 'All' },
+  { value: 2, label: '2xx' },
+  { value: 3, label: '3xx' },
+  { value: 4, label: '4xx' },
+  { value: 5, label: '5xx' },
+]
+
+export function formatBytes(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+}
+
+export function formatDurationMs(ms: number): string {
+  return ms < 1000 ? `${ms} ms` : `${(ms / 1000).toFixed(2)} s`
+}
+
+// Request logs come from the HTTP proxy, so instances reachable only over
+// TCP have none yet.
+export function hasHttpEndpoint(instance: AdminInstance): boolean {
+  return instance.endpoints.some(
+    endpoint =>
+      endpoint.kind === ExposeKind.HTTP || endpoint.kind === ExposeKind.HTTPS
+  )
 }

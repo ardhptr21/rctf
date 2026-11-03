@@ -13,3 +13,7 @@ gcp_instancer_cluster_name = ""
 gcp_instancer_machine_type = ""
 gcp_instancer_min_node_count = 1
 gcp_instancer_max_node_count = 1
+
+# Request logs (optional): rCTF's public URL and its instanceRequestLogs.token
+rctf_url = ""
+instance_request_logs_token = ""

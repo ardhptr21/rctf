@@ -63,3 +63,16 @@ variable "gcp_instancer_pod_pids_limit" {
     type = number
     default = 1024
 }
+
+# Request logs (optional): rCTF's public URL and its
+# `instanceRequestLogs.token`
+variable "rctf_url" {
+    type = string
+    default = ""
+}
+
+variable "instance_request_logs_token" {
+    type = string
+    default = ""
+    sensitive = true
+}

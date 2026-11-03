@@ -4,6 +4,7 @@
   import Spinner from '$lib/ui/spinner.svelte'
   import { getCategoryConfig } from '$lib/utils/categories'
   import { formatLocalTime } from '$lib/utils/time'
+  import InstancePanel from '../instances/instance-panel.svelte'
   import {
     endpointLabel,
     formatLifetime,
@@ -29,6 +30,7 @@
   const instances = $derived(
     instancesQuery.data?.pages.flatMap(result => result.instances) ?? []
   )
+  let openInstanceId = $state<string | null>(null)
   const now = Date.now()
 </script>
 
@@ -96,6 +98,14 @@
             {#if instance.player}
               <span>by {instance.player.name ?? 'Deleted player'}</span>
             {/if}
+            <button
+              type="button"
+              class="details"
+              onclick={() => (openInstanceId = instance.id)}
+              >{instance.requestCount} request{instance.requestCount === 1
+                ? ''
+                : 's'}</button
+            >
             {#if instance.endpoints[0]}
               <code>{endpointLabel(instance.endpoints[0])}</code>
             {/if}
@@ -116,6 +126,11 @@
     {/if}
   {/if}
 </team-instances>
+
+<InstancePanel
+  instanceId={openInstanceId}
+  onClose={() => (openInstanceId = null)}
+/>
 
 <style>
   team-instances {
@@ -178,6 +193,20 @@
 
   code {
     font-family: var(--font-mono);
+  }
+
+  .details {
+    padding: 0;
+    color: var(--foreground-l2);
+    font: inherit;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    text-decoration: underline;
+
+    &:hover {
+      color: var(--foreground-l1);
+    }
   }
 
   .challenge {

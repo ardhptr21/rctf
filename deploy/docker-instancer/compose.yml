@@ -19,6 +19,28 @@ services:
       - ./conf/tls.yml:/etc/traefik/dynamic/tls.yml:ro
       - ./conf/middlewares.yml:/etc/traefik/dynamic/middlewares.yml:ro
       - ./certs/:/certs/:ro
+    # the access log goes to stdout; keep Docker's copy of it bounded
+    logging:
+      driver: json-file
+      options:
+        max-size: 50m
+        max-file: '5'
+  # sends Traefik's access log to rCTF as the instances' request logs
+  vector:
+    image: timberio/vector:0.43.1-alpine
+    restart: unless-stopped
+    container_name: ti-vector
+    command: ['--config', '/etc/vector/vector.yaml']
+    env_file:
+      - .env
+    networks:
+      rctf:
+      tiny-network:
+    depends_on:
+      - traefik
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./conf/vector.yaml:/etc/vector/vector.yaml:ro
   cache:
     image: redis:8.2.6
     restart: unless-stopped

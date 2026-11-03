@@ -1,5 +1,7 @@
 import type { ExposeKind, InstanceEndReason } from '@rctf/types'
 import {
+  bigint,
+  foreignKey,
   index,
   integer,
   jsonb,
@@ -34,6 +36,16 @@ export const instanceHistory = pgTable(
     endedAt: timestamp('ended_at', { withTimezone: true, mode: 'string' }),
     endReason: text('end_reason').$type<InstanceEndReason>(),
     extendCount: integer('extend_count').notNull().default(0),
+    // HTTP requests that reached it, counted even once old ones are dropped
+    requestCount: integer('request_count').notNull().default(0),
+    firstRequestAt: timestamp('first_request_at', {
+      withTimezone: true,
+      mode: 'string',
+    }),
+    lastRequestAt: timestamp('last_request_at', {
+      withTimezone: true,
+      mode: 'string',
+    }),
   },
   table => [
     index('instance_history_team_challenge_index').on(
@@ -42,5 +54,37 @@ export const instanceHistory = pgTable(
       table.endedAt
     ),
     index('instance_history_started_at_index').on(table.startedAt.desc()),
+    // request logs find an instance by one of its hostnames
+    index('instance_history_endpoints_index').using('gin', table.endpoints),
+  ]
+)
+
+// HTTP requests to an instance, from the instancer's Traefik access log.
+// Only the newest few thousand per instance are kept.
+export const instanceRequests = pgTable(
+  'instance_requests',
+  {
+    id: bigint({ mode: 'number' }).primaryKey().generatedAlwaysAsIdentity(),
+    instanceId: text('instance_id').notNull(),
+    at: timestamp({ withTimezone: true, mode: 'string' }).notNull(),
+    clientIp: text('client_ip').notNull(),
+    method: text().notNull(),
+    host: text().notNull(),
+    path: text().notNull(),
+    status: integer().notNull(),
+    bytes: bigint({ mode: 'number' }).notNull(),
+    durationMs: integer('duration_ms').notNull(),
+    userAgent: text('user_agent'),
+  },
+  table => [
+    index('instance_requests_instance_at_index').on(
+      table.instanceId,
+      table.at.desc()
+    ),
+    foreignKey({
+      columns: [table.instanceId],
+      foreignColumns: [instanceHistory.id],
+      name: 'instance_requests_instance_id_fkey',
+    }).onDelete('cascade'),
   ]
 )

@@ -9,6 +9,7 @@ import type { AppEnv } from './lib/app-env'
 import { runMigrationsOnStartup } from './lib/migrations'
 import { appEnvMiddleware } from './middlewares/app-env'
 import { dynamicChallengeAuthMiddleware } from './middlewares/dynamic-challenge-auth'
+import { instanceRequestLogsAuthMiddleware } from './middlewares/instance-request-logs-auth'
 import { adminBotProvider } from './providers/instances/admin-bot'
 import { analyticsProvider } from './providers/instances/analytics'
 import { uploadProvider } from './providers/instances/uploads'
@@ -129,6 +130,7 @@ export const setupFullApiApp = async () => {
   registerApiRoutes(app, {
     adminBot: adminBotProvider?.authMiddleware || badEndpointMiddleware,
     dynamicChallenge: dynamicChallengeAuthMiddleware,
+    instanceRequestLogs: instanceRequestLogsAuthMiddleware,
   })
   await uploadProvider.startupWebPart(app)
   if (adminBotProvider) {

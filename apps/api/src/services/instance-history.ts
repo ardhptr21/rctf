@@ -268,9 +268,12 @@ const playerNameExpr = sql<
 
 const likePattern = (value: string) => `%${value.trim().toLowerCase()}%`
 
-const buildInstanceFilters = (params: AdminInstancesQuery) => {
+const buildInstanceFilters = (
+  params: AdminInstancesQuery & { id?: string }
+) => {
   const search = params.search?.trim()
   return and(
+    params.id ? eq(instanceHistory.id, params.id) : undefined,
     search
       ? sql`(
           lower(${users.name}::text) like ${likePattern(search)}
@@ -289,7 +292,7 @@ const buildInstanceFilters = (params: AdminInstancesQuery) => {
 // filters: instances, teams and instances per category.
 export const getAdminInstances = async (
   db: DatabaseClient,
-  params: AdminInstancesQuery
+  params: AdminInstancesQuery & { id?: string }
 ) => {
   const filters = buildInstanceFilters(params)
   const joined = <T extends PgSelect>(query: T) =>
@@ -337,6 +340,9 @@ export const getAdminInstances = async (
           extendCount: instanceHistory.extendCount,
           ip: instanceHistory.ip,
           endpoints: instanceHistory.endpoints,
+          requestCount: instanceHistory.requestCount,
+          firstRequestAt: instanceHistory.firstRequestAt,
+          lastRequestAt: instanceHistory.lastRequestAt,
         })
         .from(instanceHistory)
         .$dynamic()
@@ -380,6 +386,19 @@ export const getAdminInstances = async (
       extendCount: row.extendCount,
       ip: row.ip,
       endpoints: row.endpoints,
+      requestCount: row.requestCount,
+      firstRequestAt: row.firstRequestAt,
+      lastRequestAt: row.lastRequestAt,
     })),
   }
+}
+
+// One history entry, in the same shape as the list.
+export const getAdminInstance = async (db: DatabaseClient, id: string) => {
+  const { instances } = await getAdminInstances(db, {
+    id,
+    limit: 1,
+    offset: 0,
+  })
+  return instances[0]
 }

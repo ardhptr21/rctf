@@ -19,6 +19,7 @@ import {
   GoodAdminBotJobSubmitted,
   GoodClientConfigV2,
   GoodInstancerActionResult,
+  GoodInstanceRequestsIngest,
   GoodInstanceStatus,
 } from '../../responses'
 
@@ -227,4 +228,24 @@ export const SubmitAdminBotJobRouteV2 = defineRoute({
   }),
   onlyWhenStarted: true,
   onlyWhenStartedPermissionsBypass: Permissions.challsRead,
+})
+
+// Batches of the instancer's Traefik JSON access log, sent by a log shipper.
+export const IngestInstanceRequestsRouteV2 = defineRoute({
+  path: '/v2/integrations/instance-requests',
+  method: 'POST',
+  body: z.object({
+    entries: z
+      .array(z.record(z.string(), z.unknown()))
+      .check(z.maxLength(1000))
+      .check(
+        z.describe(
+          'Traefik access log entries in JSON format, at most 1000. Other fields are ignored.'
+        )
+      ),
+  }),
+  goodResponses: [GoodInstanceRequestsIngest],
+  badResponses: [BadToken],
+  authRequired: false,
+  serviceAuth: 'instanceRequestLogs',
 })

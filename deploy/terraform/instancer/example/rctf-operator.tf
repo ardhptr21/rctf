@@ -3,6 +3,9 @@ module "rctf-k8s" {
 
     ctf_name = var.ctf_name
     instancer_host = var.instancer_subdomain != "" ? "${var.instancer_subdomain}.${var.instancer_zone}" : var.instancer_zone
+
+    rctf_url = var.rctf_url
+    instance_request_logs_token = var.instance_request_logs_token
 }
 
 output "traefik_ip" {

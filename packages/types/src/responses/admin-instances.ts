@@ -74,6 +74,9 @@ const AdminInstanceSchema = z.object({
       })
     )
     .check(z.describe('Where the instance was reachable.')),
+  requestCount: example(z.int(), 1204).check(
+    z.describe('HTTP requests that reached it, including ones no longer kept.')
+  ),
 })
 
 export const GoodAdminInstances = response('goodAdminInstances', {
@@ -101,5 +104,105 @@ export const GoodAdminInstances = response('goodAdminInstances', {
     instances: z
       .array(AdminInstanceSchema)
       .check(z.describe('This page of instances, newest first.')),
+  }),
+})
+
+export const GoodInstanceRequestsIngest = response(
+  'goodInstanceRequestsIngest',
+  {
+    status: 200,
+    message: 'The requests were recorded.',
+    data: z.object({
+      stored: example(z.int(), 940).check(
+        z.describe('Requests matched to an instance and stored.')
+      ),
+      unmatched: example(z.int(), 58).check(
+        z.describe(
+          'Requests to no recorded instance: unknown hosts, admin teams, or outside the instance lifetime.'
+        )
+      ),
+      invalid: example(z.int(), 2).check(
+        z.describe('Entries that are not Traefik HTTP access log lines.')
+      ),
+    }),
+  }
+)
+
+export const BadUnknownInstance = response('badUnknownInstance', {
+  status: 404,
+  message: 'The instance could not be found.',
+})
+
+export const GoodAdminInstance = response('goodAdminInstance', {
+  status: 200,
+  message: 'The instance was retrieved.',
+  data: z.object({
+    instance: AdminInstanceSchema,
+    requests: z.object({
+      total: example(z.int(), 5312).check(
+        z.describe('Every HTTP request that reached it.')
+      ),
+      kept: example(z.int(), 2000).check(
+        z.describe('Requests still stored; older ones are dropped.')
+      ),
+      firstAt: example(
+        z.nullable(z.string()),
+        '2026-05-05T10:00:03.000Z'
+      ).check(z.describe('The first request, or `null` without any.')),
+      lastAt: example(z.nullable(z.string()), '2026-05-05T10:29:58.000Z').check(
+        z.describe('The latest request, or `null` without any.')
+      ),
+      uniqueIps: example(z.int(), 3).check(
+        z.describe('Client IPs among the kept requests.')
+      ),
+      statusClasses: z
+        .object({
+          '2xx': z.int(),
+          '3xx': z.int(),
+          '4xx': z.int(),
+          '5xx': z.int(),
+        })
+        .check(z.describe('Kept requests per response status class.')),
+    }),
+  }),
+})
+
+export const GoodAdminInstanceRequests = response('goodAdminInstanceRequests', {
+  status: 200,
+  message: 'The requests were retrieved.',
+  data: z.object({
+    total: example(z.int(), 120).check(
+      z.describe('Kept requests matching the filters.')
+    ),
+    requests: z
+      .array(
+        z.object({
+          id: example(z.string(), '981').check(z.describe('Request ID.')),
+          at: example(z.string(), '2026-05-05T10:12:00.000Z').check(
+            z.describe('When it was made.')
+          ),
+          clientIp: example(z.string(), '203.0.113.42').check(
+            z.describe('Client IP address.')
+          ),
+          method: example(z.string(), 'GET').check(z.describe('HTTP method.')),
+          host: example(z.string(), 'web-3f9c1a.inst.example.com').check(
+            z.describe('Hostname requested.')
+          ),
+          path: example(z.string(), '/notes?id=1').check(
+            z.describe('Path with its query string.')
+          ),
+          status: example(z.int(), 200).check(z.describe('Response status.')),
+          bytes: example(z.int(), 5120).check(
+            z.describe('Response size in bytes.')
+          ),
+          durationMs: example(z.int(), 12).check(
+            z.describe('Time to respond, in milliseconds.')
+          ),
+          userAgent: example(z.nullable(z.string()), 'curl/8.5.0').check(
+            z.describe('User-Agent header, or `null`.')
+          ),
+        })
+      )
+      .check(z.describe('This page of requests, newest first.')),
   }),
 })

@@ -30,6 +30,8 @@ aside: true
 | [Set player team](/api/admin/player-team/) | `<route>PUT /api/v2/admin/players/:id/team</route>` |
 | [Make player captain](/api/admin/player-captain/) | `<route>POST /api/v2/admin/players/:id/captain</route>` |
 | [Instance history](/api/admin/instances/) | `<route>POST /api/v2/admin/instances</route>` |
+| [Instance detail](/api/admin/instance-detail/) | `<route>GET /api/v2/admin/instances/:id</route>` |
+| [Instance requests](/api/admin/instance-requests/) | `<route>GET /api/v2/admin/instances/:id/requests</route>` |
 | [List integrity cases](/api/admin/integrity-cases/) | `<route>GET /api/v2/admin/integrity/cases</route>` |
 | [Integrity case](/api/admin/integrity-case/) | `<route>GET /api/v2/admin/integrity/cases/:id</route>` |
 | [Update integrity case](/api/admin/integrity-case-update/) | `<route>PUT /api/v2/admin/integrity/cases/:id</route>` |

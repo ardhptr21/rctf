@@ -33,7 +33,7 @@ export interface RouteConfig {
   returnBodyAsIs?: boolean
   bodyFormat?: BodyFormat
   captchaAction?: ProtectedAction
-  serviceAuth?: 'adminBot' | 'dynamicChallenge'
+  serviceAuth?: 'adminBot' | 'dynamicChallenge' | 'instanceRequestLogs'
   // gated by the page's access setting (public / private / admin)
   pageAccess?: AccessControlledPage
   // requires a Discord player login; the player need not be on a team

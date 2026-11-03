@@ -1,0 +1,52 @@
+# Sends Traefik's HTTP access log to rCTF, which stores each request on the
+# instance it reached (Admin -> Instances). Needs RCTF_URL and
+# RCTF_INSTANCE_REQUEST_LOGS_TOKEN in .env; the token is rCTF's
+# `instanceRequestLogs.token`.
+sources:
+  traefik:
+    type: docker_logs
+    include_containers:
+      - ${TRAEFIK_CONTAINER_NAME:-ti-traefik}
+
+transforms:
+  access_log:
+    type: remap
+    inputs:
+      - traefik
+    # Traefik's own log lines share the stream; keep only access log entries
+    drop_on_abort: true
+    source: |
+      parsed, err = parse_json(.message)
+      if err != null || !is_object(parsed) || !exists(parsed.RequestHost) {
+        abort
+      }
+      . = parsed
+
+sinks:
+  rctf:
+    type: http
+    inputs:
+      - access_log
+    uri: ${RCTF_URL}/api/v2/integrations/instance-requests
+    method: post
+    auth:
+      strategy: bearer
+      token: ${RCTF_INSTANCE_REQUEST_LOGS_TOKEN}
+    # each batch is sent as {"entries": [...]}
+    encoding:
+      codec: json
+    framing:
+      method: character_delimited
+      character_delimited:
+        delimiter: ','
+    payload_prefix: '{"entries":'
+    payload_suffix: '}'
+    batch:
+      max_events: 500
+      timeout_secs: 5
+    request:
+      retry_attempts: 10
+    buffer:
+      type: memory
+      max_events: 50000
+      when_full: drop_newest

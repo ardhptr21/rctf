@@ -143,6 +143,20 @@ export const ServerConfigSchema = z.object({
     []
   ),
 
+  // HTTP requests to challenge instances, sent in by a log shipper reading
+  // the instancer's Traefik access log; off without a token
+  instanceRequestLogs: z.optional(
+    z.object({
+      // bearer token the shipper sends
+      token: z.string().check(z.minLength(16)),
+      // requests kept per instance; older ones are dropped but still counted
+      maxPerInstance: z._default(
+        z.int().check(z.gte(1)).check(z.lte(100_000)),
+        2000
+      ),
+    })
+  ),
+
   // Cheat detection: defaults for the admin "Cheat detection" settings, and
   // the alert destinations, which stay config-only since they hold secrets
   integrity: z.prefault(
