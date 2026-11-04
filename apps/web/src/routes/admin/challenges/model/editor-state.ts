@@ -31,7 +31,9 @@ export function staticFlagValue(entry: EditorFlagEntry): string {
 }
 
 export type ScoringConfig =
-  | { kind: ChallengeScoringKind.DECAY }
+  // `decay`: solves to reach the minimum, for logarithmic decay; without it
+  // the CTF-wide score provider applies
+  | { kind: ChallengeScoringKind.DECAY; decay?: number }
   | {
       kind: ChallengeScoringKind.DYNAMIC
       source: { transport: DynamicScoringTransport.WEBHOOK; secret: string }
@@ -120,7 +122,9 @@ function scoringFromServer(
   scoring: AdminChallenge['scoring'] | undefined
 ): ScoringConfig {
   if (!scoring || scoring.kind === ChallengeScoringKind.DECAY) {
-    return { kind: ChallengeScoringKind.DECAY }
+    return scoring?.decay === undefined
+      ? { kind: ChallengeScoringKind.DECAY }
+      : { kind: ChallengeScoringKind.DECAY, decay: scoring.decay }
   }
   return {
     kind: ChallengeScoringKind.DYNAMIC,

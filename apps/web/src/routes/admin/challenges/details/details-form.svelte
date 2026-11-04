@@ -40,6 +40,8 @@
   import FieldSelect from './field-select.svelte'
   import FormScroll from './form-scroll.svelte'
   import {
+    decayPreview,
+    DEFAULT_DECAY,
     detailsTabInvalid,
     hintsTabInvalid,
     inputToReleaseTime,
@@ -123,6 +125,16 @@
       : ''
   )
   const kindLocked = $derived(scoringKindLocked(totalSolves))
+  const decay = $derived(
+    form.scoring.kind === ChallengeScoringKind.DECAY
+      ? form.scoring.decay
+      : undefined
+  )
+  const preview = $derived(
+    decay !== undefined && !errors.decay
+      ? decayPreview(form.pointsMin, form.pointsMax, decay)
+      : []
+  )
 
   let tab = $state('details')
   let nameFieldEl = $state<HTMLElement | null>(null)
@@ -284,6 +296,30 @@
       label: 'Dynamic',
       checked: isDynamic,
       onSelect: () => changeScoringKind(ChallengeScoringKind.DYNAMIC),
+    },
+  ])
+
+  // changing the curve only recalculates points, so it's allowed after solves
+  function changeDecay(value: number | undefined) {
+    onScoringChange(
+      value === undefined
+        ? { kind: ChallengeScoringKind.DECAY }
+        : { kind: ChallengeScoringKind.DECAY, decay: value }
+    )
+  }
+
+  const decayFunctionItems = $derived<MenuItem[]>([
+    {
+      value: 'default',
+      label: 'CTF default',
+      checked: decay === undefined,
+      onSelect: () => changeDecay(undefined),
+    },
+    {
+      value: 'logarithmic',
+      label: 'Logarithmic',
+      checked: decay !== undefined,
+      onSelect: () => changeDecay(decay ?? DEFAULT_DECAY),
     },
   ])
 
@@ -574,6 +610,65 @@
                   </form-field>
                 {/if}
 
+                {#if !isDynamic}
+                  <field-grid>
+                    <form-field>
+                      <field-label>
+                        Decay function
+                        <field-hint
+                          >{decay === undefined
+                            ? '(the CTF-wide formula)'
+                            : '(CTFd style)'}</field-hint
+                        >
+                      </field-label>
+                      <FieldSelect
+                        label={decay === undefined
+                          ? 'CTF default'
+                          : 'Logarithmic'}
+                        items={decayFunctionItems}
+                        {disabled}
+                      />
+                    </form-field>
+                    {#if decay !== undefined}
+                      <form-field data-invalid={errors.decay ? '' : undefined}>
+                        <field-label>
+                          Decay
+                          <field-hint>(solves to reach the minimum)</field-hint>
+                        </field-label>
+                        <Input
+                          type="number"
+                          min={1}
+                          step={1}
+                          value={Number.isNaN(decay) ? '' : decay}
+                          {disabled}
+                          aria-invalid={Boolean(errors.decay)}
+                          oninput={e =>
+                            changeDecay(
+                              e.currentTarget.value === ''
+                                ? Number.NaN
+                                : +e.currentTarget.value
+                            )}
+                        />
+                        {#if errors.decay}<field-error
+                            >{errors.decay}</field-error
+                          >{/if}
+                      </form-field>
+                    {/if}
+                  </field-grid>
+                  {#if preview.length > 0}
+                    <decay-preview aria-label="Points by number of solves">
+                      {#each preview as step (step.solves)}
+                        <span
+                          >{step.solves === 1
+                            ? '1st solve'
+                            : `${step.solves} solves`}:
+                          <strong>{step.points}</strong></span
+                        >
+                      {/each}
+                    </decay-preview>
+                  {/if}
+                {/if}
+
                 <field-grid data-dimmed={isDynamic ? '' : undefined}>
                   <form-field>
                     <field-label>
@@ -581,7 +676,9 @@
                       <field-hint
                         >{isDynamic
                           ? '(unused for dynamic)'
-                          : '(at max solves)'}</field-hint
+                          : decay !== undefined && !errors.decay
+                            ? `(from solve ${decay + 1})`
+                            : '(at max solves)'}</field-hint
                       >
                     </field-label>
                     <Input
@@ -815,6 +912,23 @@
     display: flex;
     flex-direction: column;
     min-inline-size: 0;
+  }
+
+  decay-preview {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-3xs) var(--space-s);
+    padding: var(--space-2xs) var(--space-xs);
+    color: var(--foreground-l3);
+    font-size: var(--step--1);
+    font-variant-numeric: tabular-nums;
+    background: var(--background-l3);
+    border-radius: var(--radius-md);
+
+    strong {
+      color: var(--foreground-l1);
+      font-weight: 600;
+    }
   }
 
   field-grid {

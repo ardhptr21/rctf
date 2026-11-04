@@ -14,6 +14,8 @@ scoreProvider:
 
 Each challenge sets a point range via `<red>points.min</red>` and `<red>points.max</red>` in its data. The scoring provider calculates the current point value from the solve count and other context.
 
+A challenge can also use its own CTFd-style logarithmic curve instead, by setting `<red>scoring.decay</red>`: see [Logarithmic decay per challenge](/admin/scoring/#logarithmic-decay-per-challenge).
+
 ## Score context
 
 All scoring providers receive a context object with:

@@ -21,6 +21,7 @@ import {
   scoringKindOf,
   userIsUnscoredSql,
 } from './challenge-queries'
+import { challengeDecay, decayPoints } from './decay-points'
 import {
   getResolvedSettings,
   getScoreboardFreezeCutoff,
@@ -31,6 +32,8 @@ const numberOfBloods = 3
 
 type ExtendedChallengeInfo = InternalChallengeInfo & {
   scoringKind: ChallengeScoringKind
+  // logarithmic decay, or null for the CTF-wide score provider
+  decay: number | null
 }
 
 type ExtendedUserInfo = InternalUserInfo & {
@@ -95,7 +98,7 @@ type PublicChallengeSnapshot = {
     hidden?: boolean
     releaseTime?: number | null
     scoring?:
-      | { kind: ChallengeScoringKind.DECAY }
+      | { kind: ChallengeScoringKind.DECAY; decay?: number }
       | { kind: ChallengeScoringKind.DYNAMIC; source: unknown }
   }
 }
@@ -152,6 +155,7 @@ const challengeInfoFromSnapshot = (
     sortWeight: challenge.data.sortWeight ?? null,
     firstSolveTime: null,
     scoringKind: scoringKindOf(challenge.data),
+    decay: challengeDecay(challenge.data),
   }
 }
 
@@ -307,6 +311,7 @@ const buildChallengesFingerprint = (
       ch.data.points?.max ?? 0,
       ch.data.sortWeight ?? null,
       ch.data.scoring?.kind ?? ChallengeScoringKind.DECAY,
+      challengeDecay(ch.data),
     ])
   )
 
@@ -360,7 +365,8 @@ const recomputeScores = (
     if (challengeInfo.scoringKind !== ChallengeScoringKind.DECAY) {
       continue
     }
-    challengeInfo.score = scoreProvider.calculate(
+    challengeInfo.score = decayPoints(
+      challengeInfo.decay,
       buildScoreContext(challengeInfo, maxSolves, timing)
     )
   }

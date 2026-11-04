@@ -22,6 +22,7 @@ import {
   lockChallenge,
   type DecayChallenge,
 } from './challenges'
+import { challengeDecay, decayPoints } from './decay-points'
 import { getCompetitionTiming, type CompetitionTiming } from './settings'
 
 export const scoringConfigChanged = (
@@ -114,7 +115,8 @@ const recomputeDecayWithinTx = async (
     ? new Date(activeRows[0].createdat).valueOf()
     : null
 
-  const newPoints = scoreProvider.calculate(
+  const newPoints = decayPoints(
+    challengeDecay(challenge.data),
     buildDecayScoreContext(
       challenge.data,
       activeRows.length,

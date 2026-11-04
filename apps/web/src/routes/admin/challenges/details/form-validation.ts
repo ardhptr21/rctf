@@ -1,4 +1,9 @@
-import { ChallengeScoringKind, UpdateChallengeRouteV2 } from '@rctf/types'
+import {
+  ChallengeScoringKind,
+  logarithmicDecay,
+  MAX_DECAY_SOLVES,
+  UpdateChallengeRouteV2,
+} from '@rctf/types'
 import type { InlineArgs } from '$lib/api'
 import {
   DEFAULT_FLAG_PROVIDER,
@@ -21,8 +26,12 @@ export interface FormErrors {
   description?: string
   flag?: string
   secret?: string
+  decay?: string
   hints?: string
 }
+
+// a logarithmic decay starts here until the admin picks a value
+export const DEFAULT_DECAY = 20
 
 export const MAX_HINTS = 20
 export const MAX_HINT_LENGTH = 10_000
@@ -41,8 +50,17 @@ export function formErrors(form: EditorForm): FormErrors {
     if (form.scoring.source.secret.trim() === '') {
       errors.secret = 'Webhook secret is required'
     }
-  } else if (form.flags.every(isBlankFlagEntry)) {
-    errors.flag = 'At least one flag is required'
+  } else {
+    if (form.flags.every(isBlankFlagEntry)) {
+      errors.flag = 'At least one flag is required'
+    }
+    const decay = form.scoring.decay
+    if (
+      decay !== undefined &&
+      (!Number.isInteger(decay) || decay < 1 || decay > MAX_DECAY_SOLVES)
+    ) {
+      errors.decay = `Decay must be a whole number from 1 to ${MAX_DECAY_SOLVES.toLocaleString()}`
+    }
   }
   const longHint = form.hints.findIndex(hint => hint.length > MAX_HINT_LENGTH)
   if (longHint !== -1) {
@@ -70,7 +88,23 @@ export function hintsTabInvalid(errors: FormErrors): boolean {
 }
 
 export function scoringTabInvalid(errors: FormErrors): boolean {
-  return Boolean(errors.secret)
+  return Boolean(errors.secret || errors.decay)
+}
+
+// The value after a few solve counts, for the editor's preview: the first
+// solve, the middle of the curve, and where it reaches the minimum.
+export function decayPreview(
+  minPoints: number,
+  maxPoints: number,
+  decay: number
+): { solves: number; points: number }[] {
+  const counts = [1, 2, Math.ceil(decay / 2) + 1, decay, decay + 1]
+  return [...new Set(counts)]
+    .sort((a, b) => a - b)
+    .map(solves => ({
+      solves,
+      points: logarithmicDecay({ minPoints, maxPoints, solves, decay }),
+    }))
 }
 
 export function scoringKindLocked(totalSolves: number): boolean {

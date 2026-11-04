@@ -143,8 +143,20 @@ export const DynamicScoringSourceSchema = z.object({
   ),
 })
 
+export const MAX_DECAY_SOLVES = 100_000
+
 export const ChallengeScoringSchema = z.discriminatedUnion('kind', [
-  z.object({ kind: z.literal(ChallengeScoringKind.DECAY) }),
+  z.object({
+    kind: z.literal(ChallengeScoringKind.DECAY),
+    decay: example(
+      z.optional(z.int().check(z.gte(1)).check(z.lte(MAX_DECAY_SOLVES))),
+      20
+    ).check(
+      z.describe(
+        "Logarithmic decay: the number of solves at which the challenge reaches its minimum points, as in CTFd. Without it, the CTF's `scoreProvider` sets the value."
+      )
+    ),
+  }),
   z.object({
     kind: z.literal(ChallengeScoringKind.DYNAMIC),
     source: DynamicScoringSourceSchema,

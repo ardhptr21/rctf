@@ -25,6 +25,25 @@ Editing `<red>points.min</red>` or `<red>points.max</red>` on a decay challenge 
 
 Some scoring providers compare a challenge against `<red>maxSolves</red>`, the highest solve count among decay challenges. Dynamic challenges are excluded from that calculation, since their scores come from an external source.
 
+#### Logarithmic decay per challenge
+
+A decay challenge can set its own curve instead of the global provider's, the way CTFd's "Logarithmic" decay works. `<red>scoring.decay</red>` is the number of solves it takes to reach the minimum:
+
+```json title="Challenge data - logarithmic decay"
+{
+  "points": { "min": 100, "max": 500 },
+  "scoring": { "kind": "decay", "decay": 20 }
+}
+```
+
+The value is `((min − max) / decay²) × n² + max`, never below `min`, where `n` is the number of solves *after the first*, so the first solver gets the full value. Despite the name it's a parabola: early solves lose little, later ones more. With the example above:
+
+| Solves | 1 | 2 | 3 | 5 | 10 | 15 | 20 | 21+ |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Value | 500 | 499 | 496 | 484 | 419 | 304 | 139 | 100 |
+
+In the challenge editor, pick **Logarithmic** as the **Decay function** and set **Decay**. A preview shows the value at a few solve counts. Unlike the scoring kind, the decay can be changed after solves: every solver is re-priced straight away. Challenges without `<red>scoring.decay</red>` keep using the global provider.
+
 :::note[Default behavior]
 Existing challenges that don't set `<red>scoring</red>` at all are treated as decay. Upgrading from an earlier rCTF version doesn't require touching any data.
 :::

@@ -1,6 +1,7 @@
 import { ChallengeScoringKind, DynamicScoringTransport } from '@rctf/types'
 import {
   buildSavePayload,
+  decayPreview,
   detailsTabInvalid,
   formErrors,
   hintsTabInvalid,
@@ -182,5 +183,45 @@ describe('hints', () => {
     )
     expect(tooLong.hints).toContain('Hint 2')
     expect(hintsTabInvalid(tooLong)).toBe(true)
+  })
+})
+
+describe('logarithmic decay', () => {
+  const withDecay = (decay: number) =>
+    decayForm({ scoring: { kind: ChallengeScoringKind.DECAY, decay } })
+
+  test('accepts a whole number of solves and saves it', () => {
+    expect(formErrors(withDecay(20)).decay).toBeUndefined()
+    expect(buildSavePayload(withDecay(20), 'x').data.scoring).toEqual({
+      kind: ChallengeScoringKind.DECAY,
+      decay: 20,
+    })
+  })
+
+  test('rejects a missing, zero or fractional decay', () => {
+    for (const decay of [Number.NaN, 0, -1, 2.5]) {
+      const errors = formErrors(withDecay(decay))
+      expect(errors.decay).toBeDefined()
+      expect(scoringTabInvalid(errors)).toBe(true)
+    }
+  })
+
+  test('the default curve needs no decay', () => {
+    expect(formErrors(decayForm()).decay).toBeUndefined()
+  })
+
+  test('previews the value at a few solve counts', () => {
+    expect(decayPreview(100, 500, 20)).toEqual([
+      { solves: 1, points: 500 },
+      { solves: 2, points: 499 },
+      { solves: 11, points: 400 },
+      { solves: 20, points: 139 },
+      { solves: 21, points: 100 },
+    ])
+    // short curves don't repeat a solve count
+    expect(decayPreview(100, 500, 1)).toEqual([
+      { solves: 1, points: 500 },
+      { solves: 2, points: 100 },
+    ])
   })
 })

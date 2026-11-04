@@ -64,7 +64,8 @@ export interface DynamicScoringSource {
 }
 
 export type ChallengeScoring =
-  | { kind: ChallengeScoringKind.DECAY }
+  // `decay`: solves to reach the minimum, for CTFd-style logarithmic decay
+  | { kind: ChallengeScoringKind.DECAY; decay?: number }
   | { kind: ChallengeScoringKind.DYNAMIC; source: DynamicScoringSource }
 
 export interface ChallengeData {

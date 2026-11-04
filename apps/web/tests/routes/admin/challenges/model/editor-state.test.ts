@@ -97,6 +97,26 @@ describe('select', () => {
     expect(without.form.hints).toEqual([])
   })
 
+  test('keeps a logarithmic decay from the challenge', () => {
+    const withDecay = select(
+      createEditorState(),
+      makeChallenge({
+        id: 'd',
+        scoring: { kind: ChallengeScoringKind.DECAY, decay: 25 },
+      })
+    )
+    expect(withDecay.form.scoring).toEqual({
+      kind: ChallengeScoringKind.DECAY,
+      decay: 25,
+    })
+
+    const plain = select(
+      createEditorState(),
+      makeChallenge({ id: 'p', scoring: { kind: ChallengeScoringKind.DECAY } })
+    )
+    expect(plain.form.scoring).toEqual({ kind: ChallengeScoringKind.DECAY })
+  })
+
   test('clean SELECT from idle switches to viewing and seeds both forms', () => {
     const challenge = makeChallenge({
       id: 'a',
