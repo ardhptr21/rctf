@@ -44,6 +44,8 @@ The value is `((min − max) / decay²) × n² + max`, never below `min`, where 
 
 In the challenge editor, pick **Logarithmic** as the **Decay function** and set **Decay**. A preview shows the value at a few solve counts. Unlike the scoring kind, the decay can be changed after solves: every solver is re-priced straight away. Challenges without `<red>scoring.decay</red>` keep using the global provider.
 
+An update that sends `<red>scoring</red>` without `<red>decay</red>` keeps the challenge's current decay, so a deploy tool that only sets the scoring kind, such as [Konata](/integrations/konata), doesn't undo a decay set in the admin panel. Send `"decay": null` to remove it.
+
 :::note[Default behavior]
 Existing challenges that don't set `<red>scoring</red>` at all are treated as decay. Upgrading from an earlier rCTF version doesn't require touching any data.
 :::

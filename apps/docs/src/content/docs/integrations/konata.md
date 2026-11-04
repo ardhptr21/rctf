@@ -124,7 +124,7 @@ rCTF API credentials. Konata calls into rCTF over the public admin API.
 | Field | Purpose |
 | --- | --- |
 | `<red>base_url</red>` | Public origin of the rCTF instance (no trailing slash). |
-| `<red>team_token</red>` | Admin team token. Accepts either `<red>secret: <name></red>` or `<red>value: <literal></red>`. |
+| `<red>team_token</red>` | Admin team token. Accepts either `<red>secret: <name></red>` or `<red>value: <literal></red>`. Get one with [`rctf user token`](/admin/cli#rctf-user-token); with Discord login, only an admin team's token works. |
 | `<red>extra_headers</red>` | Optional headers added to every request. Useful for a deploy-token gate at the reverse proxy. |
 
 A `<red>ctfd</red>` block with the same structure is available for CTFd deployments. Both blocks can be used together when the same challenge repository is deployed to multiple platforms.
@@ -245,7 +245,8 @@ challenges:
 | `<red>override_id</red>` | Pins the challenge ID instead of deriving it from the configured format. See [challenge_id_format](#challenge_id_format). |
 | `<red>tags</red>` | Free-form label list synced to both rCTF and CTFd. |
 | `<red>attachments</red>` | File list or full `<red>AttachmentConfig</red>`. See below. |
-| `<red>scoring</red>` | Initial / minimum point values plus per-platform overrides (`<red>scoring.rctf.eligibleForTiebreaks</red>`, `<red>scoring.ctfd.decay</red>`, ...). |
+| `<red>scoring</red>` | Initial / minimum point values plus per-platform overrides (`<red>scoring.rctf.eligibleForTiebreaks</red>`, `<red>scoring.rctf.decay</red>`, `<red>scoring.ctfd.decay</red>`, ...). See [Scoring](#scoring). |
+| `<red>rctf.hints</red>` | rCTF [hints](/admin/challenges#hints), in Markdown and in order. See [Hints](#hints). |
 | `<red>flags</red>` | Per-platform flags. `<red>flags.rctf</red>` takes one flag or a list of flag entries, `<red>flags.ctfd</red>` a list of CTFd flags. See [Flags](#flags). |
 | `<red>endpoints</red>` | Static endpoints (host/port) rendered into the description by the endpoints template. |
 | `<red>hidden</red>` | When `true{:ts}`, the challenge is uploaded but not released. |
@@ -282,6 +283,18 @@ scoring:
     eligibleForTiebreaks: true
 ```
 
+To give the challenge rCTF's [logarithmic decay](/admin/scoring#logarithmic-decay-per-challenge), set `<red>scoring.rctf.decay</red>` to the number of solves it takes to reach the minimum, a whole number from 1 to 100,000. The first solve keeps full points:
+
+```yaml
+scoring:
+  initialValue: 500
+  minimumValue: 100
+  rctf:
+    decay: 20
+```
+
+Without `<red>scoring.rctf.decay</red>`, Konata leaves the challenge's decay alone: a decay set in the admin panel survives a sync, and new challenges use the CTF-wide formula. Removing the field later doesn't remove the decay from rCTF; clear it in the admin panel. `<red>decay</red>` can't be combined with dynamic scoring.
+
 For rCTF [dynamic scoring](/admin/scoring), set `<red>scoring.rctf.kind</red>` to `<green>dynamic</green>` and provide a webhook secret. As elsewhere in Konata, the secret can come from either `<red>secret</red>` or `<red>value</red>`.
 
 ```yaml title="kona.yaml"
@@ -305,6 +318,23 @@ challenges:
 ```
 
 `<red>transport</red>` currently defaults to `<green>webhook</green>`. The resolved secret becomes the rCTF dynamic-scoring webhook secret used to authenticate score submissions to `<route>POST /api/v2/challs/:id/scores</route>`. See [Submit dynamic scores](/api/challenges/submit-dynamic-scores) for the request format.
+
+### Hints
+
+`<red>rctf.hints</red>` sets the challenge's rCTF [hints](/admin/challenges#hints): Markdown strings shown to players in order, at most 20, each up to 10,000 characters.
+
+```yaml
+challenges:
+  - category: web
+    name: header-hunt
+    author: es3n1n
+    rctf:
+      hints:
+        - Look closely at the response headers.
+        - The `X-Debug` header takes a **boolean**.
+```
+
+The list replaces the challenge's hints on every sync, so an empty list removes them. Without `<red>rctf.hints</red>`, Konata leaves the hints alone and you can manage them in the admin panel. CTFd hints are configured separately, under `<red>ctfd.hints</red>`.
 
 ### Attachments
 

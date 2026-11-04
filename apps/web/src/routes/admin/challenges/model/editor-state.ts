@@ -122,7 +122,7 @@ function scoringFromServer(
   scoring: AdminChallenge['scoring'] | undefined
 ): ScoringConfig {
   if (!scoring || scoring.kind === ChallengeScoringKind.DECAY) {
-    return scoring?.decay === undefined
+    return scoring?.decay === undefined || scoring.decay === null
       ? { kind: ChallengeScoringKind.DECAY }
       : { kind: ChallengeScoringKind.DECAY, decay: scoring.decay }
   }

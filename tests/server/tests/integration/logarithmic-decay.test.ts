@@ -135,11 +135,36 @@ describe('logarithmic decay', () => {
     // going back to the CTF-wide formula recalculates again
     await expectResponse(
       await updateChallenge(id, {
-        scoring: { kind: ChallengeScoringKind.DECAY },
+        scoring: { kind: ChallengeScoringKind.DECAY, decay: null },
       }),
       GoodChallengeUpdateV2
     )
     expect(await storedPoints(id)).toEqual(before)
+  })
+
+  test('an update that only names the scoring kind keeps the decay', async () => {
+    const id = await decayChallenge()
+    await updateChallenge(id, {
+      scoring: { kind: ChallengeScoringKind.DECAY, decay: 25 },
+    })
+
+    // what Konata sends on every sync
+    await expectResponse(
+      await updateChallenge(id, {
+        name: 'synced by konata',
+        scoring: { kind: ChallengeScoringKind.DECAY },
+      }),
+      GoodChallengeUpdateV2
+    )
+    const [row] = await getDb()
+      .select({ data: challenges.data })
+      .from(challenges)
+      .where(eq(challenges.id, id))
+    expect(row!.data.name).toBe('synced by konata')
+    expect(row!.data.scoring).toEqual({
+      kind: ChallengeScoringKind.DECAY,
+      decay: 25,
+    })
   })
 
   test("the worker's cached scoreboard picks up a decay change", async () => {

@@ -128,7 +128,12 @@ describe('buildSavePayload', () => {
     expect(payload.data.flags).toEqual([
       { provider: 'flags/static', config: { flag: 'rctf{baby_rev}' } },
     ])
-    expect(payload.data.scoring).toEqual({ kind: ChallengeScoringKind.DECAY })
+    // the CTF default is sent explicitly, since the server keeps a decay an
+    // update leaves out
+    expect(payload.data.scoring).toEqual({
+      kind: ChallengeScoringKind.DECAY,
+      decay: null,
+    })
   })
 
   test('dynamic scoring empties the flags', () => {

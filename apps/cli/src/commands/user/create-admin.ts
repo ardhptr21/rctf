@@ -91,6 +91,12 @@ export default defineCommand({
       console.log(
         'They join from the Team page after logging in with Discord. Admin teams have no size limit.'
       )
+      // deploy tools such as Konata log in with a team login token
+      const { createToken, TokenKind } =
+        await import('@rctf/api/src/lib/tokens')
+      console.log(
+        `Login token for deploy tools (Konata's teamToken): ${await createToken(TokenKind.Team, team.id)}`
+      )
       return
     }
 

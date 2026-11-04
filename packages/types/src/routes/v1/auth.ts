@@ -103,9 +103,16 @@ export const LoginRoute = defineRoute({
       })
     ),
   goodResponses: [GoodLogin],
-  badResponses: [BadUnknownUser, BadTokenVerification, BadCtftimeToken],
+  badResponses: [
+    BadUnknownUser,
+    BadTokenVerification,
+    BadCtftimeToken,
+    BadEndpoint,
+  ],
   authRequired: false,
-  legacyAuth: true,
+  // not legacyAuth: with Discord login set up, admin teams can still log in
+  // with a team token (for deploy tools such as Konata); the handler refuses
+  // everyone else
 })
 
 export const RecoverRoute = defineRoute({

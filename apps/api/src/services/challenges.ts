@@ -488,13 +488,40 @@ export class ChallengeKindChangeBlockedError extends Error {
   }
 }
 
+// A decay update that doesn't mention `decay` keeps the challenge's current
+// one, so tools that only know the scoring kind (such as Konata) don't wipe
+// a decay set in the admin panel; `decay: null` removes it.
+export const mergeDecayScoring = (
+  current: ChallengeData['scoring'] | undefined,
+  next: ScoringUpdate
+): NonNullable<ChallengeData['scoring']> => {
+  if (next.kind !== ChallengeScoringKind.DECAY) return next
+  const decay =
+    'decay' in next && next.decay !== undefined
+      ? next.decay
+      : current?.kind === ChallengeScoringKind.DECAY
+        ? current.decay
+        : undefined
+  return decay === null || decay === undefined
+    ? { kind: ChallengeScoringKind.DECAY }
+    : { kind: ChallengeScoringKind.DECAY, decay }
+}
+
+type ScoringUpdate =
+  | Exclude<
+      ChallengeData['scoring'],
+      undefined | { kind: ChallengeScoringKind.DECAY }
+    >
+  | { kind: ChallengeScoringKind.DECAY; decay?: number | null }
+
 export const upsertChallenge = async (
   db: DatabaseClient,
   id: string,
   partial: Partial<
-    Omit<ChallengeData, 'instancerConfig' | 'adminBotConfig'> & {
+    Omit<ChallengeData, 'instancerConfig' | 'adminBotConfig' | 'scoring'> & {
       instancerConfig?: Partial<InstancerConfig> | null
       adminBotConfig?: AdminBotConfig | null
+      scoring?: ScoringUpdate
     }
   >
 ): Promise<Challenge> => {
@@ -554,6 +581,12 @@ export const upsertChallenge = async (
   const filteredPartial = Object.fromEntries(
     Object.entries(partialRest).filter(([_, v]) => v !== undefined)
   )
+  if (partialRest.scoring) {
+    filteredPartial.scoring = mergeDecayScoring(
+      current?.data.scoring,
+      partialRest.scoring
+    )
+  }
 
   const data: ChallengeData = {
     ...defaultChallengeData,

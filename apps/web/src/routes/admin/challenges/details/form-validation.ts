@@ -152,7 +152,18 @@ export function buildSavePayload(
         : null,
       hidden: form.hidden,
       releaseTime: form.releaseTime,
-      scoring: form.scoring,
+      scoring: savedScoring(form.scoring),
     },
   }
+}
+
+// The server keeps a decay an update leaves out, so choosing the CTF default
+// has to say so: `decay: null` removes it.
+function savedScoring(scoring: EditorForm['scoring']) {
+  return scoring.kind === ChallengeScoringKind.DECAY
+    ? {
+        kind: ChallengeScoringKind.DECAY as const,
+        decay: scoring.decay ?? null,
+      }
+    : scoring
 }

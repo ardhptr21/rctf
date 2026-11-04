@@ -44,7 +44,7 @@ $ <red><dim>bun</dim> rctf</red> user create-admin organizers <dim>--discord-id<
 $ <red><dim>bun</dim> rctf</red> user create-admin authors <dim>--perms</dim> challsRead,challsWrite
 ```
 
-With [Discord login](/configuration#discord-login), `<dim>--discord-id</dim>` makes that Discord account the team captain, so it is an admin as soon as it logs in. The command also prints the team token, which other organizers use to join from the **Team** page. Admin teams have no size limit.
+With [Discord login](/configuration#discord-login), `<dim>--discord-id</dim>` makes that Discord account the team captain, so it is an admin as soon as it logs in. The command also prints the team token, which other organizers use to join from the **Team** page, and a login token for deploy tools such as [Konata](/integrations/konata). Admin teams have no size limit.
 
 Without Discord login, the command prints a login URL for the new team instead.
 
@@ -54,6 +54,16 @@ Without Discord login, the command prints a login URL for the new team instead.
 | `<dim>--email</dim>` | - | Team email, for the legacy team login. |
 | `<dim>--division</dim>` | default division | Division for the team. |
 | `<dim>--perms</dim>` | all permissions | Comma-separated [permission names](/admin#permissions). |
+
+### `<red>rctf</red> user token`
+
+Prints a login token for a team: for example, the `<red>team_token</red>` that [Konata](/integrations/konata) uses to sync challenges. The target can be the team's email, its name, or the Discord ID of one of its players.
+
+```ansi
+$ <red><dim>bun</dim> rctf</red> user token organizers
+```
+
+With [Discord login](/configuration#discord-login), only admin teams can log in with a token, so the command refuses other teams. The token never expires and gives full access to the team: keep it secret.
 
 ### `<red>rctf</red> user promote`
 

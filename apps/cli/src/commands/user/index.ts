@@ -10,5 +10,6 @@ export default defineCommand({
     promote: () => import('./promote').then(m => m.default),
     demote: () => import('./demote').then(m => m.default),
     'list-admins': () => import('./list-admins').then(m => m.default),
+    token: () => import('./token').then(m => m.default),
   },
 })

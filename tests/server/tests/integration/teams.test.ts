@@ -18,6 +18,7 @@ import {
   BadToken,
   GoodDiscordLogin,
   GoodFlag,
+  GoodLogin,
   GoodPlayerSelf,
   GoodTeamCaptainTransfer,
   GoodTeamCreate,
@@ -53,6 +54,7 @@ import {
   createAdminTeam,
   resolveTeamTarget,
 } from '../../../../apps/api/src/services/teams'
+import { createToken, TokenKind } from '../../../../apps/api/src/lib/tokens'
 import { createRedis } from '../../../../apps/api/src/util/redis'
 import { getApp, request } from '../../app'
 import {
@@ -278,6 +280,39 @@ describe('Discord login', () => {
     } finally {
       await team.cleanup()
       await admin.cleanup()
+    }
+  })
+
+  test('only admin teams log in with a team token in Discord mode', async () => {
+    // the permissions Konata needs to sync challenges
+    const admin = await generateRealTestUser(
+      Permissions.challsRead | Permissions.challsWrite
+    )
+    const player = await generateRealTestUser()
+    try {
+      const login = async (body: Record<string, string>) =>
+        post('/api/v1/auth/login', null, body)
+
+      // deploy tools such as Konata still reach the admin API
+      await expectResponse(
+        await login({
+          teamToken: await createToken(TokenKind.Team, admin.user.id),
+        }),
+        GoodLogin
+      )
+      await expectResponse(
+        await login({
+          teamToken: await createToken(TokenKind.Team, player.user.id),
+        }),
+        BadEndpoint
+      )
+      await expectResponse(
+        await login({ ctftimeToken: 'anything' }),
+        BadEndpoint
+      )
+    } finally {
+      await admin.cleanup()
+      await player.cleanup()
     }
   })
 
