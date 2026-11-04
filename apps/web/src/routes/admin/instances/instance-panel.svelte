@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { IconSearch } from '$lib/icons'
+  import { IconArrowClockwise, IconCaretRight, IconSearch } from '$lib/icons'
   import {
     useAdminInstance,
     useAdminInstanceRequestsInfinite,
@@ -15,6 +15,7 @@
     formatDurationMs,
     formatLifetime,
     hasHttpEndpoint,
+    requestDetails,
     STATUS_CLASS_FILTERS,
     STATUS_HINT,
     STATUS_LABEL,
@@ -69,6 +70,24 @@
     clientIp !== '' || statusClass !== null || debouncedPath !== ''
   )
   const now = $derived(Date.now())
+
+  // newest requests and the totals above them; any filters stay as they are
+  const refreshing = $derived(requestsQuery.isFetching)
+  const refresh = () => {
+    void detailQuery.refetch()
+    void requestsQuery.refetch()
+  }
+
+  // the request whose details are shown, one at a time
+  let expandedId = $state<string | null>(null)
+  const toggle = (id: string) => {
+    expandedId = expandedId === id ? null : id
+  }
+
+  $effect(() => {
+    void instanceId
+    expandedId = null
+  })
 </script>
 
 <Dialog
@@ -221,7 +240,18 @@
                 >
               </ip-chip>
             {/if}
-            {#if requestsQuery.isFetching}<Spinner />{/if}
+            <Button
+              class="refresh"
+              size="sm"
+              variant="secondary"
+              disabled={refreshing}
+              onclick={refresh}
+            >
+              {#if refreshing}<Spinner />{:else}<IconArrowClockwise
+                  aria-hidden="true"
+                />{/if}
+              Refresh
+            </Button>
           </filter-row>
 
           <requests-table>
@@ -239,15 +269,39 @@
               </thead>
               <tbody>
                 {#each requests as request (request.id)}
-                  <tr title={request.userAgent ?? undefined}>
-                    <td>{formatLocalTime(Date.parse(request.at))}</td>
+                  {@const open = expandedId === request.id}
+                  {@const localTime = formatLocalTime(Date.parse(request.at))}
+                  <tr
+                    class="request"
+                    data-open={open || undefined}
+                    tabindex="0"
+                    aria-expanded={open}
+                    aria-controls="request-{request.id}"
+                    title={open ? 'Hide details' : 'Show details'}
+                    onclick={() => toggle(request.id)}
+                    onkeydown={event => {
+                      if (event.target !== event.currentTarget) return
+                      if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault()
+                        toggle(request.id)
+                      }
+                    }}
+                  >
+                    <td>
+                      <time-cell>
+                        <IconCaretRight aria-hidden="true" data-caret />
+                        {localTime}
+                      </time-cell>
+                    </td>
                     <td>
                       <button
                         type="button"
                         class="ip"
                         title="Only this IP"
-                        onclick={() => (clientIp = request.clientIp)}
-                        >{request.clientIp}</button
+                        onclick={event => {
+                          event.stopPropagation()
+                          clientIp = request.clientIp
+                        }}>{request.clientIp}</button
                       >
                     </td>
                     <td>{request.method}</td>
@@ -260,6 +314,21 @@
                     <td>{formatBytes(request.bytes)}</td>
                     <td>{formatDurationMs(request.durationMs)}</td>
                   </tr>
+                  {#if open}
+                    <tr class="details" id="request-{request.id}">
+                      <td colspan="7">
+                        <dl>
+                          {#each requestDetails(request, localTime) as detail (detail.label)}
+                            <dt>{detail.label}</dt>
+                            <dd>
+                              {#if detail.code}<code>{detail.value}</code
+                                >{:else}{detail.value}{/if}
+                            </dd>
+                          {/each}
+                        </dl>
+                      </td>
+                    </tr>
+                  {/if}
                 {:else}
                   <tr>
                     <td colspan="7" class="empty">
@@ -382,6 +451,10 @@
 
   table-foot {
     justify-content: space-between;
+  }
+
+  filter-row :global(.refresh) {
+    margin-inline-start: auto;
   }
 
   stat {
@@ -532,6 +605,65 @@
       padding: var(--space-m);
       color: var(--foreground-l3);
       text-align: center;
+    }
+
+    .request {
+      cursor: pointer;
+
+      &:hover td,
+      &[data-open] td {
+        background: var(--background-l3);
+      }
+
+      &:focus-visible {
+        outline: 2px solid var(--foreground-l2);
+        outline-offset: -2px;
+      }
+    }
+
+    time-cell {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-3xs);
+
+      :global([data-caret]) {
+        flex: none;
+        color: var(--foreground-l3);
+        transition: rotate 120ms ease;
+      }
+    }
+
+    .request[data-open] time-cell :global([data-caret]) {
+      rotate: 90deg;
+    }
+
+    .details td {
+      padding: var(--space-xs) var(--space-s);
+      white-space: normal;
+      background: var(--background-l2);
+      border-block-start: none;
+    }
+
+    dl {
+      display: grid;
+      grid-template-columns: max-content minmax(0, 1fr);
+      gap: var(--space-3xs) var(--space-s);
+      margin: 0;
+    }
+
+    dt {
+      color: var(--foreground-l3);
+    }
+
+    dd {
+      margin: 0;
+      color: var(--foreground-l1);
+      overflow-wrap: anywhere;
+
+      code {
+        white-space: pre-wrap;
+        word-break: break-all;
+      }
     }
   }
 

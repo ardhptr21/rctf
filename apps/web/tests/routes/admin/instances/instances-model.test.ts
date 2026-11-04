@@ -7,9 +7,11 @@ import {
   hasHttpEndpoint,
   instanceQueryParams,
   PAGE_SIZE,
+  requestDetails,
   statusClassTone,
   statusTone,
   type AdminInstance,
+  type InstanceRequest,
 } from '$routes/admin/instances/instances-model'
 
 describe('formatLifetime', () => {
@@ -88,5 +90,59 @@ describe('request helpers', () => {
     expect(
       hasHttpEndpoint(withKinds(ExposeKind.TCP_SSL, ExposeKind.HTTP))
     ).toBe(true)
+  })
+})
+
+describe('requestDetails', () => {
+  const request: InstanceRequest = {
+    id: '981',
+    at: '2026-11-04T12:08:00.000Z',
+    clientIp: '10.125.152.168',
+    method: 'POST',
+    host: 'web-3f9c1a.inst.hackme.web.id',
+    path: '/login?next=%2Fadmin',
+    status: 200,
+    bytes: 437,
+    durationMs: 0,
+    userAgent: 'curl/8.5.0',
+  }
+  const byLabel = (details: ReturnType<typeof requestDetails>) =>
+    Object.fromEntries(details.map(detail => [detail.label, detail.value]))
+
+  it('lists everything kept about the request', () => {
+    expect(byLabel(requestDetails(request, 'Nov 4, 7:08 PM'))).toEqual({
+      Time: 'Nov 4, 7:08 PM',
+      'Time (UTC)': '2026-11-04T12:08:00.000Z',
+      'Client IP': '10.125.152.168',
+      Method: 'POST',
+      Host: 'web-3f9c1a.inst.hackme.web.id',
+      Path: '/login?next=%2Fadmin',
+      Status: '200',
+      'Response size': '437 B',
+      'Time taken': '0 ms',
+      'User agent': 'curl/8.5.0',
+      'Request ID': '981',
+    })
+  })
+
+  it('shows the time in UTC as ISO 8601', () => {
+    const details = byLabel(
+      requestDetails({ ...request, at: '2026-11-03 16:55:25.44+00' }, '')
+    )
+    expect(details['Time (UTC)']).toBe('2026-11-03T16:55:25.440Z')
+  })
+
+  it('gives the exact size of larger responses', () => {
+    const details = byLabel(requestDetails({ ...request, bytes: 5120 }, ''))
+    expect(details['Response size']).toBe('5.0 KB (5,120 bytes)')
+  })
+
+  it('says when no user agent was sent', () => {
+    const details = requestDetails({ ...request, userAgent: null }, '')
+    expect(details.find(detail => detail.label === 'User agent')).toEqual({
+      label: 'User agent',
+      value: 'Not sent',
+      code: false,
+    })
   })
 })

@@ -149,6 +149,45 @@ export function formatDurationMs(ms: number): string {
   return ms < 1000 ? `${ms} ms` : `${(ms / 1000).toFixed(2)} s`
 }
 
+export type RequestDetail = {
+  label: string
+  value: string
+  // shown in monospace and allowed to wrap, for long values such as paths
+  code?: boolean
+}
+
+// Everything kept about one request, for its expanded row. `localTime` is the
+// request time already formatted for the viewer.
+export function requestDetails(
+  request: InstanceRequest,
+  localTime: string
+): RequestDetail[] {
+  const size =
+    request.bytes < 1024
+      ? formatBytes(request.bytes)
+      : `${formatBytes(request.bytes)} (${request.bytes.toLocaleString('en-US')} bytes)`
+  // the API may send the database's timestamp format; show ISO 8601 in UTC
+  const at = Date.parse(request.at)
+  const utc = Number.isNaN(at) ? request.at : new Date(at).toISOString()
+  return [
+    { label: 'Time', value: localTime },
+    { label: 'Time (UTC)', value: utc, code: true },
+    { label: 'Client IP', value: request.clientIp, code: true },
+    { label: 'Method', value: request.method },
+    { label: 'Host', value: request.host, code: true },
+    { label: 'Path', value: request.path, code: true },
+    { label: 'Status', value: String(request.status) },
+    { label: 'Response size', value: size },
+    { label: 'Time taken', value: formatDurationMs(request.durationMs) },
+    {
+      label: 'User agent',
+      value: request.userAgent ?? 'Not sent',
+      code: request.userAgent !== null,
+    },
+    { label: 'Request ID', value: request.id, code: true },
+  ]
+}
+
 // Request logs come from the HTTP proxy, so instances reachable only over
 // TCP have none yet.
 export function hasHttpEndpoint(instance: AdminInstance): boolean {

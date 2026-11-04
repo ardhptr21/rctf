@@ -149,6 +149,7 @@
           </span>
         </case-summary>
 
+        <section-label>Teams</section-label>
         <case-teams>
           {#each teams as team (team.id)}
             <team-row>
@@ -170,15 +171,19 @@
           {/each}
         </case-teams>
 
+        <section-label>Signals</section-label>
         <signal-list>
           {#each kase.signals as signal (signal.id)}
-            <signal-item data-severity={signal.severity}>
+            <signal-item>
               <signal-head>
                 <strong>{KIND_LABEL[signal.kind]}</strong>
-                <severity-tag>{SEVERITY_LABEL[signal.severity]}</severity-tag>
+                <severity-text data-severity={signal.severity}
+                  >{SEVERITY_LABEL[signal.severity]}</severity-text
+                >
                 {#if signal.challenge}
-                  <span
-                    >{signal.challenge.category}/{signal.challenge.name}</span
+                  <challenge-name
+                    >{signal.challenge.category}/{signal.challenge
+                      .name}</challenge-name
                   >
                 {/if}
                 <time>{formatLocalTime(signal.createdAt)}</time>
@@ -292,10 +297,23 @@
     }
   }
 
-  case-teams {
+  section-label {
+    margin-block-end: calc(var(--space-s) * -1 + var(--space-3xs));
+    color: var(--foreground-l3);
+    font-size: var(--step--1);
+  }
+
+  /* teams and signals: one bordered list each, rows split by rules */
+  case-teams,
+  signal-list {
     display: flex;
     flex-direction: column;
-    gap: var(--space-3xs);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+
+    & > * + * {
+      border-block-start: 1px solid var(--border);
+    }
   }
 
   team-row {
@@ -303,9 +321,7 @@
     align-items: center;
     justify-content: space-between;
     gap: var(--space-s);
-    padding: var(--space-3xs) var(--space-2xs);
-    background: var(--background-l3);
-    border-radius: var(--radius-md);
+    padding: var(--space-3xs) var(--space-xs);
 
     a {
       min-inline-size: 0;
@@ -320,47 +336,22 @@
     }
   }
 
-  banned-tag,
-  severity-tag {
-    flex-shrink: 0;
-    padding: 0 var(--space-3xs);
-    font-size: var(--step--2);
-    border-radius: var(--radius-sm);
-  }
-
   banned-tag {
+    flex-shrink: 0;
     color: var(--foreground-destructive);
-    background: color-mix(
-      in srgb,
-      var(--foreground-destructive) 14%,
-      transparent
-    );
+    font-size: var(--step--1);
   }
 
   signal-list {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-3xs);
     max-block-size: 22rem;
     overflow-y: auto;
   }
 
   signal-item {
-    --severity-color: var(--foreground-l3);
     display: flex;
     flex-direction: column;
     gap: var(--space-3xs);
     padding: var(--space-2xs) var(--space-xs);
-    border-inline-start: 3px solid var(--severity-color);
-    background: var(--background-l2);
-    border-radius: var(--radius-md);
-
-    &[data-severity='medium'] {
-      --severity-color: var(--foreground-yellow-l1);
-    }
-    &[data-severity='high'] {
-      --severity-color: var(--foreground-destructive);
-    }
   }
 
   signal-head {
@@ -382,9 +373,20 @@
     }
   }
 
-  severity-tag {
-    color: var(--severity-color);
-    background: color-mix(in srgb, var(--severity-color) 14%, transparent);
+  severity-text {
+    color: var(--foreground-l3);
+
+    &[data-severity='medium'] {
+      color: var(--foreground-yellow-l1);
+    }
+    &[data-severity='high'] {
+      color: var(--foreground-destructive);
+    }
+  }
+
+  challenge-name {
+    font-family: var(--font-mono);
+    font-size: var(--step--2);
   }
 
   signal-body {
