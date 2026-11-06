@@ -34,7 +34,7 @@ Click an instance to open its details: who started it, when, its endpoints, and 
 
 - **The summary** counts every request, the client IPs, and the responses by status class (2xx, 3xx, 4xx, 5xx).
 - **The requests** are listed newest first, with the time, client IP, method, path with its query string, status, response size and time taken. Hover a row to see its user agent. Filter by path, by status class, or click an IP to show only its requests.
-- **Each instance keeps its newest 2,000 requests** by default (`instanceRequestLogs.maxPerInstance`). The total still counts every one, and the details say when older requests were dropped.
+- **Each instance keeps its newest 2,000 requests** by default (`instanceRequestLogs.maxRequestsPerInstance`). The total still counts every one, and the details say when older requests were dropped.
 - **Requests arrive a few seconds late**, since they're sent in batches.
 
 ### TCP connections

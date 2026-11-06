@@ -19,14 +19,14 @@ Set a token of at least 16 characters, and use the same token in the Vector setu
 ```yaml
 instanceRequestLogs:
   token: a-long-random-secret
-  maxPerInstance: 2000
+  maxRequestsPerInstance: 2000
   maxSessionsPerInstance: 500
 ```
 
 | Field | Type | Default | Description |
 | --- | --- | --- | --- |
 | `<red>instanceRequestLogs.token</red>` | `string{:ts}` | | Bearer token Vector sends. Without it, the ingest routes don't exist |
-| `<red>instanceRequestLogs.maxPerInstance</red>` | `number{:ts}` | `2000{:ts}` | Requests kept per instance. Older ones are dropped, but still counted in the instance's total |
+| `<red>instanceRequestLogs.maxRequestsPerInstance</red>` | `number{:ts}` | `2000{:ts}` | Requests kept per instance. Older ones are dropped, but still counted in the instance's total |
 | `<red>instanceRequestLogs.maxSessionsPerInstance</red>` | `number{:ts}` | `500{:ts}` | TCP connections kept per instance. Older ones are dropped, but still counted |
 
 ## Docker instancer

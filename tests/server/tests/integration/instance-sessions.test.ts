@@ -44,7 +44,7 @@ beforeAll(async () => {
   app = await getApp()
   config.instanceRequestLogs = {
     token: TOKEN,
-    maxPerInstance: 2000,
+    maxRequestsPerInstance: 2000,
     maxSessionsPerInstance: 500,
   }
 })

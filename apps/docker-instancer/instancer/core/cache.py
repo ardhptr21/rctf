@@ -39,6 +39,30 @@ async def instance_lock(challenge: str, team_id: str) -> AsyncGenerator[bool]:
                 await lock.release()
 
 
+def _stopping_key(challenge: str, team_id: str) -> str:
+    return f'{config.PREFIX}:stopping:{challenge}:{team_id}'
+
+
+@asynccontextmanager
+async def instance_stopping(challenge: str, team_id: str) -> AsyncGenerator[None]:
+    """Marks an instance as being stopped while its containers go away.
+
+    Stopping takes a few seconds, and meanwhile some containers have exited
+    while others still run; status checks report that as stopping, not as an
+    error. The marker expires on its own if the instancer dies mid-stop.
+    """
+    key = _stopping_key(challenge, team_id)
+    await redis.set(key, '1', ex=config.DOCKER_STOP_TIMEOUT_SECONDS + 60)
+    try:
+        yield
+    finally:
+        await redis.delete(key)
+
+
+async def is_instance_stopping(challenge: str, team_id: str) -> bool:
+    return bool(await redis.exists(_stopping_key(challenge, team_id)))
+
+
 def _expiration_key(instance_id: str) -> str:
     return f'{config.PREFIX}:expiration:{instance_id}'
 

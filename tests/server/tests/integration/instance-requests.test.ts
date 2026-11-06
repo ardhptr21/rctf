@@ -45,7 +45,7 @@ let app: Hono<any>
 
 beforeAll(async () => {
   app = await getApp()
-  config.instanceRequestLogs = { token: TOKEN, maxPerInstance: 2000 }
+  config.instanceRequestLogs = { token: TOKEN, maxRequestsPerInstance: 2000 }
 })
 
 afterAll(() => {
@@ -138,7 +138,10 @@ describe('instance request ingest', () => {
     try {
       await expectResponse(await ingest([]), BadEndpoint)
     } finally {
-      config.instanceRequestLogs = { token: TOKEN, maxPerInstance: 2000 }
+      config.instanceRequestLogs = {
+        token: TOKEN,
+        maxRequestsPerInstance: 2000,
+      }
     }
   })
 

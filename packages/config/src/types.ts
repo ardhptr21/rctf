@@ -150,7 +150,7 @@ export const ServerConfigSchema = z.object({
       // bearer token the shipper sends
       token: z.string().check(z.minLength(16)),
       // requests kept per instance; older ones are dropped but still counted
-      maxPerInstance: z._default(
+      maxRequestsPerInstance: z._default(
         z.int().check(z.gte(1)).check(z.lte(100_000)),
         2000
       ),

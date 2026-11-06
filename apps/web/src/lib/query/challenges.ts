@@ -310,6 +310,17 @@ export function invalidateAfterSolve(
       queryKey: queryKeys.challenge(challengeId),
     })
   }, 500)
+
+  // The server stops a solved challenge's instance in the background. Check
+  // its status soon after, and once more in case the stop hadn't begun yet;
+  // a stopping instance is then polled every few seconds until it's gone.
+  for (const delay of [500, 2500]) {
+    setTimeout(() => {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.challengeInstance(challengeId),
+      })
+    }, delay)
+  }
 }
 
 // Tells the server a team downloaded an attachment, for cheat detection.

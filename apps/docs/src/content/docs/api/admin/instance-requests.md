@@ -28,7 +28,7 @@ order: 43
 
 ::route-meta{def="GetAdminInstanceRequestsRouteV2"}
 
-The HTTP requests that reached an instance, newest first, from its [request logs](/integrations/instancer/request-logs/). Only the newest `instanceRequestLogs.maxPerInstance` requests are kept.
+The HTTP requests that reached an instance, newest first, from its [request logs](/integrations/instancer/request-logs/). Only the newest `instanceRequestLogs.maxRequestsPerInstance` requests are kept.
 
 ::request-body{def="GetAdminInstanceRequestsRouteV2" source="params" title="Path parameters"}
 

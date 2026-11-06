@@ -134,12 +134,12 @@ export type IngestResult = {
 
 // Stores a batch of access log entries against the instances they reached:
 // by hostname, and by time, since a restarted instance can get the same
-// hostname again. Each instance keeps its newest `maxPerInstance` requests;
+// hostname again. Each instance keeps its newest `maxRequestsPerInstance` requests;
 // its totals count every one.
 export const ingestInstanceRequests = async (
   db: DatabaseClient,
   entries: readonly Record<string, unknown>[],
-  maxPerInstance = config.instanceRequestLogs?.maxPerInstance ?? 2000
+  maxPerInstance = config.instanceRequestLogs?.maxRequestsPerInstance ?? 2000
 ): Promise<IngestResult> => {
   const parsed = entries.map(entry => ({
     request: parseTraefikAccessLog(entry),

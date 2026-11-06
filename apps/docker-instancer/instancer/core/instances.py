@@ -8,7 +8,13 @@ from aiodocker import Docker, DockerError
 from aiodocker.containers import DockerContainer
 from fastapi import HTTPException
 
-from instancer.core.cache import delete_instance_expiration, instance_lock, set_instance_expiration
+from instancer.core.cache import (
+    delete_instance_expiration,
+    instance_lock,
+    instance_stopping,
+    is_instance_stopping,
+    set_instance_expiration,
+)
 from instancer.core.config import config
 from instancer.core.instancer.const import ContainerLabels, get_common_labels
 from instancer.core.instancer.containers import (
@@ -243,12 +249,13 @@ async def stop_instance(challenge_name: str, team_id: str) -> protocol.RCTFInsta
             except DockerError:
                 pass
 
-        networks_to_remove, volumes_to_remove = await _collect_instance_resources(instance_containers)
-        await _stop_and_delete_containers(instance_containers, challenge_name, team_id)
-        await asyncio.gather(
-            cleanup_networks(docker, list(networks_to_remove)),
-            cleanup_volumes(docker, list(volumes_to_remove)),
-        )
+        async with instance_stopping(challenge_name, team_id):
+            networks_to_remove, volumes_to_remove = await _collect_instance_resources(instance_containers)
+            await _stop_and_delete_containers(instance_containers, challenge_name, team_id)
+            await asyncio.gather(
+                cleanup_networks(docker, list(networks_to_remove)),
+                cleanup_volumes(docker, list(volumes_to_remove)),
+            )
 
         if instance_id:
             await delete_instance_expiration(instance_id)
@@ -298,6 +305,13 @@ async def get_instance(challenge_name: str, team_id: str) -> protocol.RCTFInstan
     indexed_endpoints: list[tuple[int, protocol.RCTFInstanceDetails.Endpoint]] = []
 
     details = await _show_containers(containers)
+    if details and await is_instance_stopping(challenge_name, team_id):
+        # containers exiting one by one during a stop aren't an error
+        return protocol.RCTFInstanceDetails(
+            status=protocol.InstanceStatus.STOPPING,
+            endpoints=None,
+            time_left_milliseconds=None,
+        )
     if details:
         first_labels = details[0]['Config']['Labels']
         expires_at = await get_effective_expiration(first_labels)

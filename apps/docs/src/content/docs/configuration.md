@@ -272,14 +272,14 @@ The detectors, window, allow-list and `alerts` are only defaults: change them at
 ```yaml
 instanceRequestLogs:
   token: a-long-random-secret
-  maxPerInstance: 2000
+  maxRequestsPerInstance: 2000
   maxSessionsPerInstance: 500
 ```
 
 | Field | Type | Default | Description |
 | --- | --- | --- | --- |
 | `<red>instanceRequestLogs.token</red>` | `string{:ts}` | | Bearer token the instancer's log shipper sends, at least 16 characters. Request logs are off without it |
-| `<red>instanceRequestLogs.maxPerInstance</red>` | `number{:ts}` | `2000{:ts}` | Requests kept per instance; older ones are dropped but still counted |
+| `<red>instanceRequestLogs.maxRequestsPerInstance</red>` | `number{:ts}` | `2000{:ts}` | Requests kept per instance; older ones are dropped but still counted |
 | `<red>instanceRequestLogs.maxSessionsPerInstance</red>` | `number{:ts}` | `500{:ts}` | TCP connections kept per instance; older ones are dropped but still counted |
 
 See [Request logs](/integrations/instancer/request-logs/).

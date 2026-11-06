@@ -27,6 +27,7 @@ class InstanceStatus(StrEnum):
     STOPPED = 'stopped'
     RUNNING = 'running'
     STARTING = 'starting'
+    STOPPING = 'stopping'
     ERRORED = 'errored'
 
 
