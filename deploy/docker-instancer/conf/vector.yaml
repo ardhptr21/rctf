@@ -1,5 +1,6 @@
 # Sends Traefik's HTTP access log to rCTF, which stores each request on the
-# instance it reached (Admin -> Instances). Needs RCTF_URL and
+# instance it reached (Admin -> Instances), and the connections the tcplog
+# proxies record for tcp-ssl exposes. Needs RCTF_URL and
 # RCTF_INSTANCE_REQUEST_LOGS_TOKEN in .env; the token is rCTF's
 # `instanceRequestLogs.token`.
 sources:
@@ -7,6 +8,12 @@ sources:
     type: docker_logs
     include_containers:
       - ${TRAEFIK_CONTAINER_NAME:-ti-traefik}
+
+  # the logging proxies the instancer puts in front of tcp-ssl exposes
+  tcplog:
+    type: docker_logs
+    include_labels:
+      - rctf.tcplog=true
 
 transforms:
   access_log:
@@ -18,6 +25,18 @@ transforms:
     source: |
       parsed, err = parse_json(.message)
       if err != null || !is_object(parsed) || !exists(parsed.RequestHost) {
+        abort
+      }
+      . = parsed
+
+  tcp_session:
+    type: remap
+    inputs:
+      - tcplog
+    drop_on_abort: true
+    source: |
+      parsed, err = parse_json(.message)
+      if err != null || !is_object(parsed) || parsed.kind != "tcp-session" {
         abort
       }
       . = parsed
@@ -49,4 +68,33 @@ sinks:
     buffer:
       type: memory
       max_events: 50000
+      when_full: drop_newest
+
+  rctf_sessions:
+    type: http
+    inputs:
+      - tcp_session
+    uri: ${RCTF_URL}/api/v2/integrations/instance-sessions
+    method: post
+    auth:
+      strategy: bearer
+      token: ${RCTF_INSTANCE_REQUEST_LOGS_TOKEN}
+    encoding:
+      codec: json
+    framing:
+      method: character_delimited
+      character_delimited:
+        delimiter: ','
+    payload_prefix: '{"entries":'
+    payload_suffix: '}'
+    # a connection carries up to 32 KB of transcript, so batches stay small
+    batch:
+      max_events: 100
+      max_bytes: 4000000
+      timeout_secs: 5
+    request:
+      retry_attempts: 10
+    buffer:
+      type: memory
+      max_events: 5000
       when_full: drop_newest

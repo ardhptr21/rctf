@@ -43,14 +43,22 @@ def build_exposed_hostnames(exposes: list[protocol.InstancerExpose], instance_id
     return result
 
 
-def expose_ports(
+def expose_ports(  # noqa: PLR0913
     labels: dict[str, str],
     svc_name: str,
     exposes: dict[str, list[protocol.InstancerExpose]],  # container: exposes
     instance_id: str,
     routing_network: str | None,
     global_indices: list[int],
+    *,
+    tcp_via_proxy: bool = False,
 ) -> tuple[list[str], list[protocol.RCTFInstanceDetails.Endpoint]]:
+    """Traefik labels for a container's exposes, and the endpoints players get.
+
+    With `tcp_via_proxy`, tcp-ssl exposes get no Traefik labels here: Traefik
+    routes them to the container's tcplog proxy instead (`tcplog_proxy`). The
+    endpoints and the exposed-* labels are the same either way.
+    """
     to_expose = exposes.get(svc_name, [])
     coerce_tcp_exposes(to_expose)
 
@@ -63,8 +71,11 @@ def expose_ports(
     hosts: list[str] = []
     exposed: list[protocol.RCTFInstanceDetails.Endpoint] = []
 
-    labels['traefik.enable'] = 'true'
-    labels['traefik.docker.network'] = routing_network
+    # with nothing for Traefik to route here, leave the container out of
+    # Traefik altogether, or it would get a default HTTP router
+    if any(not (tcp_via_proxy and expose.kind == protocol.ExposeKind.TCP_SSL) for expose in to_expose):
+        labels['traefik.enable'] = 'true'
+        labels['traefik.docker.network'] = routing_network
 
     for i, expose in enumerate(to_expose):
         router_name = f'{config.PREFIX}-{instance_id}-{svc_name}-{i}'
@@ -81,6 +92,9 @@ def expose_ports(
 
         match expose.kind:
             # TCP is not supported
+
+            case protocol.ExposeKind.TCP_SSL if tcp_via_proxy:
+                pass
 
             case protocol.ExposeKind.TCP_SSL:
                 labels[f'traefik.tcp.routers.{router_name}.rule'] = f'HostSNI(`{host}`)'
@@ -116,6 +130,53 @@ def expose_ports(
 
     labels[ContainerLabels.EXPOSED_HOSTNAMES] = SEPARATOR.join(hosts)
     return hosts, exposed
+
+
+TCPLOG_FIRST_PORT = 10000
+
+
+def tcplog_proxy(
+    svc_name: str,
+    exposes: dict[str, list[protocol.InstancerExpose]],
+    instance_id: str,
+    routing_network: str,
+    target_host: str,
+) -> tuple[dict[str, str], list[dict]]:
+    """Traefik labels and routes for the tcplog proxy in front of a container.
+
+    Each tcp-ssl expose keeps its router name and hostname, but Traefik sends
+    it to the proxy, with a PROXY v2 header carrying the player's address
+    (through the TCPLOG_SERVERS_TRANSPORT serversTransport); the
+    proxy listens on its own port per expose and forwards to the container.
+    Returns no routes when the container has no tcp-ssl exposes.
+    """
+    labels: dict[str, str] = {}
+    routes: list[dict] = []
+    for i, expose in enumerate(exposes.get(svc_name, [])):
+        if expose.kind != protocol.ExposeKind.TCP_SSL:
+            continue
+        router_name = f'{config.PREFIX}-{instance_id}-{svc_name}-{i}'
+        host = expose_host(expose, instance_id)
+        listen = TCPLOG_FIRST_PORT + i
+
+        labels[f'traefik.tcp.routers.{router_name}.rule'] = f'HostSNI(`{host}`)'
+        labels[f'traefik.tcp.routers.{router_name}.entrypoints'] = config.TRAEFIK_TCP_ENTRYPOINT
+        labels[f'traefik.tcp.routers.{router_name}.service'] = router_name
+        labels[f'traefik.tcp.routers.{router_name}.tls'] = 'true'
+        labels[f'traefik.tcp.services.{router_name}.loadbalancer.server.port'] = str(listen)
+        if config.TCPLOG_SERVERS_TRANSPORT:
+            labels[f'traefik.tcp.services.{router_name}.loadbalancer.serversTransport'] = (
+                config.TCPLOG_SERVERS_TRANSPORT
+            )
+        else:
+            # deprecated in Traefik 3, for setups without the serversTransport file
+            labels[f'traefik.tcp.services.{router_name}.loadbalancer.proxyProtocol.version'] = '2'
+        routes.append({'listen': listen, 'target': f'{target_host}:{expose.container_port}', 'host': host})
+
+    if routes:
+        labels['traefik.enable'] = 'true'
+        labels['traefik.docker.network'] = routing_network
+    return labels, routes
 
 
 def extract_exposes(labels: dict[str, str]) -> list[tuple[int, protocol.RCTFInstanceDetails.Endpoint]]:

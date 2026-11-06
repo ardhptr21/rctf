@@ -17,6 +17,9 @@ class ContainerLabels(StrEnum):
     EXPOSED_HOSTNAMES = 'io.es3n1n.instancer.hostnames'
     EXPOSED_INDICES = 'io.es3n1n.instancer.exposed_indices'
 
+    # Set on the tcplog proxy container; Vector ships the logs of containers with it
+    TCPLOG = 'rctf.tcplog'
+
 
 def get_search_filters(challenge_name: str, team_id: str) -> dict[str, dict | list | str]:
     return {

@@ -39,6 +39,10 @@ export type AdminInstanceRequestsQueryParams = {
   path?: string | undefined
 }
 
+export type AdminInstanceSessionsQueryParams = {
+  clientIp?: string | undefined
+}
+
 export type AdminIntegrityCasesQueryParams = {
   status: IntegrityCaseStatus
   limit: number
@@ -71,6 +75,10 @@ export const queryKeys = {
     id: string,
     params: AdminInstanceRequestsQueryParams
   ) => ['admin', 'instances', id, 'requests', params] as const,
+  adminInstanceSessions: (
+    id: string,
+    params: AdminInstanceSessionsQueryParams
+  ) => ['admin', 'instances', id, 'sessions', params] as const,
   adminIntegrityCases: (params: AdminIntegrityCasesQueryParams) =>
     ['admin', 'integrity', 'list', params] as const,
   adminIntegrityCase: (id: string) => ['admin', 'integrity', id] as const,

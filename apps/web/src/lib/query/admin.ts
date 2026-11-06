@@ -2,6 +2,7 @@ import {
   FilterAdminInstancesRouteV2,
   GetAdminInstanceRequestsRouteV2,
   GetAdminInstanceRouteV2,
+  GetAdminInstanceSessionsRouteV2,
   FilterAdminSubmissionsRouteV2,
   FilterAdminUsersRouteV2,
   GetAdminBotStatusRouteV2,
@@ -22,6 +23,7 @@ import {
   GoodAdminIntegrityCase,
   GoodAdminInstance,
   GoodAdminInstanceRequests,
+  GoodAdminInstanceSessions,
   GoodAdminInstances,
   GoodAdminIntegrityCases,
   GoodAdminPlayers,
@@ -50,6 +52,7 @@ import { unwrapData } from '$lib/query/core'
 import {
   queryKeys,
   type AdminInstanceRequestsQueryParams,
+  type AdminInstanceSessionsQueryParams,
   type AdminInstancesQueryParams,
   type AdminIntegrityCasesQueryParams,
   type AdminPlayersQueryParams,
@@ -245,6 +248,39 @@ export function useAdminInstanceRequestsInfinite(
       enabled: instanceId !== null,
       initialPageParam: 0,
       getNextPageParam: lastPage => nextPageOffset(lastPage, lastPage.requests),
+      placeholderData: keepPreviousData,
+    }
+  })
+}
+
+// each connection carries up to 32 KB of transcript
+const INSTANCE_SESSIONS_PAGE_SIZE = 25
+
+export function useAdminInstanceSessionsInfinite(
+  id: () => string | null,
+  params: () => AdminInstanceSessionsQueryParams,
+  enabled: () => boolean = () => true
+) {
+  return createInfiniteQuery(() => {
+    const instanceId = id()
+    const query = params()
+    return {
+      queryKey: queryKeys.adminInstanceSessions(instanceId ?? '', query),
+      queryFn: async ({ pageParam }) => {
+        const response = await apiRequest(GetAdminInstanceSessionsRouteV2, {
+          id: instanceId!,
+          ...query,
+          limit: INSTANCE_SESSIONS_PAGE_SIZE,
+          offset: pageParam,
+        })
+        return {
+          ...unwrapData(response, GoodAdminInstanceSessions),
+          offset: pageParam,
+        }
+      },
+      enabled: instanceId !== null && enabled(),
+      initialPageParam: 0,
+      getNextPageParam: lastPage => nextPageOffset(lastPage, lastPage.sessions),
       placeholderData: keepPreviousData,
     }
   })

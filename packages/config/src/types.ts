@@ -154,6 +154,11 @@ export const ServerConfigSchema = z.object({
         z.int().check(z.gte(1)).check(z.lte(100_000)),
         2000
       ),
+      // TCP connections kept per instance, from the instancer's tcplog proxy
+      maxSessionsPerInstance: z._default(
+        z.int().check(z.gte(1)).check(z.lte(10_000)),
+        500
+      ),
     })
   ),
 

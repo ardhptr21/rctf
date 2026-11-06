@@ -1,0 +1,8 @@
+# Traefik sends the tcplog proxies a PROXY v2 header carrying the player's
+# address. The instancer points each proxy's TCP service at this transport
+# (TCPLOG_SERVERS_TRANSPORT=tcplog@file).
+tcp:
+  serversTransports:
+    tcplog:
+      proxyProtocol:
+        version: 2

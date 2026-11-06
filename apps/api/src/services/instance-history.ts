@@ -343,6 +343,8 @@ export const getAdminInstances = async (
           requestCount: instanceHistory.requestCount,
           firstRequestAt: instanceHistory.firstRequestAt,
           lastRequestAt: instanceHistory.lastRequestAt,
+          sessionCount: instanceHistory.sessionCount,
+          lastSessionAt: instanceHistory.lastSessionAt,
         })
         .from(instanceHistory)
         .$dynamic()
@@ -389,6 +391,8 @@ export const getAdminInstances = async (
       requestCount: row.requestCount,
       firstRequestAt: row.firstRequestAt,
       lastRequestAt: row.lastRequestAt,
+      sessionCount: row.sessionCount,
+      lastSessionAt: row.lastSessionAt,
     })),
   }
 }

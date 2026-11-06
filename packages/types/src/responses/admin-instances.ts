@@ -77,6 +77,11 @@ const AdminInstanceSchema = z.object({
   requestCount: example(z.int(), 1204).check(
     z.describe('HTTP requests that reached it, including ones no longer kept.')
   ),
+  sessionCount: example(z.int(), 7).check(
+    z.describe(
+      'TCP connections to its tcp-ssl endpoints, including ones no longer kept.'
+    )
+  ),
 })
 
 export const GoodAdminInstances = response('goodAdminInstances', {
@@ -128,6 +133,27 @@ export const GoodInstanceRequestsIngest = response(
   }
 )
 
+export const GoodInstanceSessionsIngest = response(
+  'goodInstanceSessionsIngest',
+  {
+    status: 200,
+    message: 'The connections were recorded.',
+    data: z.object({
+      stored: example(z.int(), 40).check(
+        z.describe('Connections matched to an instance and stored or updated.')
+      ),
+      unmatched: example(z.int(), 1).check(
+        z.describe(
+          'Connections to no recorded instance: unknown hosts, admin teams, or outside the instance lifetime.'
+        )
+      ),
+      invalid: example(z.int(), 0).check(
+        z.describe('Entries that are not tcplog connection records.')
+      ),
+    }),
+  }
+)
+
 export const BadUnknownInstance = response('badUnknownInstance', {
   status: 404,
   message: 'The instance could not be found.',
@@ -163,6 +189,20 @@ export const GoodAdminInstance = response('goodAdminInstance', {
           '5xx': z.int(),
         })
         .check(z.describe('Kept requests per response status class.')),
+    }),
+    sessions: z.object({
+      total: example(z.int(), 7).check(
+        z.describe('Every TCP connection to it.')
+      ),
+      kept: example(z.int(), 7).check(
+        z.describe('Connections still stored; older ones are dropped.')
+      ),
+      lastAt: example(z.nullable(z.string()), '2026-05-05T10:21:40.000Z').check(
+        z.describe('When the latest connection opened, or `null` without any.')
+      ),
+      uniqueIps: example(z.int(), 2).check(
+        z.describe('Client IPs among the kept connections.')
+      ),
     }),
   }),
 })
@@ -204,5 +244,72 @@ export const GoodAdminInstanceRequests = response('goodAdminInstanceRequests', {
         })
       )
       .check(z.describe('This page of requests, newest first.')),
+  }),
+})
+
+export const GoodAdminInstanceSessions = response('goodAdminInstanceSessions', {
+  status: 200,
+  message: 'The connections were retrieved.',
+  data: z.object({
+    total: example(z.int(), 7).check(
+      z.describe('Kept connections matching the filters.')
+    ),
+    sessions: z
+      .array(
+        z.object({
+          id: example(z.string(), '311').check(z.describe('Connection ID.')),
+          startedAt: example(z.string(), '2026-05-05T10:12:00.000Z').check(
+            z.describe('When it opened.')
+          ),
+          durationMs: example(z.int(), 8400).check(
+            z.describe(
+              'How long it lasted, or has lasted so far, in milliseconds.'
+            )
+          ),
+          open: example(z.boolean(), false).check(
+            z.describe('Whether it was still open at the last report.')
+          ),
+          clientIp: example(z.string(), '203.0.113.42').check(
+            z.describe('Client IP address.')
+          ),
+          host: example(z.string(), 'pwn-3f9c1a.inst.example.com').check(
+            z.describe('Hostname connected to.')
+          ),
+          bytesIn: example(z.int(), 31).check(
+            z.describe('Bytes the client sent.')
+          ),
+          bytesOut: example(z.int(), 412).check(
+            z.describe('Bytes the challenge sent back.')
+          ),
+          truncated: example(z.boolean(), false).check(
+            z.describe(
+              'Whether the transcript stops early: only the start of each direction is kept.'
+            )
+          ),
+          error: example(z.nullable(z.string()), null).check(
+            z.describe(
+              'Why it ended abnormally, such as the challenge being unreachable, or `null`.'
+            )
+          ),
+          transcript: z
+            .array(
+              z.object({
+                dir: example(z.enum(['in', 'out']), 'in').check(
+                  z.describe(
+                    '`in` for what the client sent, `out` for what the challenge answered.'
+                  )
+                ),
+                t: example(z.int(), 1200).check(
+                  z.describe('Milliseconds after the connection opened.')
+                ),
+                data: example(z.string(), 'ZmxhZwo=').check(
+                  z.describe('The bytes, base64-encoded.')
+                ),
+              })
+            )
+            .check(z.describe('What was sent each way, in order.')),
+        })
+      )
+      .check(z.describe('This page of connections, newest first.')),
   }),
 })

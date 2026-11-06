@@ -14,6 +14,7 @@ from instancer.core.instancer.const import ContainerLabels, get_common_labels
 from instancer.core.instancer.containers import (
     cleanup_containers,
     create_container,
+    create_tcplog_container,
     get_containers,
     instance_exists,
 )
@@ -57,6 +58,20 @@ async def _ensure_image(docker: Docker, image: str) -> None:
 
     name, tag = _split_image_ref(image)
     await docker.images.pull(name, tag=tag or 'latest')
+
+
+async def _tcplog_available(docker: Docker) -> bool:
+    if not config.TCPLOG_ENABLED:
+        return False
+    try:
+        await docker.images.get(config.TCPLOG_IMAGE)
+    except DockerError:
+        logger.warning(
+            f'tcplog image {config.TCPLOG_IMAGE!r} not found; TCP connections are not logged. '
+            'Build it with `docker compose build`, or set TCPLOG_ENABLED=false.'
+        )
+        return False
+    return True
 
 
 async def _show_containers(containers: list[DockerContainer]) -> list[dict]:
@@ -110,6 +125,10 @@ async def start_instance(form: protocol.RCTFCreateInstanceForm) -> protocol.RCTF
         volumes_created: dict[str, str] = {}
         indexed_endpoints: list[tuple[int, protocol.RCTFInstanceDetails.Endpoint]] = []
 
+        tcp_via_proxy = any(
+            expose.kind in {protocol.ExposeKind.TCP, protocol.ExposeKind.TCP_SSL} for expose in form.expose
+        ) and await _tcplog_available(docker)
+
         try:
             networks_created = await create_networks(docker, form.config.networks, common_labels)
             volumes_created = await create_volumes(docker, form.config.volumes, common_labels)
@@ -133,8 +152,20 @@ async def start_instance(form: protocol.RCTFCreateInstanceForm) -> protocol.RCTF
                     routing_network=routing_network,
                     global_indices=expose_indices.get(svc_name, []),
                     env_context=env_context,
+                    tcp_via_proxy=tcp_via_proxy,
                 )
                 created_containers.append(created)
+                if tcp_via_proxy and routing_network:
+                    proxy = await create_tcplog_container(
+                        docker=docker,
+                        challenge_integration_id=form.challenge_integration_id,
+                        exposes=exposes,
+                        common_labels=common_labels,
+                        svc_name=svc_name,
+                        routing_network=routing_network,
+                    )
+                    if proxy is not None:
+                        created_containers.append(proxy)
                 indexed_endpoints.extend(zip(expose_indices.get(svc_name, []), endpoints, strict=True))
 
             await asyncio.gather(*[container.start() for container in created_containers])

@@ -14,6 +14,7 @@
   import AdminTable from '../admin-table.svelte'
   import InstancePanel from './instance-panel.svelte'
   import {
+    activitySummary,
     endpointLabel,
     formatLifetime,
     instanceQueryParams,
@@ -193,7 +194,7 @@
     <th-cell>Ended</th-cell>
     <th-cell>Lifetime</th-cell>
     <th-cell>Extends</th-cell>
-    <th-cell>Requests</th-cell>
+    <th-cell>Activity</th-cell>
     <th-cell>Endpoint</th-cell>
     <th-cell>IP</th-cell>
   </instances-head>
@@ -266,7 +267,10 @@
       ></cell
     >
     <cell><span>{instance.extendCount}</span></cell>
-    <cell><span>{instance.requestCount}</span></cell>
+    <cell
+      ><span title={activitySummary(instance)}>{activitySummary(instance)}</span
+      ></cell
+    >
     <cell>
       {#if instance.endpoints.length > 0}
         <code title={instance.endpoints.map(endpointLabel).join('\n')}
@@ -521,7 +525,7 @@
     display: grid;
     grid-template-columns:
       10rem minmax(12rem, 1.2fr) minmax(12rem, 1.2fr) 7rem 9rem 6.5rem
-      4.5rem 5.5rem minmax(14rem, 1.4fr) 9rem;
+      4.5rem 9.5rem minmax(14rem, 1.4fr) 9rem;
     inline-size: 100%;
   }
 

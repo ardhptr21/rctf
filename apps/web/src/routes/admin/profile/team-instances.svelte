@@ -6,6 +6,7 @@
   import { formatLocalTime } from '$lib/utils/time'
   import InstancePanel from '../instances/instance-panel.svelte'
   import {
+    activitySummary,
     endpointLabel,
     formatLifetime,
     instanceQueryParams,
@@ -102,9 +103,7 @@
               type="button"
               class="details"
               onclick={() => (openInstanceId = instance.id)}
-              >{instance.requestCount} request{instance.requestCount === 1
-                ? ''
-                : 's'}</button
+              >{activitySummary(instance)}</button
             >
             {#if instance.endpoints[0]}
               <code>{endpointLabel(instance.endpoints[0])}</code>

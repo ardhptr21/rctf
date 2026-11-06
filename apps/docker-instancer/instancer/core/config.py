@@ -44,6 +44,18 @@ class Settings(BaseSettings):
 
     PRUNNER_INTERVAL_SECONDS: int = 3
 
+    # tcp-ssl exposes go through a small logging proxy (apps/docker-instancer/tcplog)
+    # that records each connection for rCTF's Admin -> Instances. If the image is
+    # missing, instances are routed directly as if this were off.
+    TCPLOG_ENABLED: bool = True
+    TCPLOG_IMAGE: str = 'tiny-instancer-tcplog:latest'
+    TCPLOG_MAX_BYTES: int = 16384
+    TCPLOG_FLUSH_SECONDS: int = 30
+    TCPLOG_MEM_LIMIT: str = '32m'
+    # Traefik TCP serversTransport that sends the proxy a PROXY v2 header
+    # (conf/tcplog-transport.yml); empty uses Traefik's deprecated service label
+    TCPLOG_SERVERS_TRANSPORT: str = 'tcplog@file'
+
     @property
     def cache_connection_url(self) -> str:
         return f'redis://:{self.REDIS_PASSWORD.get_secret_value()}@{self.REDIS_HOST}:{self.REDIS_PORT_NUMBER}'

@@ -30,15 +30,23 @@ A team's admin profile has an **Instances** tab with the same history for just t
 
 ## Requests
 
-Click an instance to open its details: who started it, when, its endpoints, and the HTTP requests that reached it. This needs [request logs](/integrations/instancer/request-logs/) to be set up.
+Click an instance to open its details: who started it, when, its endpoints, and the HTTP requests and TCP connections that reached it. This needs [request logs](/integrations/instancer/request-logs/) to be set up.
 
 - **The summary** counts every request, the client IPs, and the responses by status class (2xx, 3xx, 4xx, 5xx).
 - **The requests** are listed newest first, with the time, client IP, method, path with its query string, status, response size and time taken. Hover a row to see its user agent. Filter by path, by status class, or click an IP to show only its requests.
 - **Each instance keeps its newest 2,000 requests** by default (`instanceRequestLogs.maxPerInstance`). The total still counts every one, and the details say when older requests were dropped.
 - **Requests arrive a few seconds late**, since they're sent in batches.
-- **Only HTTP and HTTPS requests** are recorded. Instances reachable only over TCP say so.
 
-The detail view has its own link (`?instance=<id>`), so you can share it. A team profile's **Instances** tab opens the same details from each entry's request count.
+### TCP connections
+
+Instances with a `tcp-ssl` endpoint also list their **TCP connections**, from the Docker instancer's [logging proxy](/integrations/instancer/request-logs/#tcp-connections):
+
+- **Each connection** shows when it opened, the client IP, how long it lasted and the bytes each way. It's tagged **Open** while it's still connected, **Truncated** when more was sent than is kept, and **Error** when it ended abnormally, for example when the challenge couldn't be reached.
+- **Click a connection** to see its transcript: what the client sent and what the challenge answered, in order, each with its time since the connection opened. **Text** shows printable characters as they are and escapes the rest as `\xNN`. **Hex** shows a hex dump. **Copy** copies the transcript.
+- **Only the first 16 KB in each direction** is kept by default. Byte counts still cover everything.
+- **Each instance keeps its newest 500 connections** by default (`instanceRequestLogs.maxSessionsPerInstance`).
+
+The detail view has its own link (`?instance=<id>`), so you can share it. The **Activity** column counts requests and connections, and a team profile's **Instances** tab opens the same details from that count.
 
 ## How endings are known
 

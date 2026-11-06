@@ -46,6 +46,9 @@ flake8-quotes.inline-quotes = "single"
 quote-style = "single"
 line-ending = "lf"
 
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["PLR2004"]
+
 [tool.ruff.lint.isort]
 lines-after-imports = 2
 combine-as-imports = false
@@ -54,6 +57,7 @@ combine-as-imports = false
 max-args = 6
 
 [tool.pytest.ini_options]
+pythonpath = ["."]
 filterwarnings = [
     "ignore::DeprecationWarning",
 ]

@@ -16,6 +16,7 @@ services:
       - ./conf/traefik.yml:/etc/traefik/traefik.yml:ro
       - ./conf/tls.yml:/etc/traefik/dynamic/tls.yml:ro
       - ./conf/middlewares.yml:/etc/traefik/dynamic/middlewares.yml:ro
+      - ./conf/tcplog-transport.yml:/etc/traefik/dynamic/tcplog-transport.yml:ro
       - ./certs/:/certs/:ro
   cache:
     image: bitnami/redis:latest

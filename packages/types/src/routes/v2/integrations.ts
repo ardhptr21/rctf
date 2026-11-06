@@ -20,6 +20,7 @@ import {
   GoodClientConfigV2,
   GoodInstancerActionResult,
   GoodInstanceRequestsIngest,
+  GoodInstanceSessionsIngest,
   GoodInstanceStatus,
 } from '../../responses'
 
@@ -245,6 +246,25 @@ export const IngestInstanceRequestsRouteV2 = defineRoute({
       ),
   }),
   goodResponses: [GoodInstanceRequestsIngest],
+  badResponses: [BadToken],
+  authRequired: false,
+  serviceAuth: 'instanceRequestLogs',
+})
+
+export const IngestInstanceSessionsRouteV2 = defineRoute({
+  path: '/v2/integrations/instance-sessions',
+  method: 'POST',
+  body: z.object({
+    entries: z
+      .array(z.record(z.string(), z.unknown()))
+      .check(z.maxLength(500))
+      .check(
+        z.describe(
+          "Connection records from the instancer's tcplog proxy, at most 500. A record with an `id` already stored for the instance replaces it."
+        )
+      ),
+  }),
+  goodResponses: [GoodInstanceSessionsIngest],
   badResponses: [BadToken],
   authRequired: false,
   serviceAuth: 'instanceRequestLogs',

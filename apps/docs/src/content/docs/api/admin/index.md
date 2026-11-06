@@ -32,6 +32,7 @@ aside: true
 | [Instance history](/api/admin/instances/) | `<route>POST /api/v2/admin/instances</route>` |
 | [Instance detail](/api/admin/instance-detail/) | `<route>GET /api/v2/admin/instances/:id</route>` |
 | [Instance requests](/api/admin/instance-requests/) | `<route>GET /api/v2/admin/instances/:id/requests</route>` |
+| [Instance connections](/api/admin/instance-sessions/) | `<route>GET /api/v2/admin/instances/:id/sessions</route>` |
 | [List integrity cases](/api/admin/integrity-cases/) | `<route>GET /api/v2/admin/integrity/cases</route>` |
 | [Integrity case](/api/admin/integrity-case/) | `<route>GET /api/v2/admin/integrity/cases/:id</route>` |
 | [Update integrity case](/api/admin/integrity-case-update/) | `<route>PUT /api/v2/admin/integrity/cases/:id</route>` |

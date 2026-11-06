@@ -17,6 +17,7 @@ aside: true
 | [Extend an instance](/api/integrations/instance-extend/) | `<route>PATCH /api/v2/integrations/challs/:id/instance</route>` |
 | [Stop an instance](/api/integrations/instance-stop/) | `<route>DELETE /api/v2/integrations/challs/:id/instance</route>` |
 | [Ingest instance requests](/api/integrations/instance-requests-ingest/) | `<route>POST /api/v2/integrations/instance-requests</route>` |
+| [Ingest instance connections](/api/integrations/instance-sessions-ingest/) | `<route>POST /api/v2/integrations/instance-sessions</route>` |
 | [Admin bot config](/api/integrations/admin-bot-config/) | `<route>GET /api/v2/integrations/challs/:id/admin-bot/config</route>` |
 | [Submit admin bot job](/api/integrations/admin-bot-submit/) | `<route>POST /api/v2/integrations/challs/:id/admin-bot</route>` |
 | [Admin bot job status](/api/integrations/admin-bot-status/) | `<route>GET /api/v2/integrations/challs/:id/admin-bot/status</route>` |

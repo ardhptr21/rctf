@@ -1,6 +1,7 @@
 import type { ExposeKind, InstanceEndReason } from '@rctf/types'
 import {
   bigint,
+  boolean,
   foreignKey,
   index,
   integer,
@@ -8,6 +9,7 @@ import {
   pgTable,
   text,
   timestamp,
+  uniqueIndex,
 } from 'drizzle-orm/pg-core'
 
 export type InstanceHistoryEndpoint = {
@@ -43,6 +45,12 @@ export const instanceHistory = pgTable(
       mode: 'string',
     }),
     lastRequestAt: timestamp('last_request_at', {
+      withTimezone: true,
+      mode: 'string',
+    }),
+    // TCP connections to it, counted even once old ones are dropped
+    sessionCount: integer('session_count').notNull().default(0),
+    lastSessionAt: timestamp('last_session_at', {
       withTimezone: true,
       mode: 'string',
     }),
@@ -85,6 +93,57 @@ export const instanceRequests = pgTable(
       columns: [table.instanceId],
       foreignColumns: [instanceHistory.id],
       name: 'instance_requests_instance_id_fkey',
+    }).onDelete('cascade'),
+  ]
+)
+
+export type InstanceSessionChunk = {
+  // 'in' is what the player sent, 'out' what the challenge answered
+  dir: 'in' | 'out'
+  // milliseconds after the connection opened
+  t: number
+  // base64
+  data: string
+}
+
+// TCP connections to an instance's tcp-ssl exposes, from the instancer's
+// tcplog proxy, with the start of what was sent each way. A connection still
+// open is updated as the proxy reports it. Only the newest few hundred per
+// instance are kept.
+export const instanceSessions = pgTable(
+  'instance_sessions',
+  {
+    id: bigint({ mode: 'number' }).primaryKey().generatedAlwaysAsIdentity(),
+    instanceId: text('instance_id').notNull(),
+    // the proxy's ID for the connection
+    sessionKey: text('session_key').notNull(),
+    startedAt: timestamp('started_at', {
+      withTimezone: true,
+      mode: 'string',
+    }).notNull(),
+    durationMs: integer('duration_ms').notNull(),
+    open: boolean().notNull(),
+    clientIp: text('client_ip').notNull(),
+    host: text().notNull(),
+    bytesIn: bigint('bytes_in', { mode: 'number' }).notNull(),
+    bytesOut: bigint('bytes_out', { mode: 'number' }).notNull(),
+    truncated: boolean().notNull(),
+    error: text(),
+    transcript: jsonb().$type<InstanceSessionChunk[]>().notNull(),
+  },
+  table => [
+    index('instance_sessions_instance_started_index').on(
+      table.instanceId,
+      table.startedAt.desc()
+    ),
+    uniqueIndex('instance_sessions_instance_key_index').on(
+      table.instanceId,
+      table.sessionKey
+    ),
+    foreignKey({
+      columns: [table.instanceId],
+      foreignColumns: [instanceHistory.id],
+      name: 'instance_sessions_instance_id_fkey',
     }).onDelete('cascade'),
   ]
 )

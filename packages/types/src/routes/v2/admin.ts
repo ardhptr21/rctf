@@ -46,6 +46,7 @@ import {
   BadUnknownInstance,
   GoodAdminInstance,
   GoodAdminInstanceRequests,
+  GoodAdminInstanceSessions,
   GoodAdminInstances,
   GoodAdminTeamJoinCodes,
   GoodAdminTeamsImport,
@@ -420,6 +421,32 @@ export const GetAdminInstanceRequestsRouteV2 = defineRoute({
     ).check(z.describe('Only paths containing this text.')),
   }),
   goodResponses: [GoodAdminInstanceRequests],
+  badResponses: [BadBody, BadUnknownInstance, BadPerms, BadToken],
+  authRequired: true,
+  permissions: Permissions.usersWrite | Permissions.challsRead,
+})
+
+// The TCP connections to an instance's tcp-ssl endpoints, newest first.
+export const GetAdminInstanceSessionsRouteV2 = defineRoute({
+  path: '/v2/admin/instances/:id/sessions',
+  method: 'GET',
+  params: AdminInstanceParams,
+  query: z.object({
+    limit: z
+      .pipe(z.coerce.number(), z.int())
+      .check(z.gte(1))
+      .check(z.lte(100))
+      .check(z.describe('Integer `1`-`100`. Page size.')),
+    offset: z
+      .pipe(z.coerce.number(), z.int())
+      .check(z.gte(0))
+      .check(z.describe('Integer `>= 0`. Page offset.')),
+    clientIp: example(
+      z.optional(z.string().check(z.maxLength(64))),
+      '203.0.113.42'
+    ).check(z.describe('Only connections from this IP.')),
+  }),
+  goodResponses: [GoodAdminInstanceSessions],
   badResponses: [BadBody, BadUnknownInstance, BadPerms, BadToken],
   authRequired: true,
   permissions: Permissions.usersWrite | Permissions.challsRead,

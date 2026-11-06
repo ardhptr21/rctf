@@ -15,6 +15,7 @@
     formatDurationMs,
     formatLifetime,
     hasHttpEndpoint,
+    hasTcpEndpoint,
     requestDetails,
     STATUS_CLASS_FILTERS,
     STATUS_HINT,
@@ -22,6 +23,7 @@
     statusClassTone,
     statusTone,
   } from './instances-model'
+  import SessionsSection from './sessions-section.svelte'
 
   type Props = {
     instanceId: string | null
@@ -33,6 +35,21 @@
   const detailQuery = useAdminInstance(() => instanceId)
   const detail = $derived(detailQuery.data)
   const instance = $derived(detail?.instance)
+
+  // each log shows where it can have entries: TCP connections for tcp-ssl
+  // endpoints, HTTP requests for HTTP ones (and for anything else)
+  const showSessions = $derived(
+    !!instance &&
+      !!detail &&
+      (hasTcpEndpoint(instance) || detail.sessions.total > 0)
+  )
+  const showRequests = $derived(
+    !!instance &&
+      !!detail &&
+      (hasHttpEndpoint(instance) ||
+        detail.requests.total > 0 ||
+        !hasTcpEndpoint(instance))
+  )
 
   let clientIp = $state('')
   let statusClass = $state<number | null>(null)
@@ -177,13 +194,16 @@
           </fact>
         </facts>
 
-        <section-title>HTTP requests</section-title>
-        {#if !hasHttpEndpoint(instance) && detail.requests.total === 0}
-          <note
-            >This instance is only reachable over TCP. TCP connections aren't
-            logged yet.</note
-          >
-        {:else}
+        {#if showSessions}
+          <SessionsSection
+            {instanceId}
+            summary={detail.sessions}
+            onRefresh={() => void detailQuery.refetch()}
+          />
+        {/if}
+
+        {#if showRequests}
+          <section-title>HTTP requests</section-title>
           <summary-row>
             <stat><strong>{detail.requests.total}</strong> requests</stat>
             <stat><strong>{detail.requests.uniqueIps}</strong> IPs</stat>

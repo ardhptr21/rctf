@@ -10,7 +10,7 @@ const MAX_PATH = 2048
 const MAX_USER_AGENT = 512
 // Traefik logs a request when it ends, a moment after rCTF recorded the
 // instance's start or stop
-const LIFETIME_SLACK_MS = 60_000
+export const LIFETIME_SLACK_MS = 60_000
 
 export type ParsedRequest = {
   at: string
@@ -31,7 +31,7 @@ const number = (value: unknown): number | null =>
   typeof value === 'number' && Number.isFinite(value) ? value : null
 
 // the host without a port, as instance hostnames are stored
-const bareHost = (host: string) =>
+export const bareHost = (host: string) =>
   host.toLowerCase().replace(/:\d+$/, '').replace(/\.$/, '')
 
 // One line of Traefik's JSON access log, or null for anything that isn't an
@@ -69,7 +69,7 @@ export const parseTraefikAccessLog = (
   }
 }
 
-type Candidate = {
+export type Candidate = {
   id: string
   endpoints: { host: string }[]
   startedAt: number
@@ -78,7 +78,7 @@ type Candidate = {
 
 // The instances that ever used these hostnames, with the time each one was
 // up. An open instance past its expiry ended at its expiry.
-const candidatesFor = async (
+export const candidatesFor = async (
   db: DatabaseClient,
   hosts: readonly string[]
 ): Promise<Map<string, Candidate[]>> => {
@@ -116,7 +116,10 @@ const candidatesFor = async (
   return byHost
 }
 
-const matchInstance = (candidates: Candidate[] | undefined, at: number) =>
+export const matchInstance = (
+  candidates: Candidate[] | undefined,
+  at: number
+) =>
   candidates?.find(
     candidate =>
       at >= candidate.startedAt - LIFETIME_SLACK_MS &&
