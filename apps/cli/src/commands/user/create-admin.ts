@@ -94,9 +94,14 @@ export default defineCommand({
       // deploy tools such as Konata log in with a team login token
       const { createToken, TokenKind } =
         await import('@rctf/api/src/lib/tokens')
+      const loginToken = await createToken(TokenKind.Team, team.id)
       console.log(
-        `Login token for deploy tools (Konata's teamToken): ${await createToken(TokenKind.Team, team.id)}`
+        `Login token for deploy tools (Konata's teamToken): ${loginToken}`
       )
+      // admin teams can still use a login link in the browser
+      const loginUrl = new URL('/login', config.origin)
+      loginUrl.searchParams.set('token', loginToken)
+      console.log(`Login URL (admins, without Discord): ${loginUrl.toString()}`)
       return
     }
 

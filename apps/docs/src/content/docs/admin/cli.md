@@ -44,7 +44,7 @@ $ <red><dim>bun</dim> rctf</red> user create-admin organizers <dim>--discord-id<
 $ <red><dim>bun</dim> rctf</red> user create-admin authors <dim>--perms</dim> challsRead,challsWrite
 ```
 
-With [Discord login](/configuration#discord-login), `<dim>--discord-id</dim>` makes that Discord account the team captain, so it is an admin as soon as it logs in. The command also prints the team token, which other organizers use to join from the **Team** page, and a login token for deploy tools such as [Konata](/integrations/konata). Admin teams have no size limit.
+With [Discord login](/configuration#discord-login), `<dim>--discord-id</dim>` makes that Discord account the team captain, so it is an admin as soon as it logs in. The command also prints the team token, which other organizers use to join from the **Team** page, a login token for deploy tools such as [Konata](/integrations/konata), and a login URL that signs the admin team in to the browser without Discord. Admin teams have no size limit.
 
 Without Discord login, the command prints a login URL for the new team instead.
 
@@ -63,7 +63,7 @@ Prints a login token for a team: for example, the `<red>team_token</red>` that [
 $ <red><dim>bun</dim> rctf</red> user token organizers
 ```
 
-With [Discord login](/configuration#discord-login), only admin teams can log in with a token, so the command refuses other teams. The token never expires and gives full access to the team: keep it secret.
+With [Discord login](/configuration#discord-login), only admin teams can log in with a token, so the command refuses other teams. It also prints a login URL for the browser. The token never expires and gives full access to the team: keep it secret.
 
 ### `<red>rctf</red> user promote`
 

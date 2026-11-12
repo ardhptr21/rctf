@@ -36,9 +36,11 @@ export default defineCommand({
     }
 
     const { createToken, TokenKind } = await import('@rctf/api/src/lib/tokens')
-    console.log(
-      `Login token for ${team.name} (${team.id}): ${await createToken(TokenKind.Team, team.id)}`
-    )
+    const loginToken = await createToken(TokenKind.Team, team.id)
+    console.log(`Login token for ${team.name} (${team.id}): ${loginToken}`)
+    const loginUrl = new URL('/login', config.origin)
+    loginUrl.searchParams.set('token', loginToken)
+    console.log(`Login URL: ${loginUrl.toString()}`)
     console.log(
       'It never expires and gives full access to the team. Keep it secret.'
     )

@@ -1,5 +1,10 @@
 <script lang="ts">
-  import { BadUnknownUser, GoodLogin, LoginRoute } from '@rctf/types'
+  import {
+    BadEndpoint,
+    BadUnknownUser,
+    GoodLogin,
+    LoginRoute,
+  } from '@rctf/types'
   import { useQueryClient } from '@tanstack/svelte-query'
   import { goto } from '$app/navigation'
   import { page } from '$app/state'
@@ -14,7 +19,12 @@
   import Field from '$lib/ui/field.svelte'
   import Input from '$lib/ui/input.svelte'
   import Spinner from '$lib/ui/spinner.svelte'
+  import { IconDiscord } from '$lib/icons'
   import { createAsyncAction } from '$lib/utils/async-action.svelte'
+  import {
+    buildDiscordAuthorizeUrl,
+    startDiscordLogin,
+  } from '$lib/utils/discord'
   import { getRedirectPath } from '$lib/utils/redirect'
   import { onMount } from 'svelte'
   import ButtonCtftime from '../button-ctftime.svelte'
@@ -26,6 +36,15 @@
 
   const form = useApiForm(LoginRoute, {
     onSuccess: response => handleLoginSuccess(response.data.authToken),
+    onError: response => {
+      // with Discord login, the API turns away tokens of non-admin teams
+      if (clientConfig?.discord && response.kind === BadEndpoint.kind) {
+        form.setError(
+          '_form',
+          'Only admin teams can log in with a team token. Log in with Discord instead.'
+        )
+      }
+    },
   })
 
   const ctftimeLoginAction = createAsyncAction()
@@ -60,6 +79,20 @@
         }
       },
       { errorMessage: 'Login failed' }
+    )
+  }
+
+  function loginWithDiscord() {
+    const discord = clientConfig?.discord
+    if (!clientConfig || !discord) return
+    const state = startDiscordLogin(page.url.searchParams.get('next'))
+    window.location.assign(
+      buildDiscordAuthorizeUrl({
+        clientId: discord.clientId,
+        origin: clientConfig.origin,
+        requireGuild: discord.requireGuild,
+        state,
+      })
     )
   }
 
@@ -102,8 +135,69 @@
   {/if}
 </svelte:head>
 
+{#snippet tokenForm(adminOnly: boolean)}
+  {#if loginLinkSupplied}
+    <p role="status">
+      {replacingSession
+        ? 'This link contains a team token. Click Login to replace your current session.'
+        : 'This link contains a team token. Click Login to confirm that you want to sign in.'}
+    </p>
+  {/if}
+  {#if adminOnly}
+    <p>This link logs in an admin team. Players log in with Discord.</p>
+  {/if}
+  <form onsubmit={handleSubmit}>
+    <Field
+      label="Team token"
+      error={form.errors.teamToken ?? form.errors._form}
+    >
+      {#snippet children({ id, describedBy })}
+        <Input
+          {id}
+          name="teamToken"
+          type="password"
+          placeholder="Enter your team token"
+          autocomplete="current-password"
+          required
+          aria-describedby={describedBy}
+          aria-invalid={!!form.errors.teamToken ||
+            !!form.errors._form ||
+            undefined}
+          bind:value={form.data.teamToken}
+          oninput={() => form.validateField('teamToken')}
+        />
+      {/snippet}
+    </Field>
+    {#if !adminOnly && clientConfig?.emailEnabled}
+      <p><a href="/recover">Lost your team token?</a></p>
+    {/if}
+    <Button type="submit" disabled={isPending}>
+      {#if isPending}
+        <Spinner />
+      {/if}
+      Login
+    </Button>
+  </form>
+{/snippet}
+
 {#if clientConfig?.isArchived}
   <ArchivedNotice message="Authentication is not available." />
+{:else if clientConfig?.discord && loginLinkSupplied}
+  <!-- players log in with Discord; an admin team's login link still works -->
+  <Card title="Admin login" description="Log in to {clientConfig.ctfName}">
+    <auth-page>
+      {@render tokenForm(true)}
+      <auth-divider aria-hidden="true">or</auth-divider>
+      <Button
+        variant="secondary"
+        onclick={loginWithDiscord}
+        disabled={isPending}
+      >
+        <IconDiscord aria-hidden="true" />
+        Login with Discord
+      </Button>
+    </auth-page>
+  </Card>
 {:else if clientConfig?.discord}
   <DiscordLogin
     ctfName={clientConfig.ctfName}
@@ -114,45 +208,7 @@
 {:else if clientConfig}
   <Card title="Login" description="Log in to {clientConfig.ctfName}">
     <auth-page>
-      {#if loginLinkSupplied}
-        <p role="status">
-          {replacingSession
-            ? 'This link contains a team token. Click Login to replace your current session.'
-            : 'This link contains a team token. Click Login to confirm that you want to sign in.'}
-        </p>
-      {/if}
-      <form onsubmit={handleSubmit}>
-        <Field
-          label="Team token"
-          error={form.errors.teamToken ?? form.errors._form}
-        >
-          {#snippet children({ id, describedBy })}
-            <Input
-              {id}
-              name="teamToken"
-              type="password"
-              placeholder="Enter your team token"
-              autocomplete="current-password"
-              required
-              aria-describedby={describedBy}
-              aria-invalid={!!form.errors.teamToken ||
-                !!form.errors._form ||
-                undefined}
-              bind:value={form.data.teamToken}
-              oninput={() => form.validateField('teamToken')}
-            />
-          {/snippet}
-        </Field>
-        {#if clientConfig.emailEnabled}
-          <p><a href="/recover">Lost your team token?</a></p>
-        {/if}
-        <Button type="submit" disabled={isPending}>
-          {#if isPending}
-            <Spinner />
-          {/if}
-          Login
-        </Button>
-      </form>
+      {@render tokenForm(false)}
       {#if clientConfig.ctftime}
         <auth-divider aria-hidden="true">or</auth-divider>
         <ButtonCtftime

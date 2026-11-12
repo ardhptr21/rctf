@@ -92,6 +92,8 @@ With [Discord login](/configuration#discord-login) set up, players sign in with 
 
 Admin teams are the exception: they can still log in with a team token, so deploy tools such as [Konata](/integrations/konata) can reach the admin API. Get one with [`rctf user token`](/admin/cli#rctf-user-token).
 
+The login page shows only the Discord button, but opening an admin team's login URL (`/login?token=...`, printed by `rctf user token` and `rctf user create-admin`) shows an **Admin login** form instead. A player team's token is turned away there.
+
 ## Divisions
 
 Teams pick a division at registration. Divisions are configured in the `<red>divisions</red>` config option:

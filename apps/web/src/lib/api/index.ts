@@ -132,7 +132,10 @@ const parseResponse = <TRoute extends AnyRouteDefinition>(
     data: (payload as ApiResponseShape)?.data ?? null,
   }
 
-  if (envelope.kind === BadToken.kind) {
+  // A player-only route turns away a team session too, such as an admin team
+  // logged in with a login link under Discord login; that isn't a reason to
+  // log out. Truly invalid tokens are still caught by the other routes.
+  if (envelope.kind === BadToken.kind && !route.playerAuth) {
     clearToken()
   }
 
