@@ -52,8 +52,8 @@
     resendingId: string | null
     onCopyEmail: (email: string) => void
     onManage: (id: string) => void
-    // team tokens only work while Discord login is off
-    canCopyToken: boolean
+    // whether the viewer can get a login token for a team with these perms
+    canCopyToken: (teamPerms: number) => boolean
     onCopyToken: (team: TeamRef) => void
     onCopyJoinCode: (team: TeamRef & { joinToken: string }) => void
     onBan: (team: BanRef) => void
@@ -429,7 +429,7 @@
     display: grid;
     grid-template-columns:
       minmax(15rem, 1.4fr) 8rem 9rem minmax(12rem, 1fr)
-      6rem 6rem 12rem 11rem;
+      6rem 6rem 12rem 12.5rem; /* actions: up to five 2rem buttons */
     inline-size: 100%;
     user-select: none;
   }

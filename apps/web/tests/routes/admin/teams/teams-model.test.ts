@@ -1,6 +1,7 @@
 import { AdminTeamSortBy, AdminTeamStatus, SortOrder } from '@rctf/types'
 import { createFilter, type MultiFilter } from '$lib/filters/core'
 import {
+  canMintLoginToken,
   deriveTeamStatus,
   pendingVerificationMatchesFilters,
   registeredRowsMayMatch,
@@ -331,3 +332,20 @@ describe('teamQueryParams', () => {
 function rowKey(row: TeamRow): string {
   return row.kind === 'registered' ? row.team.id : row.verification.id
 }
+
+describe('canMintLoginToken', () => {
+  const player = { perms: 0 }
+  const deploy = { perms: 0b0011 }
+
+  test('player teams only without Discord login', () => {
+    expect(canMintLoginToken(player, 0b1111, false)).toBe(true)
+    expect(canMintLoginToken(player, 0b1111, true)).toBe(false)
+  })
+
+  test('admin teams only for viewers holding all their permissions', () => {
+    expect(canMintLoginToken(deploy, 0b0111, true)).toBe(true)
+    expect(canMintLoginToken(deploy, 0b0111, false)).toBe(true)
+    expect(canMintLoginToken(deploy, 0b0101, true)).toBe(false)
+    expect(canMintLoginToken(deploy, null, true)).toBe(false)
+  })
+})

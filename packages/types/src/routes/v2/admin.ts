@@ -815,14 +815,20 @@ export const CreateUserTokenRouteV2 = defineRoute({
   path: '/v2/admin/users/:id/token',
   method: 'POST',
   goodResponses: [GoodCreateUserTokenV2],
-  badResponses: [BadPerms, BadToken, BadUnknownUser, BadUserPrivileged],
+  badResponses: [
+    BadEndpoint,
+    BadPerms,
+    BadToken,
+    BadUnknownUser,
+    BadUserPrivileged,
+  ],
   authRequired: true,
   params: z.object({
     id: z.string().check(z.describe('Team ID.')),
   }),
+  // with Discord login, only admin teams' tokens are handed out (badEndpoint
+  // otherwise); a privileged team's token needs all of its permissions
   permissions: Permissions.usersWrite,
-  // team tokens can't be used to log in once Discord login is set up
-  legacyAuth: true,
 })
 
 export const DeleteChallengeSolveRouteV2 = defineRoute({

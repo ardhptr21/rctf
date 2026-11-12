@@ -61,6 +61,18 @@ export function deriveTeamStatus(
   return AdminTeamStatus.ACTIVE
 }
 
+// Whether an admin holding `viewerPerms` can get a login token for `team`,
+// matching the API: a privileged team's token needs all of its permissions,
+// and with Discord login only privileged (admin) teams can log in with one.
+export function canMintLoginToken(
+  team: Pick<AdminTeam, 'perms'>,
+  viewerPerms: number | null | undefined,
+  discordLogin: boolean
+): boolean {
+  if (team.perms > 0) return (team.perms & ~(viewerPerms ?? 0)) === 0
+  return !discordLogin
+}
+
 export function teamRowStatus(row: TeamRow): TeamStatusValue {
   return row.kind === 'registered' ? deriveTeamStatus(row.team) : UNVERIFIED
 }

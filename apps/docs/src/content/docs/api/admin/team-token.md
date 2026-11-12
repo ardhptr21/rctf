@@ -22,7 +22,7 @@ order: 14
 
 This route creates a fresh team token. It helps organizers recover access for a team that has lost its original credential.
 
-The returned token is a credential. This route does not issue tokens for admin users. It is unavailable when Discord login is configured, since team tokens can't be used to log in then, and answers `badEndpoint`.
+The returned token is a credential. A privileged (admin) team's token is only issued when the requesting admin holds every permission that team has; otherwise the route answers `badUserPrivileged`. With Discord login configured, only admin teams can log in with a team token, so the route answers `badEndpoint` for any other team.
 
 ::request-body{def="CreateUserTokenRouteV2" source="params" title="Path parameters"}
 

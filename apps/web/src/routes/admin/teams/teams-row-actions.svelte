@@ -25,7 +25,7 @@
     completingId: string | null
     resendingId: string | null
     onManage: (id: string) => void
-    canCopyToken: boolean
+    canCopyToken: (teamPerms: number) => boolean
     onCopyToken: (team: TeamRef) => void
     onCopyJoinCode: (team: TeamRef & { joinToken: string }) => void
     onBan: (team: BanRef) => void
@@ -104,6 +104,14 @@
     {@const team = row.team}
     {#if isAdmin}
       {@render copyJoinCode(team)}
+      {#if canCopyToken(team.perms)}
+        {@render action({
+          label: 'Copy login token',
+          icon: IconKey,
+          loading: copyingId === team.id,
+          onclick: () => onCopyToken({ id: team.id, name: team.name }),
+        })}
+      {/if}
       <admin-badge data-tip="Admin account">
         <IconAwardFilled aria-hidden="true" />
       </admin-badge>
@@ -116,7 +124,7 @@
         })}
       {/if}
       {@render copyJoinCode(team)}
-      {#if canCopyToken}
+      {#if canCopyToken(team.perms)}
         {@render action({
           label: 'Copy login token',
           icon: IconKey,

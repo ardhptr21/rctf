@@ -88,9 +88,11 @@ Players join a team with its join code. To get the codes later:
 
 Without Discord login, each team authenticates with a shared team token. Admins can generate a new login token for any non-privileged team, useful for getting teams back in when they've lost access to their account.
 
-With [Discord login](/configuration#discord-login) set up, players sign in with Discord and their team tokens can't be used to log in. **Copy login token** and **Copy login URL** are hidden, and the [create team token](/api/admin/team-token/) route answers `badEndpoint`. Give players their team's [join code](#join-codes) instead.
+With [Discord login](/configuration#discord-login) set up, players sign in with Discord and their team tokens can't be used to log in. **Copy login token** and **Copy login URL** are hidden for player teams, and the [create team token](/api/admin/team-token/) route answers `badEndpoint` for them. Give players their team's [join code](#join-codes) instead.
 
-Admin teams are the exception: they can still log in with a team token, so deploy tools such as [Konata](/integrations/konata) can reach the admin API. Get one with [`rctf user token`](/admin/cli#rctf-user-token).
+Admin teams are the exception: they can still log in with a team token, so deploy tools such as [Konata](/integrations/konata) can reach the admin API. Get one with [`rctf user token`](/admin/cli#rctf-user-token), or with **Copy login token** on the admin team's row in **Admin → Teams** (and **Copy login URL** on its profile).
+
+An admin can only copy the token of an admin team whose permissions they all hold, so a token can't be used to gain more access. The buttons are hidden otherwise.
 
 The login page shows only the Discord button, but opening an admin team's login URL (`/login?token=...`, printed by `rctf user token` and `rctf user create-admin`) shows an **Admin login** form instead. A player team's token is turned away there.
 

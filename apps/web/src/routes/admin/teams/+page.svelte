@@ -54,6 +54,7 @@
     type TeamFilters,
     type TeamRow,
     type TeamStatusValue,
+    canMintLoginToken,
   } from './teams-model'
   import ImportDialog from './import-dialog.svelte'
   import { joinCodesCsv, joinCodesFileName } from './teams-import'
@@ -416,7 +417,12 @@
         resendingId={resendAction.key}
         onCopyEmail={copyEmail}
         onManage={manage}
-        canCopyToken={!clientConfig?.discord}
+        canCopyToken={teamPerms =>
+          canMintLoginToken(
+            { perms: teamPerms },
+            currentUserQuery.data?.perms,
+            !!clientConfig?.discord
+          )}
         onCopyToken={requestCopyToken}
         onBan={requestBan}
         onDelete={requestDelete}

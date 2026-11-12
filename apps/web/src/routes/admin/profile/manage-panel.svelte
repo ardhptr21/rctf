@@ -43,6 +43,7 @@
   import { copyText } from '$lib/utils/clipboard'
   import { hasPermissions } from '$lib/utils/permissions'
   import { createConfirmState } from '../confirm-state.svelte'
+  import { canMintLoginToken } from '../teams/teams-model'
   import ConfirmDialog from './confirm-dialog.svelte'
   import {
     buildUserUpdate,
@@ -76,6 +77,14 @@
 
   const revealAfterLoading = adminUserQuery.isPending
   const clientConfig = $derived<ClientConfig | undefined>(configQuery.data)
+  const canCopyToken = $derived(
+    !!adminUser &&
+      canMintLoginToken(
+        adminUser,
+        currentUserQuery.data?.perms,
+        !!clientConfig?.discord
+      )
+  )
 
   const action = createAsyncAction<ActionKind>()
   const saveAction = createAsyncAction()
@@ -414,8 +423,8 @@
 
     <Section title="Actions">
       <manage-actions>
-        <!-- team tokens can't log in once Discord login is set up -->
-        {#if !clientConfig.discord}
+        <!-- with Discord login, only admin teams can log in with a token -->
+        {#if canCopyToken}
           <Button
             variant="secondary"
             disabled={busy}

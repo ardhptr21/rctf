@@ -16,6 +16,8 @@ import {
   BadTeamFull,
   BadTeamToken,
   BadToken,
+  BadUserPrivileged,
+  GoodCreateUserTokenV2,
   GoodDiscordLogin,
   GoodFlag,
   GoodLogin,
@@ -268,16 +270,40 @@ describe('Discord login', () => {
     )
   })
 
-  test('admins cannot create team login tokens in Discord mode', async () => {
-    const admin = await generateRealTestUser(Permissions.usersWrite)
+  test('in Discord mode, login tokens are only for admin teams', async () => {
+    const admin = await generateRealTestUser(
+      Permissions.usersWrite | Permissions.challsRead
+    )
     const team = await generateRealTestUser()
+    const deployTeam = await generateRealTestUser(Permissions.challsRead)
+    const ownerTeam = await generateRealTestUser(
+      Permissions.usersWrite | Permissions.challsWrite
+    )
     try {
       const adminToken = await generateAuthToken(admin.user.id)
-      await expectResponse(
-        await post(`/api/v2/admin/users/${team.user.id}/token`, adminToken),
-        BadEndpoint
+      const mint = async (id: string) =>
+        post(`/api/v2/admin/users/${id}/token`, adminToken)
+
+      // a player team's token can't log in under Discord login
+      await expectResponse(await mint(team.user.id), BadEndpoint)
+      // an admin team whose permissions the requester holds: a working token
+      const minted = await expectResponse(
+        await mint(deployTeam.user.id),
+        GoodCreateUserTokenV2
       )
+      await expectResponse(
+        await post('/api/v1/auth/login', null, {
+          teamToken: minted.data.token,
+        }),
+        GoodLogin
+      )
+      // the requester's own team
+      await expectResponse(await mint(admin.user.id), GoodCreateUserTokenV2)
+      // a team with a permission the requester lacks (challsWrite)
+      await expectResponse(await mint(ownerTeam.user.id), BadUserPrivileged)
     } finally {
+      await ownerTeam.cleanup()
+      await deployTeam.cleanup()
       await team.cleanup()
       await admin.cleanup()
     }
