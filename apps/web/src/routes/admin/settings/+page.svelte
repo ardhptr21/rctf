@@ -43,6 +43,7 @@
     validateAiLinkPatterns,
     validateFreeze,
     validateIntegrity,
+    validateInstanceLimit,
     validateTeamSize,
     validateTiming,
     type SettingsFormState,
@@ -190,6 +191,11 @@
     form.teamSize = resetGroup(defaults, 'teamSize')
   }
 
+  function resetInstanceLimit() {
+    if (!form || !defaults) return
+    form.instanceLimit = resetGroup(defaults, 'instanceLimit')
+  }
+
   function resetSubmissionEvidence() {
     if (!form || !defaults) return
     form.submissionEvidence = resetGroup(defaults, 'submissionEvidence')
@@ -321,6 +327,13 @@
       const teamSizeValidation = validateTeamSize(form.teamSize.value)
       if (teamSizeValidation) {
         toast.error(teamSizeValidation)
+        return
+      }
+    }
+    if (form.instanceLimit.dirty) {
+      const limitValidation = validateInstanceLimit(form.instanceLimit.value)
+      if (limitValidation) {
+        toast.error(limitValidation)
         return
       }
     }
@@ -543,6 +556,39 @@
           </group-body>
         </settings-group>
       {/if}
+
+      <settings-group>
+        {@render groupHeader('Instances', resetInstanceLimit)}
+        <group-body>
+          <Field
+            label="Max running instances per team"
+            description="0 means no limit. Counts running instances across challenges; admin teams are exempt."
+            error={settingsForm.instanceLimit.dirty
+              ? (validateInstanceLimit(settingsForm.instanceLimit.value) ??
+                undefined)
+              : undefined}
+          >
+            {#snippet children({ id, describedBy })}
+              <Input
+                {id}
+                aria-describedby={describedBy}
+                type="number"
+                min="0"
+                max="1000"
+                step="1"
+                value={settingsForm.instanceLimit.value ?? ''}
+                placeholder={String(settingsDefaults.instancerMaxPerTeam ?? 0)}
+                oninput={e => {
+                  const raw = e.currentTarget.value
+                  settingsForm.instanceLimit.value =
+                    raw === '' ? null : Number(raw)
+                  markGroup('instanceLimit')
+                }}
+              />
+            {/snippet}
+          </Field>
+        </group-body>
+      </settings-group>
 
       <settings-group>
         {@render groupHeader('Submissions', resetSubmissionEvidence)}

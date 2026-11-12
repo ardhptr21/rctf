@@ -31,6 +31,11 @@ export const AdminSettingsSchema = z.object({
       'Maximum players per team. Teams with admin permissions are unlimited.'
     )
   ),
+  instancerMaxPerTeam: example(z.optional(z.int()), 2).check(
+    z.describe(
+      'Instances a team may run at once across challenges; 0 means no limit. Admin teams are exempt.'
+    )
+  ),
   requireAiLinks: example(z.optional(z.boolean()), true).check(
     z.describe('Whether flag submissions must include AI links.')
   ),

@@ -59,6 +59,7 @@ An account with `settingsWrite` can change the following settings without restar
 | Page access       | Who can view the challenges and scoreboard  |
 | Team creation     | Whether Discord players can create new teams |
 | Max team members  | Players allowed per team                    |
+| Max running instances per team | Instances a team may run at once across challenges; 0 means no limit |
 | Submission evidence | Whether flags need AI links and a solver proof |
 | Home content      | Home page markdown content                  |
 | Sponsors          | Sponsor list (name, icon, description, URL) |

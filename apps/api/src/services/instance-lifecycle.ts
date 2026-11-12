@@ -1,4 +1,10 @@
-import type { Challenge, DatabaseClient, User } from '@rctf/db'
+import {
+  challenges,
+  instanceHistory,
+  type Challenge,
+  type DatabaseClient,
+  type User,
+} from '@rctf/db'
 import type {
   BadChallenge,
   BadEndpoint,
@@ -8,6 +14,7 @@ import type {
   ResponseHelpers,
 } from '@rctf/types'
 import { InstanceEndReason, InstanceStatus } from '@rctf/types'
+import { and, eq, gt, isNull, ne, or, sql } from 'drizzle-orm'
 import type { PinoLogger } from 'hono-pino'
 import type { TypedRedis } from '../cache/scripts'
 import type {
@@ -33,7 +40,7 @@ import {
   type InstancerResponseHelpers,
 } from './instancer'
 import { rateLimitInstancerAction } from './rate-limit'
-import { isAdminUser } from './settings'
+import { getResolvedSettings, isAdminUser } from './settings'
 
 export interface InstanceRequest {
   res: InstancerResponseHelpers
@@ -43,6 +50,7 @@ export interface InstanceRequest {
   includeHidden?: boolean
   // set by the player-facing routes, which record the instance history
   history?: InstanceHistoryContext
+  redis?: TypedRedis
 }
 
 type InstanceResponse = ReturnType<
@@ -133,15 +141,84 @@ export const getInstanceStatus = (
     recordInstanceStatus
   )
 
+const isLiveStatus = (status: InstanceStatus) =>
+  status === InstanceStatus.RUNNING || status === InstanceStatus.STARTING
+
+// The names of the team's other running instances when they already reach
+// `instancerMaxPerTeam`, or null when another may start. Open history entries
+// can be stale (an instance that expired unseen), so at the limit each one is
+// checked with its instancer, which also closes the entries of those gone.
+const instancesOverLimit = async (
+  { db, redis, user, history }: InstanceRequest,
+  challenge: Challenge
+): Promise<string[] | null> => {
+  // only the player-facing routes count, and admin teams are exempt
+  if (!history || isAdminUser(user)) return null
+  const { instancerMaxPerTeam: limit } = await getResolvedSettings(db, redis)
+  if (!limit) return null
+
+  const open = await db
+    .select({ challengeId: instanceHistory.challengeId, challenge: challenges })
+    .from(instanceHistory)
+    .innerJoin(challenges, eq(challenges.id, instanceHistory.challengeId))
+    .where(
+      and(
+        eq(instanceHistory.teamId, user.id),
+        // starting a running instance again just returns it
+        ne(instanceHistory.challengeId, challenge.id),
+        isNull(instanceHistory.endedAt),
+        or(
+          isNull(instanceHistory.expiresAt),
+          gt(instanceHistory.expiresAt, sql`now()`)
+        )
+      )
+    )
+  if (open.length < limit) return null
+
+  const live: string[] = []
+  for (const entry of open) {
+    const other = entry.challenge
+    const config = other.data.instancerConfig
+    const provider = config
+      ? getInstancerProvider(resolveInstancerName(config))
+      : undefined
+    if (!provider) continue
+    const details = await provider.getInstance(
+      instanceQueryOptions(user, other)
+    )
+    await recordInstanceStatus(
+      db,
+      history,
+      { teamId: user.id, challengeId: entry.challengeId },
+      details
+    )
+    if (
+      details.kind === 'instancerInstanceDetails' &&
+      isLiveStatus(details.status)
+    ) {
+      live.push(other.data.name)
+    }
+  }
+  return live.length >= limit ? live : null
+}
+
+const limitMessage = (running: string[]) =>
+  `Your team can run ${running.length === 1 ? '1 instance' : `${running.length} instances`} at a time. Stop one first: ${running.join(', ')}.`
+
 export const createInstance = (
   request: InstanceRequest
 ): Promise<InstanceResponse> =>
   withInstancerChallenge(
     request,
-    async (challenge, provider) =>
-      provider.createInstance(
+    async (challenge, provider) => {
+      const running = await instancesOverLimit(request, challenge)
+      if (running) {
+        return instancerError(limitMessage(running))
+      }
+      return provider.createInstance(
         await buildCreateInstanceOptions(request.db, challenge, request.user)
-      ),
+      )
+    },
     recordInstanceStart
   )
 

@@ -136,6 +136,7 @@ export const loadEnvConfig = (): ConfigLayer => {
     ['discord', discord],
     ['maxTeamSize', getEnvInteger('RCTF_MAX_TEAM_SIZE')],
     ['teamCreationEnabled', getEnvBoolean('RCTF_TEAM_CREATION_ENABLED')],
+    ['instancerMaxPerTeam', getEnvInteger('RCTF_INSTANCER_MAX_PER_TEAM')],
     [
       'requireSubmissionEvidence',
       getEnvBoolean('RCTF_REQUIRE_SUBMISSION_EVIDENCE'),

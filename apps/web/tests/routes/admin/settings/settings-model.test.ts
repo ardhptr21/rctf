@@ -13,6 +13,7 @@ import {
   sponsorsReducer,
   validateAiLinkPatterns,
   validateFreeze,
+  validateInstanceLimit,
   validateIntegrity,
   validateTeamSize,
   validateTiming,
@@ -29,6 +30,7 @@ function cleanState(): SettingsFormState {
     freeze: { time: null, dirty: false },
     teamCreation: { enabled: true, dirty: false },
     teamSize: { value: null, dirty: false },
+    instanceLimit: { value: 0, dirty: false },
     submissionEvidence: {
       requireAiLinks: true,
       requireSolverProof: true,
@@ -614,6 +616,32 @@ describe('team creation setting', () => {
     expect(buildPatch(state, { teamCreationEnabled: true })).toEqual({
       teamCreationEnabled: null,
     })
+  })
+})
+
+describe('instances per team setting', () => {
+  it('sends the new limit when edited', () => {
+    const state = cleanState()
+    state.instanceLimit = { value: 2, dirty: true }
+    expect(buildPatch(state, { instancerMaxPerTeam: 0 })).toEqual({
+      instancerMaxPerTeam: 2,
+    })
+  })
+
+  it('clears the override when it matches the default', () => {
+    const state = cleanState()
+    state.instanceLimit = { value: 0, dirty: true }
+    expect(buildPatch(state, { instancerMaxPerTeam: 0 })).toEqual({
+      instancerMaxPerTeam: null,
+    })
+  })
+
+  it('accepts 0 (no limit) up to 1000', () => {
+    expect(validateInstanceLimit(0)).toBeNull()
+    expect(validateInstanceLimit(3)).toBeNull()
+    expect(validateInstanceLimit(-1)).not.toBeNull()
+    expect(validateInstanceLimit(1.5)).not.toBeNull()
+    expect(validateInstanceLimit(null)).not.toBeNull()
   })
 })
 

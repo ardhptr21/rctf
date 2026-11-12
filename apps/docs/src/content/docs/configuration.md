@@ -459,12 +459,15 @@ instancers:
       apiUrl: https://k8s-arm.example.com
       authToken: <service-account-token>
 defaultInstancer: k8s
+# at most 2 running instances per team, across challenges (0 = no limit)
+instancerMaxPerTeam: 2
 ```
 
 | Field | Type | Default | Description |
 | --- | --- | --- | --- |
 | `<red>instancers</red>` | `object{:ts}` | - | Map of named challenge instancer providers (optional). Each key is an instancer name a challenge can target. |
 | `<red>defaultInstancer</red>` | `string{:ts}` | - | Name of the instancer used when a challenge doesn't pick one. Required when more than one instancer is defined. When there is only one, rCTF selects it automatically. |
+| `<red>instancerMaxPerTeam</red>` | `number{:ts}` | `0{:ts}` | How many instances a team may run at once, across challenges. `0{:ts}` means no limit. A team at the limit must stop one before starting another; starting a challenge whose instance is already running still works. Admin teams are exempt. Environment variable `RCTF_INSTANCER_MAX_PER_TEAM`. Can also be changed at runtime from the admin settings |
 
 See [Instancer](/integrations/instancer) for the available instancers and their options.
 

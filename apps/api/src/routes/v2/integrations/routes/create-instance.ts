@@ -10,5 +10,6 @@ integrationsGroup.route(CreateInstanceRouteV2, ({ ctx, res, params, user }) =>
     user,
     challengeId: params.id,
     history: instanceHistoryContext(ctx.var),
+    redis: ctx.var.redis,
   })
 )

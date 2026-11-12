@@ -143,6 +143,7 @@ export function getConfigDefaults(): EditableSettings {
     scoreboardFreezeTime: config.scoreboardFreezeTime,
     teamCreationEnabled: config.teamCreationEnabled,
     maxTeamSize: config.maxTeamSize,
+    instancerMaxPerTeam: config.instancerMaxPerTeam,
     requireAiLinks: configRequiresAiLinks(),
     requireSolverProof: configRequiresSolverProof(),
     aiLinkPatterns: config.aiLinkPatterns,
@@ -167,6 +168,8 @@ export function resolveSettings(overrides: EditableSettings) {
     teamCreationEnabled:
       overrides.teamCreationEnabled ?? config.teamCreationEnabled,
     maxTeamSize: overrides.maxTeamSize ?? config.maxTeamSize,
+    instancerMaxPerTeam:
+      overrides.instancerMaxPerTeam ?? config.instancerMaxPerTeam,
     requireAiLinks: overrides.requireAiLinks ?? configRequiresAiLinks(),
     requireSolverProof:
       overrides.requireSolverProof ?? configRequiresSolverProof(),

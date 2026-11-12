@@ -6,6 +6,8 @@ order: 5
 
 **Admin → Instances** lists every challenge instance a team has started, newest first. Each instance is one entry, kept from the moment it starts until it ends. If a team started three instances, you see three entries.
 
+To cap how many instances a team can run at once, set **Max running instances per team** under **Admin → Settings** (or [`instancerMaxPerTeam`](/configuration#instancers) in the config). A team at the limit is told which of its instances are running and must stop one first. rCTF checks the running ones with the instancer, so an instance that expired without anyone looking doesn't count.
+
 ## What each entry shows
 
 - **Started**: when the instance was started, with the time since the CTF began.

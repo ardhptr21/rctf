@@ -1,6 +1,7 @@
 import { config } from '@rctf/config'
 import { challenges, createDatabase, instanceHistory } from '@rctf/db'
 import {
+  BadInstancerError,
   BadPerms,
   ExposeKind,
   GoodAdminInstances,
@@ -488,5 +489,101 @@ describe('admin instance list', () => {
       (await generateRealTestUser(Permissions.challsRead)).user.id
     )
     await expectResponse(await listInstances(token), BadPerms)
+  })
+})
+
+describe('instances per team', () => {
+  const withLimit = async (limit: number, run: () => Promise<void>) => {
+    const before = config.instancerMaxPerTeam
+    config.instancerMaxPerTeam = limit
+    try {
+      await run()
+    } finally {
+      config.instancerMaxPerTeam = before
+    }
+  }
+
+  test('a team at the limit must stop one before starting another', () =>
+    withLimit(1, async () => {
+      const team = await generateRealTestUser()
+      const token = await generateAuthToken(team.user.id)
+      const first = await instancedChallenge('web', 'Notes')
+      const second = await instancedChallenge('pwn', 'Heap')
+
+      await expectResponse(
+        await instanceCall('PUT', token, first),
+        GoodInstanceStatus
+      )
+      const refused = await expectResponse(
+        await instanceCall('PUT', token, second),
+        BadInstancerError
+      )
+      expect(refused.data.message).toContain('Notes')
+      // starting the running one again still returns it
+      await expectResponse(
+        await instanceCall('PUT', token, first),
+        GoodInstanceStatus
+      )
+
+      await expectResponse(
+        await instanceCall('DELETE', token, first),
+        GoodInstanceStatus
+      )
+      await expectResponse(
+        await instanceCall('PUT', token, second),
+        GoodInstanceStatus
+      )
+    }))
+
+  test('an instance that ended unseen does not count', () =>
+    withLimit(1, async () => {
+      const team = await generateRealTestUser()
+      const token = await generateAuthToken(team.user.id)
+      const first = await instancedChallenge('web', 'Notes')
+      const second = await instancedChallenge('pwn', 'Heap')
+
+      await expectResponse(
+        await instanceCall('PUT', token, first),
+        GoodInstanceStatus
+      )
+      // the instancer dropped it without rCTF noticing
+      stub.running.clear()
+      await expectResponse(
+        await instanceCall('PUT', token, second),
+        GoodInstanceStatus
+      )
+      const rows = await entries()
+      expect(
+        rows.find(row => row.challengeId === first)?.endedAt
+      ).not.toBeNull()
+    }))
+
+  test('0 means no limit, and admin teams are exempt', async () => {
+    const first = await instancedChallenge('web', 'Notes')
+    const second = await instancedChallenge('pwn', 'Heap')
+
+    await withLimit(0, async () => {
+      const token = await generateAuthToken(
+        (await generateRealTestUser()).user.id
+      )
+      for (const id of [first, second]) {
+        await expectResponse(
+          await instanceCall('PUT', token, id),
+          GoodInstanceStatus
+        )
+      }
+    })
+
+    await withLimit(1, async () => {
+      const token = await generateAuthToken(
+        (await generateRealTestUser(Permissions.challsRead)).user.id
+      )
+      for (const id of [first, second]) {
+        await expectResponse(
+          await instanceCall('PUT', token, id),
+          GoodInstanceStatus
+        )
+      }
+    })
   })
 })

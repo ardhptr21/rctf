@@ -122,6 +122,9 @@ export const ServerConfigSchema = z.object({
   ),
   maxTeamSize: z._default(z.int().check(z.gte(1)), 4), // admin teams are unlimited
   teamCreationEnabled: z._default(z.boolean(), true), // players may create teams
+  // instances a team may run at once across challenges; 0 means no limit.
+  // Admin teams are exempt. Also editable under Admin -> Settings
+  instancerMaxPerTeam: z._default(z.int().check(z.gte(0)), 0),
 
   // Flag submissions must include AI links and a solver proof file. Each
   // requirement can be set on its own; unset, it follows the older

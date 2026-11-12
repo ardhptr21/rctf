@@ -29,6 +29,7 @@ export interface AdminSettingsShape {
   scoreboardFreezeTime?: number
   teamCreationEnabled?: boolean
   maxTeamSize?: number
+  instancerMaxPerTeam?: number
   requireAiLinks?: boolean
   requireSolverProof?: boolean
   aiLinkPatterns?: string[]
@@ -84,6 +85,12 @@ interface TeamSizeGroup {
   dirty: boolean
 }
 
+// running instances per team; 0 means no limit
+interface InstanceLimitGroup {
+  value: number | null
+  dirty: boolean
+}
+
 interface PageAccessGroup {
   challenges: PageAccess
   scores: PageAccess
@@ -114,6 +121,7 @@ export interface SettingsFormState {
   freeze: FreezeGroup
   teamCreation: TeamCreationGroup
   teamSize: TeamSizeGroup
+  instanceLimit: InstanceLimitGroup
   submissionEvidence: SubmissionEvidenceGroup
   integrity: IntegrityGroup
   pageAccess: PageAccessGroup
@@ -131,6 +139,7 @@ export interface SettingsPatch {
   scoreboardFreezeTime?: number | null
   teamCreationEnabled?: boolean | null
   maxTeamSize?: number | null
+  instancerMaxPerTeam?: number | null
   requireAiLinks?: boolean | null
   requireSolverProof?: boolean | null
   aiLinkPatterns?: string[] | null
@@ -187,6 +196,16 @@ export function buildPatch(
     patch.maxTeamSize = groupMatchesDefaults(state, 'teamSize', defaults)
       ? null
       : state.teamSize.value
+  }
+
+  if (state.instanceLimit.dirty) {
+    patch.instancerMaxPerTeam = groupMatchesDefaults(
+      state,
+      'instanceLimit',
+      defaults
+    )
+      ? null
+      : state.instanceLimit.value
   }
 
   if (state.submissionEvidence.dirty) {
@@ -279,6 +298,13 @@ export function validateFreeze(
 export function validateTeamSize(value: number | null): string | null {
   if (value === null || !Number.isInteger(value) || value < 1 || value > 1000) {
     return 'Max team members must be a whole number from 1 to 1000.'
+  }
+  return null
+}
+
+export function validateInstanceLimit(value: number | null): string | null {
+  if (value === null || !Number.isInteger(value) || value < 0 || value > 1000) {
+    return 'Instances per team must be a whole number from 0 (no limit) to 1000.'
   }
   return null
 }
@@ -447,6 +473,10 @@ export function initialFormState(
       value: overrides.maxTeamSize ?? defaults.maxTeamSize ?? null,
       dirty: false,
     },
+    instanceLimit: {
+      value: overrides.instancerMaxPerTeam ?? defaults.instancerMaxPerTeam ?? 0,
+      dirty: false,
+    },
     submissionEvidence: {
       requireAiLinks:
         overrides.requireAiLinks ?? defaults.requireAiLinks ?? true,
@@ -518,6 +548,8 @@ export function groupMatchesDefaults(
       )
     case 'teamSize':
       return form.teamSize.value === (defaults.maxTeamSize ?? null)
+    case 'instanceLimit':
+      return form.instanceLimit.value === (defaults.instancerMaxPerTeam ?? 0)
     case 'submissionEvidence':
       return (
         form.submissionEvidence.requireAiLinks ===
@@ -575,6 +607,7 @@ const settingsGroupKeys = [
   'freeze',
   'teamCreation',
   'teamSize',
+  'instanceLimit',
   'submissionEvidence',
   'integrity',
   'pageAccess',

@@ -18,6 +18,8 @@ export interface EditableSettings {
   scoreboardFreezeTime?: number
   teamCreationEnabled?: boolean
   maxTeamSize?: number
+  // running instances per team; 0 means no limit
+  instancerMaxPerTeam?: number
   requireAiLinks?: boolean
   requireSolverProof?: boolean
   // the older single setting for both; getSettings turns it into the two

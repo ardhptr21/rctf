@@ -1017,6 +1017,14 @@ const AdminSettingsUpdateBody = z.object({
           'Maximum players per team. Teams already over a lower limit keep their members but cannot take new ones.'
         )
       ),
+      instancerMaxPerTeam: example(
+        z.nullish(z.int().check(z.gte(0)).check(z.lte(1000))),
+        2
+      ).check(
+        z.describe(
+          'Instances a team may run at once across challenges; 0 means no limit. Running instances over a lower limit keep running, but no new ones start until the team is under it.'
+        )
+      ),
       requireAiLinks: example(z.nullish(z.boolean()), true).check(
         z.describe('Whether flag submissions must include AI links.')
       ),
